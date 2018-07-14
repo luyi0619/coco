@@ -13,6 +13,10 @@ set(CMAKE_CXX_STANDARD 14)
 
 include_directories(${CMAKE_SOURCE_DIR})
 
+file(GLOB_RECURSE common_cc common/*.cc)
+add_library(common STATIC ${common_cc})
+
+
 include(CTest)
 
 # Download and unpack googletest at configure time
@@ -42,16 +46,14 @@ add_subdirectory(${CMAKE_BINARY_DIR}/googletest-src
 
 file(GLOB_RECURSE TEST_SRC_FILES test/test*.cpp)
 
-message(STATUS ${TEST_SRC_FILES})
-
 # from list of files we'll create tests test_name.cpp -> test_name
 foreach(_test_file ${TEST_SRC_FILES})
     get_filename_component(_test_name ${_test_file} NAME_WE)
     add_executable(${_test_name} ${_test_file})
     # Now simply link against gtest or gtest_main as needed. Eg
-    target_link_libraries(${_test_name} gtest_main)
+    target_link_libraries(${_test_name} gtest_main common)
     add_test(NAME "${_test_name}" COMMAND ${_test_name})
 endforeach()
 
 add_executable(main main.cpp)
-target_link_libraries(main glog::glog gflags)
+target_link_libraries(main glog::glog gflags common)
