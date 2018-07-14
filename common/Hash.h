@@ -20,7 +20,7 @@ namespace scar {
 
     template<typename T, typename... Rest>
     inline std::size_t hash(const T &v, Rest... rest) {
-        std::hash <T> h;
+        std::hash<T> h;
         return hash_combine(h(v), hash(rest...));
     }
 

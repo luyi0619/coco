@@ -4,7 +4,7 @@
 
 #include "SpinLock.h"
 
-namespace scar{
+namespace scar {
     std::ostream &operator<<(std::ostream &out, const SpinLock &lock) {
         return out << &lock.lock_;
     }

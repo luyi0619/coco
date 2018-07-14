@@ -51,9 +51,9 @@ foreach(_test_file ${TEST_SRC_FILES})
     get_filename_component(_test_name ${_test_file} NAME_WE)
     add_executable(${_test_name} ${_test_file})
     # Now simply link against gtest or gtest_main as needed. Eg
-    target_link_libraries(${_test_name} gtest_main common)
+    target_link_libraries(${_test_name} common gflags glog::glog gtest_main)
     add_test(NAME "${_test_name}" COMMAND ${_test_name})
 endforeach()
 
 add_executable(main main.cpp)
-target_link_libraries(main glog::glog gflags common)
+target_link_libraries(main common gflags glog::glog)

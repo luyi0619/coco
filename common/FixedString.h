@@ -26,10 +26,10 @@ namespace scar {
     };
 
 
-    template <class C, std::size_t N>
-    inline std::basic_ostream<C>& operator<<(
-            std::basic_ostream<C>& os,
-            const FixedString<N>& string) {
+    template<class C, std::size_t N>
+    inline std::basic_ostream<C> &operator<<(
+            std::basic_ostream<C> &os,
+            const FixedString<N> &string) {
         os << static_cast<folly::FixedString<N>>(string);
         return os;
     }

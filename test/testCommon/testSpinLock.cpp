@@ -11,11 +11,11 @@ TEST(TestCommonSpinLock, TestLock) {
     scar::SpinLock lock;
     lock.lock();
     bool ok;
-    std::thread t1([&](){
+    std::thread t1([&]() {
         auto start = std::chrono::steady_clock::now();
         lock.lock();
         lock.unlock();
-        auto stop =std::chrono::steady_clock::now();
+        auto stop = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
         auto elapsed = duration.count();
         ok = elapsed > 80 && elapsed < 120;
