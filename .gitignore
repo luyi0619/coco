@@ -17,6 +17,7 @@
 !.travis.yml
 
 # Unignore source code directories
+!benchmark
 !ci/
 !cmake
 !common/
