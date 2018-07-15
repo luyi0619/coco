@@ -86,7 +86,7 @@ namespace scar {
 
         template<class MapFunc>
         void _map(MapFunc mapFunc) {
-            for (int i = 0; i < N; i++) {
+            for (auto i = 0u; i < N; i++) {
                 locks_[i].lock();
                 mapFunc(maps_[i]);
                 locks_[i].unlock();
@@ -96,13 +96,13 @@ namespace scar {
         template<class T, class FoldFunc>
         auto _fold(const T &firstValue, FoldFunc foldFunc) {
             T finalValue = firstValue;
-            for (int i = 0; i < N; i++) {
+            for (auto i = 0u; i < N; i++) {
                 locks_[i].lock();
                 finalValue = foldFunc(finalValue, maps_[i]);
                 locks_[i].unlock();
             }
             return finalValue;
-        };
+        }
 
         auto bucketNo(const KeyType &key) {
             return hasher_(key) % N;

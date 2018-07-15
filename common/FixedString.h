@@ -18,7 +18,7 @@ namespace scar {
         std::size_t hash_code() const {
             std::hash<char> h;
             std::size_t hashCode = 0;
-            for (int i = 0; i < this->size(); i++) {
+            for (auto i = 0u; i < this->size(); i++) {
                 hashCode = scar::hash_combine(hashCode, h((*this)[i]));
             }
             return hashCode;

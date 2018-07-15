@@ -23,7 +23,7 @@ namespace scar {
         std::string rand_str(std::size_t length, const std::string &str) {
             std::string result;
             auto str_len = str.length();
-            for (auto i = 0; i < length; i++) {
+            for (auto i = 0u; i < length; i++) {
                 int k = uniform_dist(0, str_len - 1);
                 result += str[k];
             }

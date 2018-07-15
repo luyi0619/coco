@@ -1,14 +1,15 @@
 cmake_minimum_required(VERSION 3.2)
 project(scar)
 
+# includes
 
-list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake" ${CMAKE_MODULE_PATH})
 
 find_library(jemalloc_lib jemalloc) # jemalloc 5.0
-find_package(glog REQUIRED)
-find_package(gflags REQUIRED)
+#find_package(glog REQUIRED)
+#find_package(gflags REQUIRED)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-long-long -Wno-unused-variable -Wno-variadic-macros -pedantic -O2")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -Wall -Wno-long-long -Wno-unused-variable -Wno-variadic-macros -pedantic -O2")
 set(CMAKE_CXX_STANDARD 14)
 
 include_directories(${CMAKE_SOURCE_DIR})
@@ -51,9 +52,9 @@ foreach(_test_file ${TEST_SRC_FILES})
     get_filename_component(_test_name ${_test_file} NAME_WE)
     add_executable(${_test_name} ${_test_file})
     # Now simply link against gtest or gtest_main as needed. Eg
-    target_link_libraries(${_test_name} common gflags glog::glog gtest_main)
+    target_link_libraries(${_test_name} common gflags glog gtest_main)
     add_test(NAME "${_test_name}" COMMAND ${_test_name})
 endforeach()
 
 add_executable(main main.cpp)
-target_link_libraries(main common gflags glog::glog)
+target_link_libraries(main common gflags glog)
