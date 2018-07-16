@@ -21,4 +21,5 @@
 !ci/
 !cmake
 !common/
+!database
 !test/
