@@ -3,10 +3,10 @@
 //
 
 #include <gtest/gtest.h>
-#include "benchmark/tpcc/TPCCRandom.h"
+#include "benchmark/tpcc/Random.h"
 
 TEST(TestTPCCRandom, TestRandStr) {
-    scar::TPCCRandom random;
+    scar::tpcc::Random random;
     std::string astring = random.a_string(10, 10);
     std::string nstring = random.a_string(10, 10);
     std::string zip = random.a_string(10, 10);
