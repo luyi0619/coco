@@ -23,27 +23,30 @@ namespace scar {
     template<class T>
     class Deserializer {
     public:
-        T operator()(const folly::StringPiece &str) const {
+        T operator()(folly::StringPiece str, std::size_t& size) const {
             T result;
-            memcpy(&result, const_cast<char *>(&str[0]), str.size());
+            size = sizeof(T);
+            memcpy(&result, const_cast<char *>(&str[0]), size);
             return result;
         }
     };
-
 
     template<>
     class Serializer<std::string> {
     public:
         std::string operator()(const std::string &v) {
-            return v;
+            return Serializer<std::string::size_type>()(v.size()) + v;
         }
     };
 
     template<>
     class Deserializer<std::string> {
     public:
-        std::string operator()(const folly::StringPiece &str) const {
-            return str.toString();
+        std::string operator()(folly::StringPiece str, std::size_t& size) const {
+            std::string::size_type len = Deserializer<std::string::size_type>()(str, size);
+            str.advance(sizeof(len));
+            size += len;
+            return std::string(str.begin(), str.begin() + len);
         }
     };
 

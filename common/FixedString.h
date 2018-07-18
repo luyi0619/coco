@@ -40,16 +40,19 @@ namespace scar {
     class Serializer<FixedString<N>> {
     public:
         std::string operator()(const FixedString<N> &v) {
-            return v.toStdString();
+            return Serializer<std::string::size_type>()(v.size()) + v.toStdString();
         }
     };
 
     template<std::size_t N>
     class Deserializer<FixedString<N>> {
     public:
-        FixedString<N> operator()(const folly::StringPiece &str) const {
+        FixedString<N> operator()(folly::StringPiece str, std::size_t& size) const {
+            std::string::size_type len = Deserializer<typename FixedString<N>::size_type >()(str, size);
+            str.advance(sizeof(len));
+            size += len;
             FixedString<N> result;
-            result.assign(str.data(), str.size());
+            result.assign(str.data(), len);
             return result;
         }
     };
