@@ -5,6 +5,7 @@
 #include <string>
 #include <gtest/gtest.h>
 #include "common/Serialization.h"
+#include "common/FixedString.h"
 
 TEST(TestSerialization, TestBasic) {
     int a = 0x1234;
@@ -18,4 +19,11 @@ TEST(TestSerialization, TestBasic) {
 TEST(TestSerialization, TestString) {
     std::string s = "helloworldHELLOWORLDhelloWORLDHELLOworld";
     EXPECT_EQ(scar::Deserializer<std::string>()(scar::Serializer<std::string>()(s)), s);
+}
+
+TEST(TestSerialization, TestFixedString) {
+    scar::FixedString<40> s = "helloworldHELLOWORLDhelloWORLDHELLOworld";
+    auto serializedString = scar::Serializer<scar::FixedString<40>>()(s);
+    EXPECT_EQ(serializedString.length(), 40);
+    EXPECT_EQ(scar::Deserializer<scar::FixedString<40>>()(serializedString), s);
 }

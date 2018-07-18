@@ -7,6 +7,7 @@
 
 #include <folly/FixedString.h>
 #include "Hash.h"
+#include "Serialization.h"
 
 namespace scar {
 
@@ -33,6 +34,25 @@ namespace scar {
         os << static_cast<folly::FixedString<N>>(string);
         return os;
     }
+
+    template<std::size_t N>
+    class Serializer<FixedString<N>> {
+    public:
+        std::string operator()(const FixedString<N> &v) {
+            return v.toStdString();
+        }
+    };
+
+    template<std::size_t N>
+    class Deserializer<FixedString<N>> {
+    public:
+        FixedString<N> operator()(const std::string &str) const {
+            FixedString<N> result;
+            result.assign(str.c_str(), str.size());
+            return result;
+        }
+    };
+
 }
 
 namespace std {
