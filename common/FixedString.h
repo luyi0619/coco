@@ -6,6 +6,7 @@
 #define SCAR_FIXEDSTRING_H
 
 #include <folly/FixedString.h>
+#include <folly/String.h>
 #include "Hash.h"
 #include "Serialization.h"
 
@@ -46,9 +47,9 @@ namespace scar {
     template<std::size_t N>
     class Deserializer<FixedString<N>> {
     public:
-        FixedString<N> operator()(const std::string &str) const {
+        FixedString<N> operator()(const folly::StringPiece &str) const {
             FixedString<N> result;
-            result.assign(str.c_str(), str.size());
+            result.assign(str.data(), str.size());
             return result;
         }
     };

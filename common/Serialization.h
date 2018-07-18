@@ -7,6 +7,7 @@
 
 #include <string>
 #include <cstring>
+#include <folly/String.h>
 
 namespace scar {
     template<class T>
@@ -22,7 +23,7 @@ namespace scar {
     template<class T>
     class Deserializer {
     public:
-        T operator()(const std::string &str) const {
+        T operator()(const folly::StringPiece &str) const {
             T result;
             memcpy(&result, const_cast<char *>(&str[0]), str.size());
             return result;
@@ -41,8 +42,8 @@ namespace scar {
     template<>
     class Deserializer<std::string> {
     public:
-        std::string operator()(const std::string &str) const {
-            return str;
+        std::string operator()(const folly::StringPiece &str) const {
+            return str.toString();
         }
     };
 
