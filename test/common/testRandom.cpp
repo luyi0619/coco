@@ -4,11 +4,9 @@
 
 #include <gtest/gtest.h>
 #include <glog/logging.h>
-#include <thread>
-#include <chrono>
 #include "common/Random.h"
 
-TEST(TestRandom, TestRandomness) {
+TEST(TestRandom, TestBasic) {
 
     constexpr int N = 100, nNumbers = 100000000;
 
@@ -26,4 +24,17 @@ TEST(TestRandom, TestRandomness) {
     auto avg = 1.0 * nNumbers / N;
 
     EXPECT_LE( (max_e - min_e) / avg, 0.01);
+}
+
+
+TEST(TestRandom, TestNextDouble) {
+
+    constexpr int N = 1000;
+    scar::Random r;
+
+    for(auto i = 0; i < N; i ++){
+        double d = r.next_double();
+        EXPECT_TRUE(d >= 0);
+        EXPECT_TRUE(d < 1);
+    }
 }

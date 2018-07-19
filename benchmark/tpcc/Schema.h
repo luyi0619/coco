@@ -6,7 +6,7 @@
 #define SCAR_TPCC_SCHEMA_H
 
 #include "common/FixedString.h"
-#include "database/SchemaDef.h"
+#include "core/SchemaDef.h"
 
 namespace scar {
     namespace tpcc {
