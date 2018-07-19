@@ -2,8 +2,8 @@
 // Created by Yi Lu on 7/15/18.
 //
 
-#ifndef SCAR_TPCC_DATABASE_H
-#define SCAR_TPCC_DATABASE_H
+#ifndef SCAR_TPCC_SCHEMA_H
+#define SCAR_TPCC_SCHEMA_H
 
 #include "common/FixedString.h"
 #include "database/SchemaDef.h"
@@ -166,4 +166,4 @@ namespace scar {
         DO_STRUCT(stock, STOCK_KEY_FIELDS, STOCK_VALUE_FIELDS)
     }
 }
-#endif //SCAR_TPCC_DATABASE_H
+#endif //SCAR_TPCC_SCHEMA_H

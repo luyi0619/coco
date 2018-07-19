@@ -3,9 +3,9 @@
 //
 
 #include <gtest/gtest.h>
-#include "benchmark/ycsb/Database.h"
+#include "benchmark/ycsb/Schema.h"
 
-TEST(TestYCSBDatabase, TestYCSB) {
+TEST(TestYCSBSchema, TestYCSB) {
     scar::ycsb::ycsb::key key(1);
     EXPECT_EQ(key.Y_KEY, 1);
     scar::ycsb::ycsb::value value;

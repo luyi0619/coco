@@ -2,8 +2,8 @@
 // Created by Yi Lu on 7/15/18.
 //
 
-#ifndef SCAR_YCSB_DATABASE_H
-#define SCAR_YCSB_DATABASE_H
+#ifndef SCAR_YCSB_SCHEMA_H
+#define SCAR_YCSB_SCHEMA_H
 
 #include "common/FixedString.h"
 #include "database/SchemaDef.h"
@@ -32,4 +32,4 @@ namespace scar {
     }
 }
 
-#endif //SCAR_YCSB_DATABASE_H
+#endif //SCAR_YCSB_SCHEMA_H

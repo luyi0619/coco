@@ -3,9 +3,9 @@
 //
 
 #include <gtest/gtest.h>
-#include "benchmark/tpcc/Database.h"
+#include "benchmark/tpcc/Schema.h"
 
-TEST(TestTPCCDatabase, TestWarehouse) {
+TEST(TestTPCCSchema, TestWarehouse) {
     scar::tpcc::warehouse::key key(1);
     EXPECT_EQ(key.W_ID, 1);
     scar::tpcc::warehouse::value value;
