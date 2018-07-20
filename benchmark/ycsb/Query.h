@@ -23,10 +23,10 @@ namespace scar {
         class makeYCSBQuery {
         public:
             YCSBQuery<N>
-            operator()(const Context &context, uint32_t partitionID, bool isCrossPartition, Random &random) {
+            operator()(const Context &context, uint32_t partitionID, Random &random) const {
 
                 YCSBQuery<N> query;
-                int x = random.uniform_dist(1, 100);
+                int readOnly = random.uniform_dist(1, 100);
                 for (auto i = 0; i < N; i++) {
 
                     int32_t key;
@@ -43,7 +43,9 @@ namespace scar {
                             key = Zipf::globalZipf().value(random.next_double());
                         }
 
-                        if (isCrossPartition && context.partitionNum > 1) {
+                        int crossPartition = random.uniform_dist(1, 100);
+
+                        if (crossPartition <= context.crossPartitionProbability && context.partitionNum > 1) {
                             int newPartitionID = partitionID;
                             while (newPartitionID == partitionID) {
                                 newPartitionID = random.uniform_dist(0, context.partitionNum - 1);
@@ -63,11 +65,11 @@ namespace scar {
 
                     // read or write
 
-                    if (x <= context.readOnlyTransaction) {
+                    if (readOnly <= context.readOnlyTransaction) {
                         query.UPDATE[i] = false;
                     } else {
-                        int y = random.uniform_dist(1, 100);
-                        if (y <= context.readWriteRatio) {
+                        int readOrWrite = random.uniform_dist(1, 100);
+                        if (readOrWrite <= context.readWriteRatio) {
                             query.UPDATE[i] = false;
                         } else {
                             query.UPDATE[i] = true;

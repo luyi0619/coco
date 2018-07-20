@@ -3,7 +3,6 @@
 //
 
 #include <gtest/gtest.h>
-#include <glog/logging.h>
 #include "benchmark/ycsb/Query.h"
 
 TEST(TestYCSBQuery, TestBasic) {
@@ -23,18 +22,17 @@ TEST(TestYCSBQuery, TestBasic) {
     scar::ycsb::Random random(reinterpret_cast<uint64_t >(&context));
 
     constexpr int N = 10000, M = 10;
-    constexpr int partitionID = 1;
+    constexpr int partitionID = 0;
 
     int readOnly = 0, reads = 0, writes = 0;
 
     for (auto i = 0; i < N; i++) {
-        scar::ycsb::YCSBQuery<M> q = scar::ycsb::makeYCSBQuery<M>()(context, partitionID, false, random);
+        scar::ycsb::YCSBQuery<M> q = scar::ycsb::makeYCSBQuery<M>()(context, partitionID, random);
 
         bool hasWrite = false;
         int read = 0, write = 0;
         // test partitionID
         for (int k = 0; k < M; k++) {
-            EXPECT_EQ(context.getPartitionID(q.Y_KEY[k]), partitionID);
             if (q.UPDATE[k]) {
                 hasWrite = true;
             }

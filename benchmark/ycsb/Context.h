@@ -45,12 +45,12 @@ namespace scar {
             int readOnlyTransaction = 0; //  out of 100
             int crossPartitionProbability = 0; // out of 100
 
-            std::size_t keysPerTransaction;
-            std::size_t keysPerPartition;
+            std::size_t keysPerTransaction = 10;
+            std::size_t keysPerPartition = 200000;
 
-            bool isUniform;
+            bool isUniform = true;
 
-            PartitionStrategy strategy;
+            PartitionStrategy strategy = PartitionStrategy::ROUND_ROBIN;
         };
     }
 }
