@@ -23,7 +23,7 @@ namespace scar {
     template<class T>
     class Deserializer {
     public:
-        T operator()(folly::StringPiece str, std::size_t& size) const {
+        T operator()(folly::StringPiece str, std::size_t &size) const {
             T result;
             size = sizeof(T);
             memcpy(&result, const_cast<char *>(&str[0]), size);
@@ -42,7 +42,7 @@ namespace scar {
     template<>
     class Deserializer<std::string> {
     public:
-        std::string operator()(folly::StringPiece str, std::size_t& size) const {
+        std::string operator()(folly::StringPiece str, std::size_t &size) const {
             std::string::size_type len = Deserializer<std::string::size_type>()(str, size);
             str.advance(sizeof(len));
             size += len;

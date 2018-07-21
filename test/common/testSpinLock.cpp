@@ -4,7 +4,6 @@
 
 #include <gtest/gtest.h>
 #include <thread>
-#include <chrono>
 #include "common/SpinLock.h"
 
 TEST(TestCommonSpinLock, TestLock) {

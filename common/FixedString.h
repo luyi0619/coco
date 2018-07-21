@@ -25,6 +25,11 @@ namespace scar {
             }
             return hashCode;
         }
+
+        FixedString &assignStdString(const std::string str) {
+            folly::FixedString<N>::assign(str.c_str(), str.size());
+            return *this;
+        }
     };
 
 
@@ -47,8 +52,8 @@ namespace scar {
     template<std::size_t N>
     class Deserializer<FixedString<N>> {
     public:
-        FixedString<N> operator()(folly::StringPiece str, std::size_t& size) const {
-            std::string::size_type len = Deserializer<typename FixedString<N>::size_type >()(str, size);
+        FixedString<N> operator()(folly::StringPiece str, std::size_t &size) const {
+            std::string::size_type len = Deserializer<typename FixedString<N>::size_type>()(str, size);
             str.advance(sizeof(len));
             size += len;
             FixedString<N> result;
