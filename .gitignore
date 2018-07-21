@@ -14,13 +14,12 @@
 !CMakeLists.txt
 !CMakeLists.txt.in
 !.gitignore
-!.travis.yml
 
 # Unignore source code directories
-!benchmark
-!ci/
+!benchmark/
 !cmake
 !common/
 !core/
-!database
+!database/
+!protocol/
 !test/

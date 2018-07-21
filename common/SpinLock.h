@@ -34,8 +34,6 @@ namespace scar {
 
         std::atomic_flag lock_ = ATOMIC_FLAG_INIT;
     };
-
-    std::ostream &operator<<(std::ostream &out, const SpinLock &lock);
 }
 
 #endif //SCAR_SPINLOCK_H
