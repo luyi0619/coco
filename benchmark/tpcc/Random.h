@@ -12,28 +12,12 @@
 
 namespace scar {
     namespace tpcc {
-    class Random : public scar::Random {
+        class Random : public scar::Random {
         public:
             using scar::Random::Random;
 
             uint64_t non_uniform_distribution(uint64_t A, uint64_t x, uint64_t y) {
                 return (uniform_dist(0, A) | uniform_dist(x, y)) % (y - x + 1) + x;
-            }
-
-            std::string rand_str(std::size_t length, const std::string &str) {
-                std::string result;
-                auto str_len = str.length();
-                for (auto i = 0u; i < length; i++) {
-                    int k = uniform_dist(0, str_len - 1);
-                    result += str[k];
-                }
-                return result;
-            }
-
-            std::string a_string(std::size_t min_len, std::size_t max_len) {
-                auto len = uniform_dist(min_len, max_len);
-                return rand_str(len, alpha());
-
             }
 
             std::string n_string(std::size_t min_len, std::size_t max_len) {
@@ -66,11 +50,6 @@ namespace scar {
                                                               "EING"};
                 return last_names;
             }
-
-            static const std::string &alpha() {
-                static std::string alpha_ = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-                return alpha_;
-            };
 
             static const std::string &numeric() {
                 static std::string numeric_ = "0123456789";

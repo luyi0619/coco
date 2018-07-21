@@ -5,6 +5,8 @@
 #ifndef SCAR_RANDOM_H
 #define SCAR_RANDOM_H
 
+#include <string>
+
 namespace scar {
 
     class Random {
@@ -45,7 +47,30 @@ namespace scar {
             return next() % (b - a + 1) + a;
         }
 
+        std::string rand_str(std::size_t length, const std::string &str) {
+            std::string result;
+            auto str_len = str.length();
+            for (auto i = 0u; i < length; i++) {
+                int k = uniform_dist(0, str_len - 1);
+                result += str[k];
+            }
+            return result;
+        }
+
+        std::string a_string(std::size_t min_len, std::size_t max_len) {
+            auto len = uniform_dist(min_len, max_len);
+            return rand_str(len, alpha());
+
+        }
+
     private:
+
+        static const std::string &alpha() {
+            static std::string alpha_ = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            return alpha_;
+        };
+
+
         uint64_t seed_;
     };
 }
