@@ -10,6 +10,15 @@
 #define APPLY_X_AND_Y(x, y) \
     x(y, y)
 
+#define NAMESPACE_OPEN(name) \
+    namespace name {
+
+#define NAMESPACE_CLOSE(name) \
+    }
+
+#define NAMESPACE_EXPAND(name) \
+    name::
+
 #define STRUCT_PARAM_FIRST_X(type, name) \
     type name
 
@@ -39,8 +48,9 @@
     name ## _field,
 
 // the main macro
-#define DO_STRUCT(name, keyfields, valuefields) \
-  struct name { \
+#define DO_STRUCT(name, keyfields, valuefields, namespacefields) \
+namespacefields(NAMESPACE_OPEN) \
+struct name { \
   struct key { \
     key() = default; \
     key(keyfields(STRUCT_PARAM_FIRST_X, STRUCT_PARAM_REST_X)) : \
@@ -79,7 +89,18 @@
       NFIELDS \
     }; \
   }; \
-};
-
+  static constexpr int tableID(){ \
+    return __COUNTER__ - __BASE_COUNTER__; \
+  } \
+}; \
+namespacefields(NAMESPACE_CLOSE) \
+namespace std { \
+template <> \
+  struct hash<namespacefields(NAMESPACE_EXPAND)name::key> { \
+    std::size_t operator()(const namespacefields(NAMESPACE_EXPAND)name::key &k) const { \
+        return scar::hash(keyfields(STRUCT_HASH_FIRST_X, STRUCT_HASH_REST_X)); \
+    } \
+  }; \
+}
 
 #endif //SCAR_SCHEMADEF_H

@@ -6,11 +6,22 @@
 #define SCAR_TPCC_SCHEMA_H
 
 #include "common/FixedString.h"
+#include "common/Hash.h"
 #include "core/SchemaDef.h"
 
+
+// table definition for ycsb
 namespace scar {
     namespace tpcc {
-        // table definition for ycsb
+        constexpr auto __BASE_COUNTER__ = __COUNTER__ + 1;
+    }
+}
+
+#undef NAMESPACE_FIELDS
+#define NAMESPACE_FIELDS(x) \
+    x(scar) \
+    x(tpcc)
+
 
 #define WAREHOUSE_KEY_FIELDS(x, y) \
     x(int32_t,W_ID)
@@ -24,7 +35,7 @@ namespace scar {
     y(float,W_TAX) \
     y(float,W_YTD)
 
-        DO_STRUCT(warehouse, WAREHOUSE_KEY_FIELDS, WAREHOUSE_VALUE_FIELDS)
+DO_STRUCT(warehouse, WAREHOUSE_KEY_FIELDS, WAREHOUSE_VALUE_FIELDS, NAMESPACE_FIELDS)
 
 
 #define DISTRICT_KEY_FIELDS(x, y) \
@@ -41,7 +52,7 @@ namespace scar {
     y(float,D_YTD) \
     y(int32_t,D_NEXT_O_ID)
 
-        DO_STRUCT(district, DISTRICT_KEY_FIELDS, DISTRICT_VALUE_FIELDS)
+DO_STRUCT(district, DISTRICT_KEY_FIELDS, DISTRICT_VALUE_FIELDS, NAMESPACE_FIELDS)
 
 #define CUSTOMER_KEY_FIELDS(x, y) \
     x(int32_t,C_W_ID)  \
@@ -67,7 +78,7 @@ namespace scar {
     y(int32_t,C_DELIVERY_CNT) \
     y(FixedString<500>,C_DATA)
 
-        DO_STRUCT(customer, CUSTOMER_KEY_FIELDS, CUSTOMER_VALUE_FIELDS)
+DO_STRUCT(customer, CUSTOMER_KEY_FIELDS, CUSTOMER_VALUE_FIELDS, NAMESPACE_FIELDS)
 
 
 #define CUSTOMER_NAME_IDX_KEY_FIELDS(x, y) \
@@ -77,7 +88,7 @@ namespace scar {
 #define CUSTOMER_NAME_IDX_VALUE_FIELDS(x, y) \
     x(int32_t,C_ID)
 
-        DO_STRUCT(customer_name_idx, CUSTOMER_NAME_IDX_KEY_FIELDS, CUSTOMER_NAME_IDX_VALUE_FIELDS)
+DO_STRUCT(customer_name_idx, CUSTOMER_NAME_IDX_KEY_FIELDS, CUSTOMER_NAME_IDX_VALUE_FIELDS, NAMESPACE_FIELDS)
 
 
 #define HISTORY_KEY_FIELDS(x, y) \
@@ -91,7 +102,7 @@ namespace scar {
     x(float,H_AMOUNT) \
     y(FixedString<24>,H_DATA)
 
-        DO_STRUCT(history, HISTORY_KEY_FIELDS, HISTORY_VALUE_FIELDS)
+DO_STRUCT(history, HISTORY_KEY_FIELDS, HISTORY_VALUE_FIELDS, NAMESPACE_FIELDS)
 
 #define NEW_ORDER_KEY_FIELDS(x, y) \
     x(int32_t,NO_W_ID)  \
@@ -100,7 +111,7 @@ namespace scar {
 #define NEW_ORDER_VALUE_FIELDS(x, y) \
     x(int32_t,NO_DUMMY)
 
-        DO_STRUCT(new_order, NEW_ORDER_KEY_FIELDS, NEW_ORDER_VALUE_FIELDS)
+DO_STRUCT(new_order, NEW_ORDER_KEY_FIELDS, NEW_ORDER_VALUE_FIELDS, NAMESPACE_FIELDS)
 
 #define ORDER_KEY_FIELDS(x, y) \
     x(int32_t,O_W_ID)  \
@@ -113,7 +124,7 @@ namespace scar {
     y(int8_t,O_OL_CNT) \
     y(bool,O_ALL_LOCAL)
 
-        DO_STRUCT(order, ORDER_KEY_FIELDS, ORDER_VALUE_FIELDS)
+DO_STRUCT(order, ORDER_KEY_FIELDS, ORDER_VALUE_FIELDS, NAMESPACE_FIELDS)
 
 
 #define ORDER_LINE_KEY_FIELDS(x, y) \
@@ -129,7 +140,7 @@ namespace scar {
     y(float,OL_AMOUNT) \
     y(FixedString<24>,OL_DIST_INFO)
 
-        DO_STRUCT(order_line, ORDER_LINE_KEY_FIELDS, ORDER_LINE_VALUE_FIELDS)
+DO_STRUCT(order_line, ORDER_LINE_KEY_FIELDS, ORDER_LINE_VALUE_FIELDS, NAMESPACE_FIELDS)
 
 
 #define ITEM_KEY_FIELDS(x, y) \
@@ -140,7 +151,7 @@ namespace scar {
     y(float,I_PRICE) \
     y(FixedString<50>,I_DATA)
 
-        DO_STRUCT(item, ITEM_KEY_FIELDS, ITEM_VALUE_FIELDS)
+DO_STRUCT(item, ITEM_KEY_FIELDS, ITEM_VALUE_FIELDS, NAMESPACE_FIELDS)
 
 
 #define STOCK_KEY_FIELDS(x, y) \
@@ -163,7 +174,6 @@ namespace scar {
     y(int32_t,S_REMOTE_CNT) \
     y(FixedString<50>,S_DATA)
 
-        DO_STRUCT(stock, STOCK_KEY_FIELDS, STOCK_VALUE_FIELDS)
-    }
-}
+DO_STRUCT(stock, STOCK_KEY_FIELDS, STOCK_VALUE_FIELDS, NAMESPACE_FIELDS)
+
 #endif //SCAR_TPCC_SCHEMA_H
