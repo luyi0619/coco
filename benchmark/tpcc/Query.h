@@ -166,7 +166,7 @@ namespace scar {
                     // from a non-uniform random value using the NURand(255,0,999) function.
 
                     std::string last_name = random.rand_last_name(random.non_uniform_distribution(255, 0, 999));
-                    query.C_LAST.assign(last_name.c_str(), last_name.size());
+                    query.C_LAST.assignStdString(last_name);
                 } else {
                     // If y > 60 a non-uniform random customer number (C_ID) is selected using the NURand(1023,1,3000) function.
                     query.C_ID = random.non_uniform_distribution(1023, 1, 3000);
