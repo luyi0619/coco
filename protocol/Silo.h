@@ -115,11 +115,9 @@ namespace scar {
         using RWKeyType = SiloRWKey;
 
         template<class ValueType>
-        ValueType read(std::tuple<DataType, ValueType> &row) {
+        static void read(std::tuple<DataType, ValueType> &row, ValueType &result) {
             DataType &tid = std::get<0>(row);
             ValueType &value = std::get<1>(row);
-
-            ValueType result;
             uint64_t tid_;
             do {
                 do {
@@ -127,11 +125,10 @@ namespace scar {
                 } while (isLocked(tid_));
                 result = value;
             } while (tid_ != tid.load());
-            return result;
         }
 
-        template<class KeyType, class ValueType>
-        void update(std::tuple<DataType, ValueType> &row, const ValueType &v) {
+        template<class DataType, class ValueType>
+        static void update(std::tuple<DataType, ValueType> &row, const ValueType &v) {
             DataType &tid = std::get<0>(row);
             ValueType &value = std::get<1>(row);
             uint64_t tid_ = tid.load();
@@ -141,11 +138,11 @@ namespace scar {
 
     private:
 
-        bool isLocked(uint64_t value) {
+        static bool isLocked(uint64_t value) {
             return value & LOCK_BIT_MASK;
         }
 
-        uint64_t lock(std::atomic<uint64_t> &a) {
+        static uint64_t lock(std::atomic<uint64_t> &a) {
             uint64_t oldValue, newValue;
             do {
                 do {
@@ -157,7 +154,7 @@ namespace scar {
             return oldValue;
         }
 
-        uint64_t lock(std::atomic<uint64_t> &a, bool &success) {
+        static uint64_t lock(std::atomic<uint64_t> &a, bool &success) {
             uint64_t oldValue = a.load();
 
             if (isLocked(oldValue)) {
@@ -168,7 +165,6 @@ namespace scar {
             }
             return oldValue;
         }
-
 
         static constexpr uint64_t LOCK_BIT_MASK = 0x1ull << 63;
     };

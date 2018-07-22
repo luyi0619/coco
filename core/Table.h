@@ -10,9 +10,9 @@
 namespace scar {
     class ITable {
     public:
-        virtual void *search(void *key) = 0;
+        virtual void *search(const void *key) = 0;
 
-        virtual void insert(void *key, void *value) = 0;
+        virtual void insert(const void *key, const void *value) = 0;
 
         virtual std::size_t keyNBytes() = 0;
 
@@ -27,14 +27,14 @@ namespace scar {
 
         Table(std::size_t tableID) : tableID_(tableID) {}
 
-        void *search(void *key) override {
-            const auto &k = *static_cast<KeyType *>(key);
+        void *search(const void *key) override {
+            const auto &k = *static_cast<const KeyType *>(key);
             return &map_[k];
         }
 
-        void insert(void *key, void *value) override {
-            const auto &k = *static_cast<KeyType *>(key);
-            const auto &v = *static_cast<ValueType *>(value);
+        void insert(const void *key, const void *value) override {
+            const auto &k = *static_cast<const KeyType *>(key);
+            const auto &v = *static_cast<const ValueType *>(value);
             auto &row = map_[k];
             std::get<1>(row) = v;
         }

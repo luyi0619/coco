@@ -13,12 +13,16 @@
 #include "core/Table.h"
 #include "benchmark/tpcc/Random.h"
 #include "benchmark/tpcc/Schema.h"
+#include "benchmark/tpcc/Context.h"
 
 namespace scar {
     namespace tpcc {
         template<class Protocol>
         class Database {
         public:
+            using ProtocolType = Protocol;
+            using ContextType = Context;
+            using RandomType = Random;
 
             ITable *find_table(std::size_t table_id, std::size_t partition_id) {
                 CHECK(table_id < tbl_vecs.size());

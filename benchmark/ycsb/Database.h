@@ -20,6 +20,9 @@ namespace scar {
         template<class Protocol>
         class Database {
         public:
+            using ProtocolType = Protocol;
+            using ContextType = Context;
+            using RandomType = Random;
 
             ITable *find_table(std::size_t table_id, std::size_t partition_id) {
                 CHECK(table_id < tbl_vecs.size());
