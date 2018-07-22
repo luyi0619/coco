@@ -8,6 +8,7 @@
 #include "benchmark/tpcc/Context.h"
 #include "benchmark/tpcc/Random.h"
 #include "benchmark/tpcc/Schema.h"
+#include "common/Time.h"
 #include "core/Table.h"
 #include <chrono>
 #include <glog/logging.h>
@@ -278,7 +279,7 @@ private:
         value.C_STATE.assignStdString(random.a_string(2, 2));
         value.C_ZIP.assignStdString(random.rand_zip());
         value.C_PHONE.assignStdString(random.n_string(16, 16));
-        value.C_SINCE = 0; // system_clock();
+        value.C_SINCE = Time::now();
         value.C_CREDIT_LIM = 50000;
         value.C_DISCOUNT =
             static_cast<float>(random.uniform_dist(0, 5000)) / 10000;
@@ -377,7 +378,7 @@ private:
         key.H_C_W_ID = partitionID + 1;
         key.H_C_D_ID = i;
         key.H_C_ID = j;
-        key.H_DATE = 0; // system_clock();
+        key.H_DATE = Time::now();
 
         history::value value;
         value.H_AMOUNT = 10;
@@ -440,7 +441,7 @@ private:
 
         order::value value;
         value.O_C_ID = perm[j - 1];
-        value.O_ENTRY_D = 0; // system_clock();
+        value.O_ENTRY_D = Time::now();
         value.O_OL_CNT = random.uniform_dist(5, 15);
         value.O_ALL_LOCAL = true;
 

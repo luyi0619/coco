@@ -9,6 +9,7 @@
 
 #include "benchmark/tpcc/Database.h"
 #include "benchmark/tpcc/Query.h"
+#include "common/Time.h"
 #include "core/Transaction.h"
 
 namespace scar {
@@ -87,7 +88,7 @@ public:
     order::key order_key(W_ID, D_ID, D_NEXT_O_ID);
     order::value order_value;
 
-    order_value.O_ENTRY_D = 0; // system_clock();
+    order_value.O_ENTRY_D = Time::now();
     order_value.O_CARRIER_ID = 0;
     order_value.O_OL_CNT = query.O_OL_CNT;
     order_value.O_C_ID = query.C_ID;
@@ -340,7 +341,7 @@ public:
                            district_value.D_NAME.c_str());
     H_DATA[written] = 0;
 
-    history::key h_key(W_ID, D_ID, C_W_ID, C_D_ID, C_ID, 0 /*system_clock()*/);
+    history::key h_key(W_ID, D_ID, C_W_ID, C_D_ID, C_ID, Time::now());
     history::value h_value;
     h_value.H_AMOUNT = H_AMOUNT;
     h_value.H_DATA.assign(H_DATA);
