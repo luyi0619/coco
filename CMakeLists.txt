@@ -6,8 +6,20 @@ project(scar)
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake" ${CMAKE_MODULE_PATH})
 
 find_library(jemalloc_lib jemalloc) # jemalloc 5.0
-#find_package(glog REQUIRED)
-#find_package(gflags REQUIRED)
+
+# additional target to perform clang-format run, requires clang-format
+
+# get all project files
+file(GLOB_RECURSE ALL_SOURCE_FILES benchmark/*.h common/*.h core/*.h protocol/*.h test/*.cpp main.cpp)
+
+add_custom_target(
+        format
+        COMMAND clang-format
+        -style=LLVM
+        -i
+        ${ALL_SOURCE_FILES}
+)
+
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -Wall -Wno-long-long -Wno-unused-variable -Wno-variadic-macros -pedantic -O2")
 set(CMAKE_CXX_STANDARD 14)
