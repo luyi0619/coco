@@ -4,6 +4,7 @@
 
 #include <gtest/gtest.h>
 #include "benchmark/ycsb/Database.h"
+#include "benchmark/ycsb/Schema.h"
 #include "protocol/Silo.h"
 
 TEST(TestYCSBDatabase, TestBasic) {
@@ -13,7 +14,7 @@ TEST(TestYCSBDatabase, TestBasic) {
     context.keysPerPartition = 20;
     context.keysPerTransaction = 10;
 
-    scar::ycsb::Database<Silo> db;
+    scar::ycsb::Database<scar::Silo> db;
     db.initialize(context, 4, 4);
     EXPECT_EQ(true, true);
 }

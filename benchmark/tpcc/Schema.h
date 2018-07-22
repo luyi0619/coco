@@ -13,7 +13,7 @@
 // table definition for ycsb
 namespace scar {
     namespace tpcc {
-        constexpr auto __BASE_COUNTER__ = __COUNTER__ + 1;
+        static constexpr std::size_t __BASE_COUNTER__ = __COUNTER__ + 1;
     }
 }
 

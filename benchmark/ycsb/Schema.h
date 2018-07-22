@@ -11,8 +11,8 @@
 
 namespace scar {
     namespace ycsb {
-        constexpr auto __BASE_COUNTER__ = __COUNTER__ + 1;
-        constexpr auto YCSB_FIELD_SIZE = 10;
+        static constexpr auto __BASE_COUNTER__ = __COUNTER__ + 1;
+        static constexpr auto YCSB_FIELD_SIZE = 10;
     }
 }
 

@@ -89,9 +89,7 @@ struct name { \
       NFIELDS \
     }; \
   }; \
-  static constexpr int tableID(){ \
-    return __COUNTER__ - __BASE_COUNTER__; \
-  } \
+  static constexpr std::size_t tableID = __COUNTER__ - __BASE_COUNTER__; \
 }; \
 namespacefields(NAMESPACE_CLOSE) \
 namespace std { \

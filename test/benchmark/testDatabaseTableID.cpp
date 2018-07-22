@@ -8,17 +8,28 @@
 
 TEST(TestDatabaseTableID, TestBasic) {
     scar::tpcc::warehouse w;
-    EXPECT_EQ(scar::tpcc::warehouse::tableID(), 0);
-    EXPECT_EQ(scar::tpcc::district::tableID(), 1);
-    EXPECT_EQ(scar::tpcc::customer::tableID(), 2);
-    EXPECT_EQ(scar::tpcc::customer_name_idx::tableID(), 3);
-    EXPECT_EQ(scar::tpcc::history::tableID(), 4);
-    EXPECT_EQ(scar::tpcc::new_order::tableID(), 5);
-    EXPECT_EQ(scar::tpcc::order::tableID(), 6);
-    EXPECT_EQ(scar::tpcc::order_line::tableID(), 7);
-    EXPECT_EQ(scar::tpcc::item::tableID(), 8);
-    EXPECT_EQ(scar::tpcc::stock::tableID(), 9);
+    auto warehouseTableID = scar::tpcc::warehouse::tableID;
+    EXPECT_EQ(warehouseTableID, 0);
+    auto districtTableID = scar::tpcc::district::tableID;
+    EXPECT_EQ(districtTableID, 1);
+    auto customerTableID = scar::tpcc::customer::tableID;
+    EXPECT_EQ(customerTableID, 2);
+    auto customerNameIdxTableID = scar::tpcc::customer_name_idx::tableID;
+    EXPECT_EQ(customerNameIdxTableID, 3);
+    auto historyTableID = scar::tpcc::history::tableID;
+    EXPECT_EQ(historyTableID, 4);
+    auto newOrderTableID = scar::tpcc::new_order::tableID;
+    EXPECT_EQ(newOrderTableID, 5);
+    auto orderTableID = scar::tpcc::order::tableID;
+    EXPECT_EQ(orderTableID, 6);
+    auto orderLineTableID = scar::tpcc::order_line::tableID;
+    EXPECT_EQ(orderLineTableID, 7);
+    auto itemTableID = scar::tpcc::item::tableID;
+    EXPECT_EQ(itemTableID, 8);
+    auto stockTableID = scar::tpcc::stock::tableID;
+    EXPECT_EQ(stockTableID, 9);
 
-    EXPECT_EQ(scar::ycsb::ycsb::tableID(), 0);
+    auto ycsbTableID = scar::ycsb::ycsb::tableID;
+    EXPECT_EQ(ycsbTableID, 0);
 
 }

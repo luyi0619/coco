@@ -50,8 +50,8 @@ namespace scar {
             void initialize(const Context &context, std::size_t partitionNum, std::size_t threadsNum) {
 
                 for (auto partitionID = 0; partitionID < partitionNum; partitionID++) {
-                    tbl_ycsb_vec.push_back(std::make_unique<Table<1000007, ycsb::key, ycsb::value, Protocol>>(
-                            ycsb::tableID()));
+                    auto ycsbTableID = ycsb::tableID;
+                    tbl_ycsb_vec.push_back(std::make_unique<Table<1000007, ycsb::key, ycsb::value, Protocol>>(ycsbTableID));
                 }
 
                 // there is 1 table in ycsb

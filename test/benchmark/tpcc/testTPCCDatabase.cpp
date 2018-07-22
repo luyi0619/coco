@@ -8,7 +8,7 @@
 
 TEST(TestTPCCDatabase, TestBasic) {
 
-    scar::tpcc::Database<Silo> db;
+    scar::tpcc::Database<scar::Silo> db;
     db.initialize(4, 4);
     EXPECT_EQ(true, true);
 }

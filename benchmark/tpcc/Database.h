@@ -100,33 +100,42 @@ namespace scar {
             void initialize(std::size_t partitionNum, std::size_t threadsNum) {
 
                 for (auto partitionID = 0; partitionID < partitionNum; partitionID++) {
+                    auto warehouseTableID = warehouse::tableID;
                     tbl_warehouse_vec.push_back(std::make_unique<Table<1, warehouse::key, warehouse::value, Protocol>>(
-                            warehouse::tableID()));
+                            warehouseTableID));
+                    auto districtTableID = district::tableID;
                     tbl_district_vec.push_back(
-                            std::make_unique<Table<11, district::key, district::value, Protocol>>(district::tableID()));
+                            std::make_unique<Table<11, district::key, district::value, Protocol>>(districtTableID));
+                    auto customerTableID = customer::tableID;
                     tbl_customer_vec.push_back(
                             std::make_unique<Table<100007, customer::key, customer::value, Protocol>>(
-                                    customer::tableID()));
+                                    customerTableID));
+                    auto customerNameIdxTableID = customer_name_idx::tableID;
                     tbl_customer_name_idx_vec.push_back(
                             std::make_unique<Table<100007, customer_name_idx::key, customer_name_idx::value, Protocol>>(
-                                    customer_name_idx::tableID()));
+                                    customerNameIdxTableID));
+                    auto historyTableID = history::tableID;
                     tbl_history_vec.push_back(
                             std::make_unique<Table<1000007, history::key, history::value, Protocol>>(
-                                    history::tableID()));
+                                    historyTableID));
+                    auto newOrderTableID = new_order::tableID;
                     tbl_new_order_vec.push_back(
                             std::make_unique<Table<1000007, new_order::key, new_order::value, Protocol>>(
-                                    new_order::tableID()));
+                                    newOrderTableID));
+                    auto orderTableID = order::tableID;
                     tbl_order_vec.push_back(
-                            std::make_unique<Table<1000007, order::key, order::value, Protocol>>(order::tableID()));
+                            std::make_unique<Table<1000007, order::key, order::value, Protocol>>(orderTableID));
+                    auto orderLineTableID = order_line::tableID;
                     tbl_order_line_vec.push_back(
                             std::make_unique<Table<10000007, order_line::key, order_line::value, Protocol>>(
-                                    order_line::tableID()));
+                                    orderLineTableID));
+                    auto stockTableID = stock::tableID;
                     tbl_stock_vec.push_back(
-                            std::make_unique<Table<100007, stock::key, stock::value, Protocol>>(stock::tableID()));
+                            std::make_unique<Table<100007, stock::key, stock::value, Protocol>>(stockTableID));
                 }
-
+                auto itemTableID = item::tableID;
                 tbl_item_vec.push_back(
-                        std::make_unique<Table<100007, item::key, item::value, Protocol>>(item::tableID()));
+                        std::make_unique<Table<100007, item::key, item::value, Protocol>>(itemTableID));
 
                 // there are 10 tables in tpcc
                 tbl_vecs.resize(10);
@@ -287,7 +296,7 @@ namespace scar {
                 // For each row in the WAREHOUSE table, 10 rows in the DISTRICT table
                 // For each row in the DISTRICT table, 3,000 rows in the CUSTOMER table
 
-                ITable *customer_table = find_table(customer::tableID(), partitionID);
+                ITable *customer_table = find_table(customer::tableID, partitionID);
 
                 std::unordered_map<FixedString<16>, std::vector<std::pair<FixedString<16>, int32_t>>> last_name_to_first_names_and_c_ids;
 
@@ -430,7 +439,7 @@ namespace scar {
                 // For each row in the DISTRICT table, 3,000 rows in the ORDER table
                 // For each row in the ORDER table, O_OL_CNT rows in the ORDER_LINE table
 
-                ITable *order_table = find_table(order::tableID(), partitionID);
+                ITable *order_table = find_table(order::tableID, partitionID);
 
                 for (int i = 1; i <= 10; i++) {
 
