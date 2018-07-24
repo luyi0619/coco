@@ -21,8 +21,9 @@ public:
   using RandomType = typename Database::RandomType;
   using DataType = typename ProtocolType::DataType;
 
-  Transaction(Database &db, ContextType &context, RandomType &random)
-      : db(db), context(context), random(random) {}
+  Transaction(Database &db, ContextType &context, RandomType &random,
+              ProtocolType &protocol)
+      : db(db), context(context), random(random), protocol(protocol) {}
 
   virtual TransactionResult execute() = 0;
 
@@ -32,7 +33,7 @@ public:
     ITable *table = db.find_table(table_id, partition_id);
     std::tuple<DataType, ValueType> *row =
         static_cast<std::tuple<DataType, ValueType> *>(table->search(&key));
-    ProtocolType::read(*row, value);
+    protocol.read(*row, value);
   }
 
   template <class KeyType, class ValueType>
@@ -41,7 +42,7 @@ public:
     ITable *table = db.find_table(table_id, partition_id);
     std::tuple<DataType, ValueType> *row =
         static_cast<std::tuple<DataType, ValueType> *>(table->search(&key));
-    ProtocolType::update(*row, value);
+    protocol.update(*row, value);
   }
 
   std::size_t add_to_read_set(const RWKeyType &key) {
@@ -58,6 +59,7 @@ protected:
   Database &db;
   ContextType &context;
   RandomType &random;
+  ProtocolType &protocol;
   std::vector<RWKeyType> readSet, writeSet;
 };
 

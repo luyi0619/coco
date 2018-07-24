@@ -24,8 +24,9 @@ public:
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
 
-  NewOrder(DatabaseType &db, ContextType &context, RandomType &random)
-      : Transaction<DatabaseType>(db, context, random) {}
+  NewOrder(DatabaseType &db, ContextType &context, RandomType &random,
+           ProtocolType &protocol)
+      : Transaction<DatabaseType>(db, context, random, protocol) {}
 
   TransactionResult execute() override {
 
@@ -226,8 +227,9 @@ public:
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
 
-  Payment(DatabaseType &db, ContextType &context, RandomType &random)
-      : Transaction<DatabaseType>(db, context, random) {}
+  Payment(DatabaseType &db, ContextType &context, RandomType &random,
+          ProtocolType &protocol)
+      : Transaction<DatabaseType>(db, context, random, protocol) {}
 
   TransactionResult execute() override {
 

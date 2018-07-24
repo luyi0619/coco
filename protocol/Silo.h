@@ -7,6 +7,7 @@
 
 #include <atomic>
 #include <glog/logging.h>
+#include <thread>
 
 namespace scar {
 
@@ -63,11 +64,10 @@ public:
   void *get_sort_key() const { return sort_key; }
 
 private:
-  /*
-   *   A bitvec is a 64-bit word. 16 bits for status bits. 16 bits for table id.
+  /*   A bitvec is a 64-bit word. 16 bits for status bits. 16 bits for table id.
    * 32 bits for partition id. [ lock bit | unused bit (15) | table id (16) |
-   * partition id (32) ] [     0    |    1 ... 15     |  16 ...  31   |      32
-   * ... 63    ]
+   * partition id (32) ] [     0    |    1 ... 15     |  16 ...  31   | 32... 63
+   * ]
    */
 
   uint64_t bitvec = 0;
@@ -87,8 +87,10 @@ public:
   using DataType = std::atomic<uint64_t>;
   using RWKeyType = SiloRWKey;
 
+  Silo(std::atomic<uint64_t> &epoch) : epoch(epoch) {}
+
   template <class ValueType>
-  static void read(std::tuple<DataType, ValueType> &row, ValueType &result) {
+  void read(std::tuple<DataType, ValueType> &row, ValueType &result) {
     DataType &tid = std::get<0>(row);
     ValueType &value = std::get<1>(row);
     uint64_t tid_;
@@ -101,7 +103,7 @@ public:
   }
 
   template <class DataType, class ValueType>
-  static void update(std::tuple<DataType, ValueType> &row, const ValueType &v) {
+  void update(std::tuple<DataType, ValueType> &row, const ValueType &v) {
     DataType &tid = std::get<0>(row);
     ValueType &value = std::get<1>(row);
     uint64_t tid_ = tid.load();
@@ -109,10 +111,15 @@ public:
     value = v;
   }
 
-private:
-  static bool isLocked(uint64_t value) { return value & LOCK_BIT_MASK; }
+  bool commit(std::vector<SiloRWKey> &readSet,
+              std::vector<SiloRWKey> &writeSet) {
+    return true;
+  }
 
-  static uint64_t lock(std::atomic<uint64_t> &a) {
+private:
+  bool isLocked(uint64_t value) { return value & LOCK_BIT_MASK; }
+
+  uint64_t lock(std::atomic<uint64_t> &a) {
     uint64_t oldValue, newValue;
     do {
       do {
@@ -124,7 +131,7 @@ private:
     return oldValue;
   }
 
-  static uint64_t lock(std::atomic<uint64_t> &a, bool &success) {
+  uint64_t lock(std::atomic<uint64_t> &a, bool &success) {
     uint64_t oldValue = a.load();
 
     if (isLocked(oldValue)) {
@@ -136,6 +143,16 @@ private:
     return oldValue;
   }
 
+  void unlock(std::atomic<uint64_t> &a, uint64_t newValue) {
+    uint64_t oldValue = a.load();
+    CHECK(isLocked(oldValue));
+    CHECK(isLocked(newValue) == false);
+    bool ok = a.compare_exchange_strong(oldValue, newValue);
+    CHECK(ok);
+  }
+
+  std::atomic<uint64_t> &epoch;
+  uint64_t maxTID = 0;
   static constexpr uint64_t LOCK_BIT_MASK = 0x1ull << 63;
 };
 

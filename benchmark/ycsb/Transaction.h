@@ -23,8 +23,9 @@ public:
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
 
-  ReadModifyWrite(DatabaseType &db, ContextType &context, RandomType &random)
-      : Transaction<DatabaseType>(db, context, random) {}
+  ReadModifyWrite(DatabaseType &db, ContextType &context, RandomType &random,
+                  ProtocolType &protocol)
+      : Transaction<DatabaseType>(db, context, random, protocol) {}
 
   TransactionResult execute() override {
     ContextType &context = this->context;

@@ -13,7 +13,9 @@ TEST(TestTPCCTransaction, TestBasic) {
   scar::tpcc::Context context;
   scar::tpcc::Random random;
 
-  scar::tpcc::NewOrder<scar::Silo> t1(db, context, random);
-  scar::tpcc::Payment<scar::Silo> t2(db, context, random);
+  std::atomic<uint64_t> epoch;
+  scar::Silo silo(epoch);
+  scar::tpcc::NewOrder<scar::Silo> t1(db, context, random, silo);
+  scar::tpcc::Payment<scar::Silo> t2(db, context, random, silo);
   EXPECT_EQ(true, true);
 }
