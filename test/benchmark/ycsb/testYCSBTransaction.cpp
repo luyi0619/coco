@@ -16,6 +16,7 @@ TEST(TestYCSBTransaction, TestBasic) {
   std::atomic<uint64_t> epoch;
   scar::Silo silo(epoch);
 
-  scar::ycsb::ReadModifyWrite<scar::Silo> t(db, context, random, silo);
+  scar::ycsb::ReadModifyWrite<scar::ycsb::Database<scar::Silo>> t(db, context,
+                                                                  random, silo);
   EXPECT_EQ(true, true);
 }

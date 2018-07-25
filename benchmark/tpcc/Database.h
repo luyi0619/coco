@@ -18,6 +18,7 @@
 
 namespace scar {
 namespace tpcc {
+
 template <class Protocol> class Database {
 public:
   using ProtocolType = Protocol;
@@ -103,7 +104,8 @@ public:
                << " milliseconds.";
   }
 
-  void initialize(std::size_t partitionNum, std::size_t threadsNum) {
+  void initialize(const Context &context, std::size_t partitionNum,
+                  std::size_t threadsNum) {
 
     for (auto partitionID = 0; partitionID < partitionNum; partitionID++) {
       auto warehouseTableID = warehouse::tableID;

@@ -8,7 +8,9 @@
 
 TEST(TestTPCCDatabase, TestBasic) {
 
+  scar::tpcc::Context context;
+
   scar::tpcc::Database<scar::Silo> db;
-  db.initialize(4, 4);
+  db.initialize(context, 4, 4);
   EXPECT_EQ(true, true);
 }

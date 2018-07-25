@@ -7,7 +7,6 @@
 
 #include "glog/logging.h"
 
-#include "benchmark/tpcc/Database.h"
 #include "benchmark/tpcc/Query.h"
 #include "common/Time.h"
 #include "core/Transaction.h"
@@ -15,10 +14,9 @@
 namespace scar {
 namespace tpcc {
 
-template <class Protocol>
-class NewOrder : public Transaction<Database<Protocol>> {
+template <class Database> class NewOrder : public Transaction<Database> {
 public:
-  using DatabaseType = Database<Protocol>;
+  using DatabaseType = Database;
   using ProtocolType = typename DatabaseType::ProtocolType;
   using RWKeyType = typename ProtocolType::RWKeyType;
   using ContextType = typename DatabaseType::ContextType;
@@ -27,6 +25,8 @@ public:
   NewOrder(DatabaseType &db, ContextType &context, RandomType &random,
            ProtocolType &protocol)
       : Transaction<DatabaseType>(db, context, random, protocol) {}
+
+  virtual ~NewOrder() override = default;
 
   TransactionResult execute() override {
 
@@ -218,10 +218,9 @@ public:
   }
 };
 
-template <class Protocol>
-class Payment : public Transaction<Database<Protocol>> {
+template <class Database> class Payment : public Transaction<Database> {
 public:
-  using DatabaseType = Database<Protocol>;
+  using DatabaseType = Database;
   using ProtocolType = typename DatabaseType::ProtocolType;
   using RWKeyType = typename ProtocolType::RWKeyType;
   using ContextType = typename DatabaseType::ContextType;
@@ -230,6 +229,8 @@ public:
   Payment(DatabaseType &db, ContextType &context, RandomType &random,
           ProtocolType &protocol)
       : Transaction<DatabaseType>(db, context, random, protocol) {}
+
+  virtual ~Payment() override = default;
 
   TransactionResult execute() override {
 
@@ -346,7 +347,7 @@ public:
     history::key h_key(W_ID, D_ID, C_W_ID, C_D_ID, C_ID, Time::now());
     history::value h_value;
     h_value.H_AMOUNT = H_AMOUNT;
-    h_value.H_DATA.assign(H_DATA);
+    h_value.H_DATA.assign(H_DATA, written);
 
     return TransactionResult::COMMIT;
   }

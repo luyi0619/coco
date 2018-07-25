@@ -7,17 +7,15 @@
 
 #include "glog/logging.h"
 
-#include "benchmark/ycsb/Database.h"
 #include "benchmark/ycsb/Query.h"
 #include "core/Transaction.h"
 
 namespace scar {
 namespace ycsb {
 
-template <class Protocol>
-class ReadModifyWrite : public Transaction<Database<Protocol>> {
+template <class Database> class ReadModifyWrite : public Transaction<Database> {
 public:
-  using DatabaseType = Database<Protocol>;
+  using DatabaseType = Database;
   using ProtocolType = typename DatabaseType::ProtocolType;
   using RWKeyType = typename ProtocolType::RWKeyType;
   using ContextType = typename DatabaseType::ContextType;
@@ -27,10 +25,11 @@ public:
                   ProtocolType &protocol)
       : Transaction<DatabaseType>(db, context, random, protocol) {}
 
+  virtual ~ReadModifyWrite() override = default;
+
   TransactionResult execute() override {
     ContextType &context = this->context;
     RandomType &random = this->random;
-
     auto partitionID = random.uniform_dist(0, context.partitionNum - 1);
     YCSBQuery<YCSB_FIELD_SIZE> query =
         makeYCSBQuery<YCSB_FIELD_SIZE>()(context, partitionID, random);

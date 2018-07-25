@@ -25,6 +25,8 @@ public:
               ProtocolType &protocol)
       : db(db), context(context), random(random), protocol(protocol) {}
 
+  virtual ~Transaction() = default;
+
   virtual TransactionResult execute() = 0;
 
   template <class KeyType, class ValueType>
@@ -42,7 +44,6 @@ public:
     ITable *table = db.find_table(table_id, partition_id);
     std::tuple<DataType, ValueType> *row =
         static_cast<std::tuple<DataType, ValueType> *>(table->search(&key));
-    protocol.update(*row, value);
   }
 
   std::size_t add_to_read_set(const RWKeyType &key) {
