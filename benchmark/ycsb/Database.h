@@ -17,9 +17,9 @@
 
 namespace scar {
 namespace ycsb {
-template <class Protocol> class Database {
+template <class DataT> class Database {
 public:
-  using ProtocolType = Protocol;
+  using DataType = DataT;
   using ContextType = Context;
   using RandomType = Random;
 
@@ -58,7 +58,7 @@ public:
     for (auto partitionID = 0; partitionID < partitionNum; partitionID++) {
       auto ycsbTableID = ycsb::tableID;
       tbl_ycsb_vec.push_back(
-          std::make_unique<Table<1000007, ycsb::key, ycsb::value, Protocol>>(
+          std::make_unique<Table<1000007, ycsb::key, ycsb::value, DataType>>(
               ycsbTableID));
     }
 

@@ -19,10 +19,10 @@ public:
   virtual std::size_t valueNBytes() = 0;
 };
 
-template <std::size_t N, class KeyType, class ValueType, class Protocol>
+template <std::size_t N, class KeyType, class ValueType, class DataT>
 class Table : public ITable {
 public:
-  using DataType = typename Protocol::DataType;
+  using DataType = DataT;
 
   Table(std::size_t tableID) : tableID_(tableID) {}
 

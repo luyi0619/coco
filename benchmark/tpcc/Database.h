@@ -19,9 +19,9 @@
 namespace scar {
 namespace tpcc {
 
-template <class Protocol> class Database {
+template <class DataT> class Database {
 public:
-  using ProtocolType = Protocol;
+  using DataType = DataT;
   using ContextType = Context;
   using RandomType = Random;
 
@@ -111,49 +111,49 @@ public:
       auto warehouseTableID = warehouse::tableID;
       tbl_warehouse_vec.push_back(
           std::make_unique<
-              Table<1, warehouse::key, warehouse::value, Protocol>>(
+              Table<1, warehouse::key, warehouse::value, DataType>>(
               warehouseTableID));
       auto districtTableID = district::tableID;
       tbl_district_vec.push_back(
-          std::make_unique<Table<11, district::key, district::value, Protocol>>(
+          std::make_unique<Table<11, district::key, district::value, DataType>>(
               districtTableID));
       auto customerTableID = customer::tableID;
       tbl_customer_vec.push_back(
           std::make_unique<
-              Table<100007, customer::key, customer::value, Protocol>>(
+              Table<100007, customer::key, customer::value, DataType>>(
               customerTableID));
       auto customerNameIdxTableID = customer_name_idx::tableID;
       tbl_customer_name_idx_vec.push_back(
           std::make_unique<Table<100007, customer_name_idx::key,
-                                 customer_name_idx::value, Protocol>>(
+                                 customer_name_idx::value, DataType>>(
               customerNameIdxTableID));
       auto historyTableID = history::tableID;
       tbl_history_vec.push_back(
           std::make_unique<
-              Table<1000007, history::key, history::value, Protocol>>(
+              Table<1000007, history::key, history::value, DataType>>(
               historyTableID));
       auto newOrderTableID = new_order::tableID;
       tbl_new_order_vec.push_back(
           std::make_unique<
-              Table<1000007, new_order::key, new_order::value, Protocol>>(
+              Table<1000007, new_order::key, new_order::value, DataType>>(
               newOrderTableID));
       auto orderTableID = order::tableID;
       tbl_order_vec.push_back(
-          std::make_unique<Table<1000007, order::key, order::value, Protocol>>(
+          std::make_unique<Table<1000007, order::key, order::value, DataType>>(
               orderTableID));
       auto orderLineTableID = order_line::tableID;
       tbl_order_line_vec.push_back(
           std::make_unique<
-              Table<10000007, order_line::key, order_line::value, Protocol>>(
+              Table<10000007, order_line::key, order_line::value, DataType>>(
               orderLineTableID));
       auto stockTableID = stock::tableID;
       tbl_stock_vec.push_back(
-          std::make_unique<Table<100007, stock::key, stock::value, Protocol>>(
+          std::make_unique<Table<100007, stock::key, stock::value, DataType>>(
               stockTableID));
     }
     auto itemTableID = item::tableID;
     tbl_item_vec.push_back(
-        std::make_unique<Table<100007, item::key, item::value, Protocol>>(
+        std::make_unique<Table<100007, item::key, item::value, DataType>>(
             itemTableID));
 
     // there are 10 tables in tpcc
@@ -339,7 +339,7 @@ private:
 
         // no concurrent write, it is ok to read without validation on
         // Protocol::DataType
-        std::tuple<typename Protocol::DataType, customer::value> *customer_row =
+        std::tuple<DataType, customer::value> *customer_row =
             static_cast<decltype(customer_row)>(
                 customer_table->search(&customer_key));
 
@@ -480,7 +480,7 @@ private:
 
         // no concurrent write, it is ok to read without validation on
         // Protocol::DataType
-        std::tuple<typename Protocol::DataType, order::value> *order_row =
+        std::tuple<DataType, order::value> *order_row =
             static_cast<decltype(order_row)>(order_table->search(&order_key));
         const order::value &order_value = std::get<1>(*order_row);
 

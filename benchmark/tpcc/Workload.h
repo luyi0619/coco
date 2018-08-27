@@ -5,6 +5,9 @@
 #ifndef SCAR_TPCC_WORKLOAD_H
 #define SCAR_TPCC_WORKLOAD_H
 
+#include "core/Transaction.h"
+
+#include "benchmark/tpcc/Database.h"
 #include "benchmark/tpcc/Random.h"
 #include "benchmark/tpcc/Transaction.h"
 
@@ -12,13 +15,13 @@ namespace scar {
 
 namespace tpcc {
 
-template <class Database> class Workload {
+template <class Protocol> class Workload {
 public:
-  using DatabaseType = Database;
-  using ContextType = typename Database::ContextType;
-  using RandomType = typename Database::RandomType;
-  using ProtocolType = typename Database::ProtocolType;
-  using TransactionType = Transaction<Database>;
+  using ProtocolType = Protocol;
+  using DatabaseType = Database<typename ProtocolType::DataType>;
+  using ContextType = typename DatabaseType::ContextType;
+  using RandomType = typename DatabaseType::RandomType;
+  using TransactionType = Transaction<ProtocolType>;
 
   Workload(DatabaseType &db, ContextType &context, RandomType &random,
            ProtocolType &protocol)
@@ -31,10 +34,10 @@ public:
     std::unique_ptr<TransactionType> p;
 
     if (x <= 50) {
-      p = std::make_unique<NewOrder<DatabaseType>>(db, context, random,
+      p = std::make_unique<NewOrder<ProtocolType>>(db, context, random,
                                                    protocol);
     } else {
-      p = std::make_unique<Payment<DatabaseType>>(db, context, random,
+      p = std::make_unique<Payment<ProtocolType>>(db, context, random,
                                                   protocol);
     }
 

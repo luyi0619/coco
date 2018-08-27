@@ -14,17 +14,21 @@
 namespace scar {
 namespace tpcc {
 
-template <class Database> class NewOrder : public Transaction<Database> {
+template <class Protocol> class NewOrder : public Transaction<Protocol> {
 public:
-  using DatabaseType = Database;
-  using ProtocolType = typename DatabaseType::ProtocolType;
-  using RWKeyType = typename ProtocolType::RWKeyType;
+  using ProtocolType = Protocol;
+  using RWKeyType = typename Protocol::RWKeyType;
+  using DatabaseType = typename Protocol::DatabaseType;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
+  using DataType = typename DatabaseType::DataType;
+
+  static_assert(std::is_same<DataType, typename Protocol::DataType>::value,
+                "The database datatype is different from the one in protocol.");
 
   NewOrder(DatabaseType &db, ContextType &context, RandomType &random,
            ProtocolType &protocol)
-      : Transaction<DatabaseType>(db, context, random, protocol) {}
+      : Transaction<ProtocolType>(db, context, random, protocol) {}
 
   virtual ~NewOrder() override = default;
 
@@ -214,21 +218,25 @@ public:
       total_amount += OL_AMOUNT * (1 - C_DISCOUNT) * (1 + W_TAX + D_TAX);
     }
 
-    return TransactionResult::COMMIT;
+    return this->commit();
   }
 };
 
-template <class Database> class Payment : public Transaction<Database> {
+template <class Protocol> class Payment : public Transaction<Protocol> {
 public:
-  using DatabaseType = Database;
-  using ProtocolType = typename DatabaseType::ProtocolType;
-  using RWKeyType = typename ProtocolType::RWKeyType;
+  using ProtocolType = Protocol;
+  using RWKeyType = typename Protocol::RWKeyType;
+  using DatabaseType = typename Protocol::DatabaseType;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
+  using DataType = typename DatabaseType::DataType;
+
+  static_assert(std::is_same<DataType, typename Protocol::DataType>::value,
+                "The database datatype is different from the one in protocol.");
 
   Payment(DatabaseType &db, ContextType &context, RandomType &random,
           ProtocolType &protocol)
-      : Transaction<DatabaseType>(db, context, random, protocol) {}
+      : Transaction<ProtocolType>(db, context, random, protocol) {}
 
   virtual ~Payment() override = default;
 
@@ -349,7 +357,7 @@ public:
     h_value.H_AMOUNT = H_AMOUNT;
     h_value.H_DATA.assign(H_DATA, written);
 
-    return TransactionResult::COMMIT;
+    return this->commit();
   }
 };
 

@@ -13,17 +13,21 @@
 namespace scar {
 namespace ycsb {
 
-template <class Database> class ReadModifyWrite : public Transaction<Database> {
+template <class Protocol> class ReadModifyWrite : public Transaction<Protocol> {
 public:
-  using DatabaseType = Database;
-  using ProtocolType = typename DatabaseType::ProtocolType;
-  using RWKeyType = typename ProtocolType::RWKeyType;
+  using ProtocolType = Protocol;
+  using RWKeyType = typename Protocol::RWKeyType;
+  using DatabaseType = typename Protocol::DatabaseType;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
+  using DataType = typename DatabaseType::DataType;
+
+  static_assert(std::is_same<DataType, typename Protocol::DataType>::value,
+                "The database datatype is different from the one in protocol.");
 
   ReadModifyWrite(DatabaseType &db, ContextType &context, RandomType &random,
                   ProtocolType &protocol)
-      : Transaction<DatabaseType>(db, context, random, protocol) {}
+      : Transaction<ProtocolType>(db, context, random, protocol) {}
 
   virtual ~ReadModifyWrite() override = default;
 
@@ -77,7 +81,7 @@ public:
       }
     }
 
-    return TransactionResult::COMMIT;
+    return this->commit();
   }
 };
 } // namespace ycsb

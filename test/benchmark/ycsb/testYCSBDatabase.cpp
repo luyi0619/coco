@@ -3,18 +3,17 @@
 //
 
 #include "benchmark/ycsb/Database.h"
-#include "benchmark/ycsb/Schema.h"
-#include "protocol/Silo.h"
 #include <gtest/gtest.h>
 
 TEST(TestYCSBDatabase, TestBasic) {
+  using DataT = std::atomic<uint64_t>;
 
   scar::ycsb::Context context;
   context.strategy = scar::ycsb::PartitionStrategy::ROUND_ROBIN;
   context.keysPerPartition = 20;
   context.keysPerTransaction = 10;
 
-  scar::ycsb::Database<scar::Silo> db;
+  scar::ycsb::Database<DataT> db;
   db.initialize(context, 4, 4);
   EXPECT_EQ(true, true);
 }

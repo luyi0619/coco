@@ -12,19 +12,22 @@
 
 TEST(TestWorker, TestTPCC) {
 
+  using DataT = std::atomic<uint64_t>;
+
   scar::tpcc::Context context;
   context.partitionNum = 4;
   context.workerNum = 4;
   scar::tpcc::Random random;
 
-  scar::tpcc::Database<scar::Silo> db;
+  scar::tpcc::Database<DataT> db;
   db.initialize(context, 4, 4);
 
   std::atomic<uint64_t> epoch;
   std::atomic<bool> stopFlag;
-  scar::Silo protocol(epoch);
+  scar::Silo<decltype(db)> protocol(db, epoch);
 
-  scar::tpcc::Workload<decltype(db)> workload(db, context, random, protocol);
+  scar::tpcc::Workload<decltype(protocol)> workload(db, context, random,
+                                                    protocol);
 
   scar::Worker<decltype(workload)> w(db, context, epoch, stopFlag);
   w.start();
@@ -34,19 +37,22 @@ TEST(TestWorker, TestTPCC) {
 
 TEST(TestWorker, TestYCSB) {
 
+  using DataT = std::atomic<uint64_t>;
+
   scar::ycsb::Context context;
   context.partitionNum = 4;
   context.workerNum = 4;
   scar::ycsb::Random random;
 
-  scar::ycsb::Database<scar::Silo> db;
+  scar::ycsb::Database<DataT> db;
   db.initialize(context, 4, 4);
 
   std::atomic<uint64_t> epoch;
   std::atomic<bool> stopFlag;
-  scar::Silo protocol(epoch);
+  scar::Silo<decltype(db)> protocol(db, epoch);
 
-  scar::ycsb::Workload<decltype(db)> workload(db, context, random, protocol);
+  scar::ycsb::Workload<decltype(protocol)> workload(db, context, random,
+                                                    protocol);
 
   scar::Worker<decltype(workload)> w(db, context, epoch, stopFlag);
   w.start();

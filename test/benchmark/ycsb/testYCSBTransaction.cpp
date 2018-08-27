@@ -9,14 +9,15 @@
 
 TEST(TestYCSBTransaction, TestBasic) {
 
-  scar::ycsb::Database<scar::Silo> db;
+  using DataT = std::atomic<uint64_t>;
+
+  scar::ycsb::Database<DataT> db;
   scar::ycsb::Context context;
   scar::ycsb::Random random;
 
   std::atomic<uint64_t> epoch;
-  scar::Silo silo(epoch);
+  scar::Silo<decltype(db)> silo(db, epoch);
 
-  scar::ycsb::ReadModifyWrite<scar::ycsb::Database<scar::Silo>> t(db, context,
-                                                                  random, silo);
+  scar::ycsb::ReadModifyWrite<decltype(silo)> t(db, context, random, silo);
   EXPECT_EQ(true, true);
 }

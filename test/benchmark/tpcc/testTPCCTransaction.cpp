@@ -9,15 +9,15 @@
 
 TEST(TestTPCCTransaction, TestBasic) {
 
-  scar::tpcc::Database<scar::Silo> db;
+  using DataT = std::atomic<uint64_t>;
+
+  scar::tpcc::Database<DataT> db;
   scar::tpcc::Context context;
   scar::tpcc::Random random;
 
   std::atomic<uint64_t> epoch;
-  scar::Silo silo(epoch);
-  scar::tpcc::NewOrder<scar::tpcc::Database<scar::Silo>> t1(db, context, random,
-                                                            silo);
-  scar::tpcc::Payment<scar::tpcc::Database<scar::Silo>> t2(db, context, random,
-                                                           silo);
+  scar::Silo<decltype(db)> silo(db, epoch);
+  scar::tpcc::NewOrder<decltype(silo)> t1(db, context, random, silo);
+  scar::tpcc::Payment<decltype(silo)> t2(db, context, random, silo);
   EXPECT_EQ(true, true);
 }

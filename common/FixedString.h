@@ -25,7 +25,7 @@ public:
     return hashCode;
   }
 
-  FixedString &assignStdString(const std::string str) {
+  FixedString &assignStdString(const std::string &str) {
     folly::FixedString<N>::assign(str.c_str(), str.size());
     return *this;
   }

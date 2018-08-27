@@ -5,6 +5,9 @@
 #ifndef SCAR_YCSB_WORKLOAD_H
 #define SCAR_YCSB_WORKLOAD_H
 
+#include "core/Transaction.h"
+
+#include "benchmark/ycsb/Database.h"
 #include "benchmark/ycsb/Random.h"
 #include "benchmark/ycsb/Transaction.h"
 
@@ -12,13 +15,13 @@ namespace scar {
 
 namespace ycsb {
 
-template <class Database> class Workload {
+template <class Protocol> class Workload {
 public:
-  using DatabaseType = Database;
-  using ContextType = typename Database::ContextType;
-  using RandomType = typename Database::RandomType;
-  using ProtocolType = typename Database::ProtocolType;
-  using TransactionType = Transaction<Database>;
+  using ProtocolType = Protocol;
+  using DatabaseType = Database<typename ProtocolType::DataType>;
+  using ContextType = typename DatabaseType::ContextType;
+  using RandomType = typename DatabaseType::RandomType;
+  using TransactionType = Transaction<ProtocolType>;
 
   Workload(DatabaseType &db, ContextType &context, RandomType &random,
            ProtocolType &protocol)
@@ -27,7 +30,7 @@ public:
   std::unique_ptr<TransactionType> nextTransaction() {
 
     std::unique_ptr<TransactionType> p =
-        std::make_unique<ReadModifyWrite<DatabaseType>>(db, context, random,
+        std::make_unique<ReadModifyWrite<ProtocolType>>(db, context, random,
                                                         protocol);
 
     return p;

@@ -82,12 +82,13 @@ private:
   static constexpr uint64_t __partition_id_mask = 0xffffffffull << 32;
 };
 
-class Silo {
+template <class Database> class Silo {
 public:
+  using DatabaseType = Database;
   using DataType = std::atomic<uint64_t>;
   using RWKeyType = SiloRWKey;
 
-  Silo(std::atomic<uint64_t> &epoch) : epoch(epoch) {}
+  Silo(DatabaseType &db, std::atomic<uint64_t> &epoch) : db(db), epoch(epoch) {}
 
   template <class ValueType>
   void read(std::tuple<DataType, ValueType> &row, ValueType &result) {
@@ -113,6 +114,20 @@ public:
 
   bool commit(std::vector<SiloRWKey> &readSet,
               std::vector<SiloRWKey> &writeSet) {
+
+    // lock write set
+
+    std::sort(writeSet.begin(), writeSet.end(),
+              [](const SiloRWKey &k1, const SiloRWKey &k2) {
+                return k1.get_sort_key() < k2.get_sort_key();
+              });
+
+    /*
+      for(auto& writeKey: writeSet){
+          std::atomic<uint64_t> &tid =
+      }
+*/
+
     return true;
   }
 
@@ -151,6 +166,8 @@ private:
     CHECK(ok);
   }
 
+private:
+  DatabaseType &db;
   std::atomic<uint64_t> &epoch;
   uint64_t maxTID = 0;
   static constexpr uint64_t LOCK_BIT_MASK = 0x1ull << 63;

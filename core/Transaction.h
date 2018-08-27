@@ -13,21 +13,33 @@ namespace scar {
 
 enum class TransactionResult { COMMIT, ABORT, ABORT_NORETRY };
 
-template <class Database> class Transaction {
+template <class Protocol> class Transaction {
 public:
-  using ProtocolType = typename Database::ProtocolType;
-  using RWKeyType = typename ProtocolType::RWKeyType;
-  using ContextType = typename Database::ContextType;
-  using RandomType = typename Database::RandomType;
-  using DataType = typename ProtocolType::DataType;
+  using ProtocolType = Protocol;
+  using RWKeyType = typename Protocol::RWKeyType;
+  using DatabaseType = typename Protocol::DatabaseType;
+  using ContextType = typename DatabaseType::ContextType;
+  using RandomType = typename DatabaseType::RandomType;
+  using DataType = typename DatabaseType::DataType;
 
-  Transaction(Database &db, ContextType &context, RandomType &random,
+  static_assert(std::is_same<DataType, typename Protocol::DataType>::value,
+                "The database datatype is different from the one in protocol.");
+
+  Transaction(DatabaseType &db, ContextType &context, RandomType &random,
               ProtocolType &protocol)
       : db(db), context(context), random(random), protocol(protocol) {}
 
   virtual ~Transaction() = default;
 
   virtual TransactionResult execute() = 0;
+
+  TransactionResult commit() {
+    if (protocol.commit(readSet, writeSet)) {
+      return TransactionResult::COMMIT;
+    } else {
+      return TransactionResult::ABORT;
+    }
+  }
 
   template <class KeyType, class ValueType>
   void search(std::size_t table_id, std::size_t partition_id,
@@ -57,7 +69,7 @@ public:
   }
 
 protected:
-  Database &db;
+  DatabaseType &db;
   ContextType &context;
   RandomType &random;
   ProtocolType &protocol;
