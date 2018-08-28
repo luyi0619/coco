@@ -5,8 +5,9 @@
 #pragma once
 
 #include <cstring>
-#include <folly/String.h>
 #include <string>
+
+#include "StringPiece.h"
 
 namespace scar {
 template <class T> class Serializer {
@@ -20,10 +21,10 @@ public:
 
 template <class T> class Deserializer {
 public:
-  T operator()(folly::StringPiece str, std::size_t &size) const {
+  T operator()(StringPiece str, std::size_t &size) const {
     T result;
     size = sizeof(T);
-    memcpy(&result, const_cast<char *>(&str[0]), size);
+    memcpy(&result, str.data(), size);
     return result;
   }
 };
@@ -37,10 +38,10 @@ public:
 
 template <> class Deserializer<std::string> {
 public:
-  std::string operator()(folly::StringPiece str, std::size_t &size) const {
+  std::string operator()(StringPiece str, std::size_t &size) const {
     std::string::size_type len =
         Deserializer<std::string::size_type>()(str, size);
-    str.advance(sizeof(len));
+    str.remove_prefix(sizeof(len));
     size += len;
     return std::string(str.begin(), str.begin() + len);
   }

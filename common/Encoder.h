@@ -4,19 +4,19 @@
 
 #pragma once
 
-#include "Serialization.h"
-#include <folly/String.h>
+#include <iostream>
 #include <string>
 
-#include <iostream>
+#include "Serialization.h"
+#include "StringPiece.h"
 
 namespace scar {
 class Encoder {
 public:
   template <class T> friend Encoder &operator<<(Encoder &enc, const T &rhs);
 
-  folly::StringPiece toStringPiece() {
-    return folly::StringPiece(bytes.data(), bytes.data() + bytes.size());
+  StringPiece toStringPiece() {
+    return StringPiece(bytes.data(), bytes.size());
   }
 
 private:
@@ -31,19 +31,19 @@ template <class T> Encoder &operator<<(Encoder &enc, const T &rhs) {
 
 class Decoder {
 public:
-  Decoder(folly::StringPiece bytes) : bytes(bytes) {}
+  Decoder(StringPiece bytes) : bytes(bytes) {}
 
   template <class T> friend Decoder &operator>>(Decoder &dec, T &rhs);
 
 private:
-  folly::StringPiece bytes;
+  StringPiece bytes;
 };
 
 template <class T> Decoder &operator>>(Decoder &dec, T &rhs) {
   Deserializer<T> deserializer;
   std::size_t size;
   rhs = deserializer(dec.bytes, size);
-  dec.bytes.advance(size);
+  dec.bytes.remove_prefix(size);
   return dec;
 }
 }; // namespace scar

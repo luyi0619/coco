@@ -34,6 +34,9 @@ public:
   StringPiece(const std::string &str)
       : data_(str.data()), length_(str.length()) {}
 
+  StringPiece(const StringPiece &that)
+      : data_(that.data_), length_(that.length_) {}
+
   const char *data() const { return data_; }
 
   size_type size() const { return length_; }

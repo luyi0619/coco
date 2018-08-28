@@ -4,11 +4,13 @@
 
 #pragma once
 
+#include <array>
 #include <iostream>
 #include <string>
 
 #include "Hash.h"
 #include "Serialization.h"
+#include "StringPiece.h"
 
 namespace scar {
 
@@ -108,10 +110,10 @@ public:
 
 template <std::size_t N> class Deserializer<FixedString<N>> {
 public:
-  FixedString<N> operator()(folly::StringPiece str, std::size_t &size) const {
+  FixedString<N> operator()(StringPiece str, std::size_t &size) const {
     std::string::size_type len =
         Deserializer<typename FixedString<N>::size_type>()(str, size);
-    str.advance(sizeof(len));
+    str.remove_prefix(sizeof(len));
     size += len;
     FixedString<N> result;
     result.assign(str.data(), len);
