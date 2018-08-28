@@ -6,21 +6,22 @@
 
 #include "core/Transaction.h"
 #include <atomic>
+#include <glog/logging.h>
 
 namespace scar {
 
 template <class Workload> class Worker {
 public:
   using WorkloadType = Workload;
-  using DatabaseType = typename Workload::DatabaseType;
+  using DatabaseType = typename WorkloadType::DatabaseType;
   using ProtocolType = typename WorkloadType::ProtocolType;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
 
-  Worker(DatabaseType &db, ContextType &context, std::atomic<uint64_t> &epoch,
-         std::atomic<bool> &stopFlag)
-      : db(db), context(context), stopFlag(stopFlag), protocol(db, epoch),
-        workload(db, context, random, protocol) {}
+  Worker(std::size_t id, DatabaseType &db, ContextType &context,
+         std::atomic<uint64_t> &epoch, std::atomic<bool> &stopFlag)
+      : id(id), db(db), context(context), stopFlag(stopFlag),
+        protocol(db, epoch), workload(db, context, random, protocol) {}
 
   void start() {
 
@@ -34,9 +35,12 @@ public:
         break;
       }
     }
+
+    LOG(INFO) << "Worker " << id << " exits.";
   }
 
 private:
+  std::size_t id;
   DatabaseType &db;
   ContextType &context;
   std::atomic<bool> &stopFlag;
