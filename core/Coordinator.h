@@ -21,7 +21,8 @@ public:
   Coordinator(std::size_t id, DatabaseType &db, ContextType &context)
       : id(id), db(db), context(context) {
     epoch.store(0);
-    stopFlag.store(false);
+    workerStopFlag.store(false);
+    epochStopFlag.store(false);
   }
 
   void start() {
@@ -30,7 +31,7 @@ public:
 
     for (auto i = 0u; i < context.workerNum; i++) {
       workers.push_back(std::make_unique<Worker<WorkloadType>>(
-          i, db, context, epoch, stopFlag));
+          i, db, context, epoch, workerStopFlag));
     }
 
     std::thread epochThread(&Coordinator::advanceEpoch, this);
@@ -45,11 +46,11 @@ public:
     }
 
     // run timeToRun milliseconds
-    auto timeToRun = 100;
+    auto timeToRun = 250;
     LOG(INFO) << "Coordinator starts to sleep " << timeToRun
               << " milliseconds.";
     std::this_thread::sleep_for(std::chrono::milliseconds(timeToRun));
-    stopFlag.store(true);
+    workerStopFlag.store(true);
     LOG(INFO) << "Coordinator awakes.";
 
     uint64_t totalTransaction = 0;
@@ -58,6 +59,8 @@ public:
       threads[i].join();
       totalTransaction += workers[i]->transactionId + 1;
     }
+
+    epochStopFlag.store(true);
     epochThread.join();
 
     LOG(INFO) << "Coordinator executed " << totalTransaction
@@ -73,18 +76,21 @@ private:
 
     auto sleepTime = std::chrono::milliseconds(40);
 
-    while (!stopFlag.load()) {
+    // epoch thread only exits when worker threads have exited, making epoch is larger than the epoch workers read
+
+    while (!epochStopFlag.load()) {
       std::this_thread::sleep_for(sleepTime);
       epoch.fetch_add(1);
     }
 
-    LOG(INFO) << "Coordinator epoch thread exits, last epoch = " << epoch.load() << ".";
+    LOG(INFO) << "Coordinator epoch thread exits, last epoch = " << epoch.load()
+              << ".";
   }
 
 private:
   std::size_t id;
   std::atomic<uint64_t> epoch;
-  std::atomic<bool> stopFlag;
+  std::atomic<bool> workerStopFlag, epochStopFlag;
   DatabaseType &db;
   ContextType &context;
 

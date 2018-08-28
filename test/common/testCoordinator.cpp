@@ -15,12 +15,12 @@ TEST(TestCoordinator, TestTPCC) {
   using WorkloadType = scar::tpcc::Workload<ProtocolType>;
 
   scar::tpcc::Context context;
-  context.partitionNum = 4;
-  context.workerNum = 4;
+  context.partitionNum = 2;
+  context.workerNum = 2;
   scar::tpcc::Random random;
 
   scar::tpcc::Database<MetaDataType> db;
-  db.initialize(context, 4, 4);
+  db.initialize(context, 2, 2);
 
   std::atomic<uint64_t> epoch;
   std::atomic<bool> stopFlag;

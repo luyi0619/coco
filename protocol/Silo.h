@@ -130,8 +130,8 @@ public:
     }
   }
 
-  bool commit(std::vector<SiloRWKey> &readSet,
-              std::vector<SiloRWKey> &writeSet) {
+  bool commit(std::vector<SiloRWKey> &readSet, std::vector<SiloRWKey> &writeSet,
+              uint64_t &commitEpoch) {
 
     // lock write set
     if (lockWriteSet(readSet, writeSet)) {
@@ -140,7 +140,7 @@ public:
     }
 
     // read epoch E
-    uint64_t e = epoch.load();
+    commitEpoch = epoch.load();
 
     // commit phase 2, read validation
     if (!validateReadSet(readSet, writeSet)) {
@@ -149,7 +149,7 @@ public:
     }
 
     // generate tid
-    uint64_t commit_tid = generateTid(readSet, writeSet, e);
+    uint64_t commit_tid = generateTid(readSet, writeSet, commitEpoch);
 
     for (auto &writeKey : writeSet) {
       auto table_id = writeKey.get_table_id();

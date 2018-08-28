@@ -29,15 +29,15 @@ public:
 
   Transaction(DatabaseType &db, ContextType &context, RandomType &random,
               ProtocolType &protocol)
-      : startTime(std::chrono::steady_clock::now()), db(db), context(context),
-        random(random), protocol(protocol) {}
+      : startTime(std::chrono::steady_clock::now()), commitEpoch(0), db(db),
+        context(context), random(random), protocol(protocol) {}
 
   virtual ~Transaction() = default;
 
   virtual TransactionResult execute() = 0;
 
   TransactionResult commit() {
-    if (protocol.commit(readSet, writeSet)) {
+    if (protocol.commit(readSet, writeSet, commitEpoch)) {
       return TransactionResult::COMMIT;
     } else {
       return TransactionResult::ABORT;
@@ -73,6 +73,7 @@ public:
 
 public:
   std::chrono::steady_clock::time_point startTime;
+  uint64_t commitEpoch;
 
 protected:
   DatabaseType &db;
