@@ -179,7 +179,7 @@ public:
 
       std::string last_name =
           random.rand_last_name(random.non_uniform_distribution(255, 0, 999));
-      query.C_LAST.assignStdString(last_name);
+      query.C_LAST.assign(last_name);
     } else {
       // If y > 60 a non-uniform random customer number (C_ID) is selected using
       // the NURand(1023,1,3000) function.

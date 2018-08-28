@@ -53,25 +53,25 @@ public:
         this->search(ycsbTableID, context.getPartitionID(key), ycsb_keys[i],
                      ycsb_values[i]);
 
-        ycsb_values[i].Y_F01.assignStdString(
+        ycsb_values[i].Y_F01.assign(
             random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        ycsb_values[i].Y_F02.assignStdString(
+        ycsb_values[i].Y_F02.assign(
             random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        ycsb_values[i].Y_F03.assignStdString(
+        ycsb_values[i].Y_F03.assign(
             random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        ycsb_values[i].Y_F04.assignStdString(
+        ycsb_values[i].Y_F04.assign(
             random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        ycsb_values[i].Y_F05.assignStdString(
+        ycsb_values[i].Y_F05.assign(
             random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        ycsb_values[i].Y_F06.assignStdString(
+        ycsb_values[i].Y_F06.assign(
             random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        ycsb_values[i].Y_F07.assignStdString(
+        ycsb_values[i].Y_F07.assign(
             random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        ycsb_values[i].Y_F08.assignStdString(
+        ycsb_values[i].Y_F08.assign(
             random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        ycsb_values[i].Y_F09.assignStdString(
+        ycsb_values[i].Y_F09.assign(
             random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        ycsb_values[i].Y_F10.assignStdString(
+        ycsb_values[i].Y_F10.assign(
             random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
 
         this->update(ycsbTableID, context.getPartitionID(key), ycsb_keys[i],

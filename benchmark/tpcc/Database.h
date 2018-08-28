@@ -219,12 +219,12 @@ private:
     key.W_ID = partitionID + 1; // partitionID is from 0, W_ID is from 1
 
     warehouse::value value;
-    value.W_NAME.assignStdString(random.a_string(6, 10));
-    value.W_STREET_1.assignStdString(random.a_string(10, 20));
-    value.W_STREET_2.assignStdString(random.a_string(10, 20));
-    value.W_CITY.assignStdString(random.a_string(10, 20));
-    value.W_STATE.assignStdString(random.a_string(2, 2));
-    value.W_ZIP.assignStdString(random.rand_zip());
+    value.W_NAME.assign(random.a_string(6, 10));
+    value.W_STREET_1.assign(random.a_string(10, 20));
+    value.W_STREET_2.assign(random.a_string(10, 20));
+    value.W_CITY.assign(random.a_string(10, 20));
+    value.W_STATE.assign(random.a_string(2, 2));
+    value.W_ZIP.assign(random.rand_zip());
     value.W_TAX = static_cast<float>(random.uniform_dist(0, 2000)) / 10000;
     value.W_YTD = 30000;
 
@@ -245,12 +245,12 @@ private:
       key.D_ID = i;
 
       district::value value;
-      value.D_NAME.assignStdString(random.a_string(6, 10));
-      value.D_STREET_1.assignStdString(random.a_string(10, 20));
-      value.D_STREET_2.assignStdString(random.a_string(10, 20));
-      value.D_CITY.assignStdString(random.a_string(10, 20));
-      value.D_STATE.assignStdString(random.a_string(2, 2));
-      value.D_ZIP.assignStdString(random.rand_zip());
+      value.D_NAME.assign(random.a_string(6, 10));
+      value.D_STREET_1.assign(random.a_string(10, 20));
+      value.D_STREET_2.assign(random.a_string(10, 20));
+      value.D_CITY.assign(random.a_string(10, 20));
+      value.D_STATE.assign(random.a_string(2, 2));
+      value.D_ZIP.assign(random.rand_zip());
       value.D_TAX = static_cast<float>(random.uniform_dist(0, 2000)) / 10000;
       value.D_YTD = 30000;
       value.D_NEXT_O_ID = 3001;
@@ -277,13 +277,13 @@ private:
 
         customer::value value;
         value.C_MIDDLE.assign("OE");
-        value.C_FIRST.assignStdString(random.a_string(8, 16));
-        value.C_STREET_1.assignStdString(random.a_string(10, 20));
-        value.C_STREET_2.assignStdString(random.a_string(10, 20));
-        value.C_CITY.assignStdString(random.a_string(10, 20));
-        value.C_STATE.assignStdString(random.a_string(2, 2));
-        value.C_ZIP.assignStdString(random.rand_zip());
-        value.C_PHONE.assignStdString(random.n_string(16, 16));
+        value.C_FIRST.assign(random.a_string(8, 16));
+        value.C_STREET_1.assign(random.a_string(10, 20));
+        value.C_STREET_2.assign(random.a_string(10, 20));
+        value.C_CITY.assign(random.a_string(10, 20));
+        value.C_STATE.assign(random.a_string(2, 2));
+        value.C_ZIP.assign(random.rand_zip());
+        value.C_PHONE.assign(random.n_string(16, 16));
         value.C_SINCE = Time::now();
         value.C_CREDIT_LIM = 50000;
         value.C_DISCOUNT =
@@ -292,7 +292,7 @@ private:
         value.C_YTD_PAYMENT = 10;
         value.C_PAYMENT_CNT = 1;
         value.C_DELIVERY_CNT = 1;
-        value.C_DATA.assignStdString(random.a_string(300, 500));
+        value.C_DATA.assign(random.a_string(300, 500));
 
         int last_name;
 
@@ -302,7 +302,7 @@ private:
           last_name = random.non_uniform_distribution(255, 0, 999);
         }
 
-        value.C_LAST.assignStdString(random.rand_last_name(last_name));
+        value.C_LAST.assign(random.rand_last_name(last_name));
 
         // For 10% of the rows, selected at random , C_CREDIT = "BC"
 
@@ -387,7 +387,7 @@ private:
 
         history::value value;
         value.H_AMOUNT = 10;
-        value.H_DATA.assignStdString(random.a_string(12, 24));
+        value.H_DATA.assign(random.a_string(12, 24));
 
         table->insert(&key, &value);
       }
@@ -498,7 +498,7 @@ private:
           value.OL_I_ID = random.uniform_dist(1, 100000);
           value.OL_SUPPLY_W_ID = partitionID + 1;
           value.OL_QUANTITY = 5;
-          value.OL_DIST_INFO.assignStdString(random.a_string(24, 24));
+          value.OL_DIST_INFO.assign(random.a_string(24, 24));
 
           if (key.OL_O_ID < 2101) {
             value.OL_DELIVERY_D = order_value.O_ENTRY_D;
@@ -530,7 +530,7 @@ private:
 
       item::value value;
       value.I_IM_ID = random.uniform_dist(1, 10000);
-      value.I_NAME.assignStdString(random.a_string(14, 24));
+      value.I_NAME.assign(random.a_string(14, 24));
       value.I_PRICE = random.uniform_dist(1, 100);
 
       std::string i_data = random.a_string(26, 50);
@@ -548,7 +548,7 @@ private:
         memcpy(&i_data[0] + pos, &i_original[0], i_original.length());
       }
 
-      value.I_DATA.assignStdString(i_data);
+      value.I_DATA.assign(i_data);
 
       table->insert(&key, &value);
     }
@@ -572,16 +572,16 @@ private:
       stock::value value;
 
       value.S_QUANTITY = random.uniform_dist(10, 100);
-      value.S_DIST_01.assignStdString(random.a_string(24, 24));
-      value.S_DIST_02.assignStdString(random.a_string(24, 24));
-      value.S_DIST_03.assignStdString(random.a_string(24, 24));
-      value.S_DIST_04.assignStdString(random.a_string(24, 24));
-      value.S_DIST_05.assignStdString(random.a_string(24, 24));
-      value.S_DIST_06.assignStdString(random.a_string(24, 24));
-      value.S_DIST_07.assignStdString(random.a_string(24, 24));
-      value.S_DIST_08.assignStdString(random.a_string(24, 24));
-      value.S_DIST_09.assignStdString(random.a_string(24, 24));
-      value.S_DIST_10.assignStdString(random.a_string(24, 24));
+      value.S_DIST_01.assign(random.a_string(24, 24));
+      value.S_DIST_02.assign(random.a_string(24, 24));
+      value.S_DIST_03.assign(random.a_string(24, 24));
+      value.S_DIST_04.assign(random.a_string(24, 24));
+      value.S_DIST_05.assign(random.a_string(24, 24));
+      value.S_DIST_06.assign(random.a_string(24, 24));
+      value.S_DIST_07.assign(random.a_string(24, 24));
+      value.S_DIST_08.assign(random.a_string(24, 24));
+      value.S_DIST_09.assign(random.a_string(24, 24));
+      value.S_DIST_10.assign(random.a_string(24, 24));
       value.S_YTD = 0;
       value.S_ORDER_CNT = 0;
       value.S_REMOTE_CNT = 0;
@@ -601,7 +601,7 @@ private:
         memcpy(&s_data[0] + pos, &s_original[0], s_original.length());
       }
 
-      value.S_DATA.assignStdString(s_data);
+      value.S_DATA.assign(s_data);
 
       table->insert(&key, &value);
     }

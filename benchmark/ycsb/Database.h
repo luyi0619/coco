@@ -100,26 +100,16 @@ private:
 
         ycsb::key key(i);
         ycsb::value value;
-        value.Y_F01.assignStdString(
-            random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        value.Y_F02.assignStdString(
-            random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        value.Y_F03.assignStdString(
-            random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        value.Y_F04.assignStdString(
-            random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        value.Y_F05.assignStdString(
-            random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        value.Y_F06.assignStdString(
-            random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        value.Y_F07.assignStdString(
-            random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        value.Y_F08.assignStdString(
-            random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        value.Y_F09.assignStdString(
-            random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        value.Y_F10.assignStdString(
-            random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
+        value.Y_F01.assign(random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
+        value.Y_F02.assign(random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
+        value.Y_F03.assign(random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
+        value.Y_F04.assign(random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
+        value.Y_F05.assign(random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
+        value.Y_F06.assign(random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
+        value.Y_F07.assign(random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
+        value.Y_F08.assign(random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
+        value.Y_F09.assign(random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
+        value.Y_F10.assign(random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
 
         table->insert(&key, &value);
       }
@@ -134,26 +124,16 @@ private:
 
         ycsb::key key(i);
         ycsb::value value;
-        value.Y_F01.assignStdString(
-            random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        value.Y_F02.assignStdString(
-            random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        value.Y_F03.assignStdString(
-            random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        value.Y_F04.assignStdString(
-            random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        value.Y_F05.assignStdString(
-            random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        value.Y_F06.assignStdString(
-            random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        value.Y_F07.assignStdString(
-            random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        value.Y_F08.assignStdString(
-            random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        value.Y_F09.assignStdString(
-            random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        value.Y_F10.assignStdString(
-            random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
+        value.Y_F01.assign(random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
+        value.Y_F02.assign(random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
+        value.Y_F03.assign(random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
+        value.Y_F04.assign(random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
+        value.Y_F05.assign(random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
+        value.Y_F06.assign(random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
+        value.Y_F07.assign(random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
+        value.Y_F08.assign(random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
+        value.Y_F09.assign(random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
+        value.Y_F10.assign(random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
 
         table->insert(&key, &value);
       }
