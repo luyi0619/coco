@@ -336,6 +336,7 @@ public:
            i++, k++) {
         C_DATA[k] = old_C_DATA[i];
       }
+      C_DATA[k] = 0;
 
       customer_value.C_DATA.assign(C_DATA);
     }

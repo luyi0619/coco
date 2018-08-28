@@ -4,9 +4,10 @@
 
 #pragma once
 
-#include <vector>
-
 #include "core/Table.h"
+#include <chrono>
+#include <glog/logging.h>
+#include <vector>
 
 namespace scar {
 
@@ -28,7 +29,8 @@ public:
 
   Transaction(DatabaseType &db, ContextType &context, RandomType &random,
               ProtocolType &protocol)
-      : db(db), context(context), random(random), protocol(protocol) {}
+      : startTime(std::chrono::steady_clock::now()), db(db), context(context),
+        random(random), protocol(protocol) {}
 
   virtual ~Transaction() = default;
 
@@ -68,6 +70,9 @@ public:
     writeSet.push_back(key);
     return writeSet.size() - 1;
   }
+
+public:
+  std::chrono::steady_clock::time_point startTime;
 
 protected:
   DatabaseType &db;

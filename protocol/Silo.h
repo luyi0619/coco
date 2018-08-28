@@ -65,10 +65,10 @@ public:
   void *get_sort_key() const { return sort_key; }
 
 private:
-  /*   A bitvec is a 64-bit word. 16 bits for status bits. 16 bits for table id.
-   * 32 bits for partition id. [ lock bit | unused bit (15) | table id (16) |
-   * partition id (32) ] [     0    |    1 ... 15     |  16 ...  31   | 32... 63
-   * ]
+  /*  A bitvec is a 64-bit word. 16 bits for status bits. 16 bits for table id.
+   *  32 bits for partition id.
+   *  [ lock bit | unused bit (15) | table id (16) | partition id (32) ]
+   *  [     0    |    1 ... 15     |  16 ...  31   | 32... 63         ]
    */
 
   uint64_t bitvec = 0;
@@ -299,7 +299,7 @@ private:
                        std::vector<SiloRWKey> &writeSet, uint64_t epoch) {
 
     // in the current global epoch
-    uint64_t next_tid = epoch;
+    uint64_t next_tid = epoch << SILO_EPOCH_OFFSET;
 
     /*
      *  A timestamp is a 64-bit word, 33 bits for epoch are sufficient for ~ 10
@@ -331,7 +331,7 @@ private:
 
     // generated tid must be in the same epoch
 
-    CHECK(getEpoch(next_tid) == getEpoch(epoch));
+    CHECK(getEpoch(next_tid) == epoch);
 
     return maxTID;
   }

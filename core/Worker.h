@@ -21,23 +21,32 @@ public:
   Worker(std::size_t id, DatabaseType &db, ContextType &context,
          std::atomic<uint64_t> &epoch, std::atomic<bool> &stopFlag)
       : id(id), db(db), context(context), stopFlag(stopFlag),
-        protocol(db, epoch), workload(db, context, random, protocol) {}
+        protocol(db, epoch), workload(db, context, random, protocol) {
+    transactionId.store(0);
+  }
 
   void start() {
-
-    int cnt = 0;
 
     while (!stopFlag.load()) {
       std::unique_ptr<Transaction<ProtocolType>> p = workload.nextTransaction();
       p->execute();
+      transactionId.fetch_add(1);
 
-      if (++cnt == 10) {
-        break;
-      }
+      //      auto now = std::chrono::steady_clock::now();
+      //      LOG(INFO) << "Worker " << id << " executes transaction "
+      //                << transactionId++ << " in "
+      //                <<
+      //                std::chrono::duration_cast<std::chrono::microseconds>(
+      //                       now - p->startTime)
+      //                       .count()
+      //                << " ms.";
     }
 
     LOG(INFO) << "Worker " << id << " exits.";
   }
+
+public:
+  std::atomic<uint64_t> transactionId;
 
 private:
   std::size_t id;

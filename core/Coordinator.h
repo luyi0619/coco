@@ -19,19 +19,21 @@ public:
   using RandomType = typename DatabaseType::RandomType;
 
   Coordinator(std::size_t id, DatabaseType &db, ContextType &context)
-      : id(id), db(db), context(context) {}
+      : id(id), db(db), context(context) {
+    epoch.store(0);
+    stopFlag.store(false);
+  }
 
   void start() {
 
     LOG(INFO) << "Coordinator initializes " << context.workerNum << " workers.";
 
-    std::atomic<uint64_t> epoch;
-    std::atomic<bool> stopFlag;
-
     for (auto i = 0u; i < context.workerNum; i++) {
       workers.push_back(std::make_unique<Worker<WorkloadType>>(
           i, db, context, epoch, stopFlag));
     }
+
+    std::thread epochThread(&Coordinator::advanceEpoch, this);
 
     std::vector<std::thread> threads;
 
@@ -42,15 +44,47 @@ public:
       threads.emplace_back(&Worker<WorkloadType>::start, workers[i].get());
     }
 
+    // run timeToRun milliseconds
+    auto timeToRun = 100;
+    LOG(INFO) << "Coordinator starts to sleep " << timeToRun
+              << " milliseconds.";
+    std::this_thread::sleep_for(std::chrono::milliseconds(timeToRun));
+    stopFlag.store(true);
+    LOG(INFO) << "Coordinator awakes.";
+
+    uint64_t totalTransaction = 0;
+
     for (auto i = 0u; i < context.workerNum; i++) {
       threads[i].join();
+      totalTransaction += workers[i]->transactionId + 1;
     }
+    epochThread.join();
+
+    LOG(INFO) << "Coordinator executed " << totalTransaction
+              << " transactions in " << timeToRun << " milliseconds.";
 
     LOG(INFO) << "Coordinator exits.";
   }
 
 private:
+  void advanceEpoch() {
+
+    LOG(INFO) << "Coordinator epoch thread starts.";
+
+    auto sleepTime = std::chrono::milliseconds(40);
+
+    while (!stopFlag.load()) {
+      std::this_thread::sleep_for(sleepTime);
+      epoch.fetch_add(1);
+    }
+
+    LOG(INFO) << "Coordinator epoch thread exits, last epoch = " << epoch.load() << ".";
+  }
+
+private:
   std::size_t id;
+  std::atomic<uint64_t> epoch;
+  std::atomic<bool> stopFlag;
   DatabaseType &db;
   ContextType &context;
 
