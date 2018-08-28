@@ -24,59 +24,60 @@ public:
   using MetaDataType = MetaData;
   using ContextType = Context;
   using RandomType = Random;
+  using TableType = ITable<MetaDataType>;
 
-  ITable *find_table(std::size_t table_id, std::size_t partition_id) {
+  TableType *find_table(std::size_t table_id, std::size_t partition_id) {
     CHECK(table_id < tbl_vecs.size());
     CHECK(partition_id < tbl_vecs[table_id].size());
     return tbl_vecs[table_id][partition_id];
   }
 
-  ITable *tbl_warehouse(std::size_t partition_id) {
+  TableType *tbl_warehouse(std::size_t partition_id) {
     CHECK(partition_id < tbl_warehouse_vec.size());
     return tbl_warehouse_vec[partition_id].get();
   }
 
-  ITable *tbl_district(std::size_t partition_id) {
+  TableType *tbl_district(std::size_t partition_id) {
     CHECK(partition_id < tbl_district_vec.size());
     return tbl_district_vec[partition_id].get();
   }
 
-  ITable *tbl_customer(std::size_t partition_id) {
+  TableType *tbl_customer(std::size_t partition_id) {
     CHECK(partition_id < tbl_customer_vec.size());
     return tbl_customer_vec[partition_id].get();
   }
 
-  ITable *tbl_customer_name_idx(std::size_t partition_id) {
+  TableType *tbl_customer_name_idx(std::size_t partition_id) {
     CHECK(partition_id < tbl_customer_name_idx_vec.size());
     return tbl_customer_name_idx_vec[partition_id].get();
   }
 
-  ITable *tbl_history(std::size_t partition_id) {
+  TableType *tbl_history(std::size_t partition_id) {
     CHECK(partition_id < tbl_history_vec.size());
     return tbl_history_vec[partition_id].get();
   }
 
-  ITable *tbl_new_order(std::size_t partition_id) {
+  TableType *tbl_new_order(std::size_t partition_id) {
     CHECK(partition_id < tbl_new_order_vec.size());
     return tbl_new_order_vec[partition_id].get();
   }
 
-  ITable *tbl_order(std::size_t partition_id) {
+  TableType *tbl_order(std::size_t partition_id) {
     CHECK(partition_id < tbl_order_vec.size());
     return tbl_order_vec[partition_id].get();
   }
 
-  ITable *tbl_order_line(std::size_t partition_id) {
+  TableType *tbl_order_line(std::size_t partition_id) {
     CHECK(partition_id < tbl_order_line_vec.size());
     return tbl_order_line_vec[partition_id].get();
   }
 
-  ITable *tbl_item(std::size_t partition_id) {
+  TableType *tbl_item(std::size_t partition_id) {
     CHECK(partition_id < tbl_item_vec.size());
     return tbl_item_vec[partition_id].get();
   }
 
-  ITable *tbl_stock(std::size_t partition_id) {
+  TableType *tbl_stock(std::size_t partition_id) {
     CHECK(partition_id < tbl_stock_vec.size());
     return tbl_stock_vec[partition_id].get();
   }
@@ -161,7 +162,7 @@ public:
     // there are 10 tables in tpcc
     tbl_vecs.resize(10);
 
-    auto tFunc = [](std::unique_ptr<ITable> &table) { return table.get(); };
+    auto tFunc = [](std::unique_ptr<TableType> &table) { return table.get(); };
 
     std::transform(tbl_warehouse_vec.begin(), tbl_warehouse_vec.end(),
                    std::back_inserter(tbl_vecs[0]), tFunc);
@@ -212,7 +213,7 @@ private:
   void warehouseInit(std::size_t partitionID) {
 
     Random random;
-    ITable *table = tbl_warehouse_vec[partitionID].get();
+    TableType *table = tbl_warehouse_vec[partitionID].get();
 
     warehouse::key key;
     key.W_ID = partitionID + 1; // partitionID is from 0, W_ID is from 1
@@ -233,7 +234,7 @@ private:
   void districtInit(std::size_t partitionID) {
 
     Random random;
-    ITable *table = tbl_district_vec[partitionID].get();
+    TableType *table = tbl_district_vec[partitionID].get();
 
     // For each row in the WAREHOUSE table, 10 rows in the DISTRICT table
 
@@ -261,7 +262,7 @@ private:
   void customerInit(std::size_t partitionID) {
 
     Random random;
-    ITable *table = tbl_customer_vec[partitionID].get();
+    TableType *table = tbl_customer_vec[partitionID].get();
 
     // For each row in the WAREHOUSE table, 10 rows in the DISTRICT table
     // For each row in the DISTRICT table, 3,000 rows in the CUSTOMER table
@@ -321,12 +322,12 @@ private:
   void customerNameIdxInit(std::size_t partitionID) {
 
     Random random;
-    ITable *table = tbl_customer_name_idx_vec[partitionID].get();
+    TableType *table = tbl_customer_name_idx_vec[partitionID].get();
 
     // For each row in the WAREHOUSE table, 10 rows in the DISTRICT table
     // For each row in the DISTRICT table, 3,000 rows in the CUSTOMER table
 
-    ITable *customer_table = find_table(customer::tableID, partitionID);
+    TableType *customer_table = find_table(customer::tableID, partitionID);
 
     std::unordered_map<FixedString<16>,
                        std::vector<std::pair<FixedString<16>, int32_t>>>
@@ -366,7 +367,7 @@ private:
   void historyInit(std::size_t partitionID) {
 
     Random random;
-    ITable *table = tbl_history_vec[partitionID].get();
+    TableType *table = tbl_history_vec[partitionID].get();
 
     // For each row in the WAREHOUSE table, 10 rows in the DISTRICT table
     // For each row in the DISTRICT table, 3,000 rows in the CUSTOMER table
@@ -396,7 +397,7 @@ private:
   void newOrderInit(std::size_t partitionID) {
 
     Random random;
-    ITable *table = tbl_new_order_vec[partitionID].get();
+    TableType *table = tbl_new_order_vec[partitionID].get();
 
     // For each row in the WAREHOUSE table, 10 rows in the DISTRICT table
     // For each row in the DISTRICT table, 3,000 rows in the ORDER table
@@ -421,7 +422,7 @@ private:
   void orderInit(std::size_t partitionID) {
 
     Random random;
-    ITable *table = tbl_order_vec[partitionID].get();
+    TableType *table = tbl_order_vec[partitionID].get();
 
     // For each row in the WAREHOUSE table, 10 rows in the DISTRICT table
     // For each row in the DISTRICT table, 3,000 rows in the ORDER table
@@ -463,13 +464,13 @@ private:
   void orderLineInit(std::size_t partitionID) {
 
     Random random;
-    ITable *table = tbl_order_vec[partitionID].get();
+    TableType *table = tbl_order_vec[partitionID].get();
 
     // For each row in the WAREHOUSE table, 10 rows in the DISTRICT table
     // For each row in the DISTRICT table, 3,000 rows in the ORDER table
     // For each row in the ORDER table, O_OL_CNT rows in the ORDER_LINE table
 
-    ITable *order_table = find_table(order::tableID, partitionID);
+    TableType *order_table = find_table(order::tableID, partitionID);
 
     for (int i = 1; i <= 10; i++) {
 
@@ -516,7 +517,7 @@ private:
   void itemInit(std::size_t partitionID) {
 
     Random random;
-    ITable *table = tbl_item_vec[partitionID].get();
+    TableType *table = tbl_item_vec[partitionID].get();
 
     std::string i_original = "ORIGINAL";
 
@@ -556,7 +557,7 @@ private:
   void stockInit(std::size_t partitionID) {
 
     Random random;
-    ITable *table = tbl_stock_vec[partitionID].get();
+    TableType *table = tbl_stock_vec[partitionID].get();
 
     std::string s_original = "ORIGINAL";
 
@@ -607,18 +608,18 @@ private:
   }
 
 private:
-  std::vector<std::vector<ITable *>> tbl_vecs;
+  std::vector<std::vector<TableType *>> tbl_vecs;
 
-  std::vector<std::unique_ptr<ITable>> tbl_warehouse_vec;
-  std::vector<std::unique_ptr<ITable>> tbl_district_vec;
-  std::vector<std::unique_ptr<ITable>> tbl_customer_vec;
-  std::vector<std::unique_ptr<ITable>> tbl_customer_name_idx_vec;
-  std::vector<std::unique_ptr<ITable>> tbl_history_vec;
-  std::vector<std::unique_ptr<ITable>> tbl_new_order_vec;
-  std::vector<std::unique_ptr<ITable>> tbl_order_vec;
-  std::vector<std::unique_ptr<ITable>> tbl_order_line_vec;
-  std::vector<std::unique_ptr<ITable>> tbl_item_vec;
-  std::vector<std::unique_ptr<ITable>> tbl_stock_vec;
+  std::vector<std::unique_ptr<TableType>> tbl_warehouse_vec;
+  std::vector<std::unique_ptr<TableType>> tbl_district_vec;
+  std::vector<std::unique_ptr<TableType>> tbl_customer_vec;
+  std::vector<std::unique_ptr<TableType>> tbl_customer_name_idx_vec;
+  std::vector<std::unique_ptr<TableType>> tbl_history_vec;
+  std::vector<std::unique_ptr<TableType>> tbl_new_order_vec;
+  std::vector<std::unique_ptr<TableType>> tbl_order_vec;
+  std::vector<std::unique_ptr<TableType>> tbl_order_line_vec;
+  std::vector<std::unique_ptr<TableType>> tbl_item_vec;
+  std::vector<std::unique_ptr<TableType>> tbl_stock_vec;
 };
 } // namespace tpcc
 } // namespace scar

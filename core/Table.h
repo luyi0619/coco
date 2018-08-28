@@ -8,9 +8,14 @@
 #include "common/HashMap.h"
 
 namespace scar {
-class ITable {
+
+template <class MetaData> class ITable {
 public:
+  using MetaDataType = MetaData;
+
   virtual void *search(const void *key) = 0;
+
+  virtual MetaDataType &searchMetaData(const void *key) = 0;
 
   virtual void insert(const void *key, const void *value) = 0;
 
@@ -20,7 +25,7 @@ public:
 };
 
 template <std::size_t N, class KeyType, class ValueType, class MetaData>
-class Table : public ITable {
+class Table : public ITable<MetaData> {
 public:
   using MetaDataType = MetaData;
 
@@ -29,6 +34,11 @@ public:
   void *search(const void *key) override {
     const auto &k = *static_cast<const KeyType *>(key);
     return &map_[k];
+  }
+
+  MetaDataType &searchMetaData(const void *key) override {
+    const auto &k = *static_cast<const KeyType *>(key);
+    return std::get<0>(map_[k]);
   }
 
   void insert(const void *key, const void *value) override {

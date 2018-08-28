@@ -21,6 +21,7 @@ public:
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
   using MetaDataType = typename DatabaseType::MetaDataType;
+  using TableType = ITable<MetaDataType>;
 
   static_assert(
       std::is_same<MetaDataType, typename Protocol::MetaDataType>::value,
@@ -45,7 +46,7 @@ public:
   template <class KeyType, class ValueType>
   void search(std::size_t table_id, std::size_t partition_id,
               const KeyType &key, ValueType &value) {
-    ITable *table = db.find_table(table_id, partition_id);
+    TableType *table = db.find_table(table_id, partition_id);
     std::tuple<MetaDataType, ValueType> *row =
         static_cast<std::tuple<MetaDataType, ValueType> *>(table->search(&key));
     protocol.read(*row, value);
@@ -54,7 +55,7 @@ public:
   template <class KeyType, class ValueType>
   void update(std::size_t table_id, std::size_t partition_id,
               const KeyType &key, const ValueType &value) {
-    ITable *table = db.find_table(table_id, partition_id);
+    TableType *table = db.find_table(table_id, partition_id);
     std::tuple<MetaDataType, ValueType> *row =
         static_cast<std::tuple<MetaDataType, ValueType> *>(table->search(&key));
   }
