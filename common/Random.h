@@ -2,8 +2,7 @@
 // Created by Yi Lu on 7/14/18.
 //
 
-#ifndef SCAR_RANDOM_H
-#define SCAR_RANDOM_H
+#pragma once
 
 #include <string>
 
@@ -64,5 +63,3 @@ private:
   uint64_t seed_;
 };
 } // namespace scar
-
-#endif // SCAR_RANDOM_H

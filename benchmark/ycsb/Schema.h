@@ -2,8 +2,7 @@
 // Created by Yi Lu on 7/15/18.
 //
 
-#ifndef SCAR_YCSB_SCHEMA_H
-#define SCAR_YCSB_SCHEMA_H
+#pragma once
 
 #include "common/FixedString.h"
 #include "common/Hash.h"
@@ -34,4 +33,4 @@ static constexpr auto YCSB_FIELD_SIZE = 10;
 
 DO_STRUCT(ycsb, YCSB_KEY_FIELDS, YCSB_VALUE_FIELDS, NAMESPACE_FIELDS)
 
-#endif // SCAR_YCSB_SCHEMA_H
+

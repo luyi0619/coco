@@ -2,8 +2,7 @@
 // Created by Yi Lu on 7/14/18.
 //
 
-#ifndef SCAR_TPCC_RANDOM_H
-#define SCAR_TPCC_RANDOM_H
+#pragma once
 
 #include <string>
 #include <vector>
@@ -57,5 +56,3 @@ private:
 };
 } // namespace tpcc
 } // namespace scar
-
-#endif // SCAR_TPCC_RANDOM_H

@@ -2,8 +2,7 @@
 // Created by Yi Lu on 7/14/18.
 //
 
-#ifndef SCAR_SPINLOCK_H
-#define SCAR_SPINLOCK_H
+#pragma once
 
 #include <atomic>
 #include <ostream>
@@ -33,4 +32,3 @@ private:
 };
 } // namespace scar
 
-#endif // SCAR_SPINLOCK_H

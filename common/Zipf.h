@@ -2,8 +2,7 @@
 // Created by Yi Lu on 7/19/18.
 //
 
-#ifndef SCAR_ZIPF_H
-#define SCAR_ZIPF_H
+#pragma once
 
 #include <cmath>
 #include <glog/logging.h>
@@ -66,4 +65,3 @@ private:
 };
 } // namespace scar
 
-#endif // SCAR_ZIPF_H

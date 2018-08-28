@@ -2,8 +2,7 @@
 // Created by Yi Lu on 7/13/18.
 //
 
-#ifndef SCAR_FIXEDSTRING_H
-#define SCAR_FIXEDSTRING_H
+#pragma once
 
 #include <iostream>
 #include <string>
@@ -130,4 +129,3 @@ template <std::size_t N> struct hash<scar::FixedString<N>> {
 };
 } // namespace std
 
-#endif // SCAR_FIXEDSTRING_H

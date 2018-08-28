@@ -2,8 +2,7 @@
 // Created by Yi Lu on 7/22/18.
 //
 
-#ifndef SCAR_TPCC_TRANSACTION_H
-#define SCAR_TPCC_TRANSACTION_H
+#pragma once
 
 #include "glog/logging.h"
 
@@ -366,4 +365,3 @@ public:
 } // namespace tpcc
 } // namespace scar
 
-#endif // SCAR_TPCC_TRANSACTION_H

@@ -2,8 +2,7 @@
 // Created by Yi Lu on 7/18/18.
 //
 
-#ifndef SCAR_TABLE_H
-#define SCAR_TABLE_H
+#pragma once
 
 #include "common/HashMap.h"
 
@@ -59,4 +58,3 @@ private:
 };
 } // namespace scar
 
-#endif // SCAR_TABLE_H

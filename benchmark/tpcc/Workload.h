@@ -2,8 +2,7 @@
 // Created by Yi Lu on 7/24/18.
 //
 
-#ifndef SCAR_TPCC_WORKLOAD_H
-#define SCAR_TPCC_WORKLOAD_H
+#pragma once
 
 #include "core/Transaction.h"
 
@@ -54,4 +53,4 @@ private:
 } // namespace tpcc
 } // namespace scar
 
-#endif // SCAR_TPCC_WORKLOAD_H
+

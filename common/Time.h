@@ -2,8 +2,7 @@
 // Created by Yi Lu on 7/22/18.
 //
 
-#ifndef SCAR_TIME_H
-#define SCAR_TIME_H
+#pragma once
 
 #include <chrono>
 
@@ -21,5 +20,3 @@ public:
 };
 
 } // namespace scar
-
-#endif // SCAR_TIME_H

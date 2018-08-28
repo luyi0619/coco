@@ -2,8 +2,7 @@
 // Created by Yi Lu on 7/14/18.
 //
 
-#ifndef SCAR_HASHMAP_H
-#define SCAR_HASHMAP_H
+#pragma once
 
 #include "SpinLock.h"
 #include <atomic>
@@ -116,4 +115,3 @@ private:
 
 } // namespace scar
 
-#endif // SCAR_HASHMAP_H

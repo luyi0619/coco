@@ -2,8 +2,7 @@
 // Created by Yi Lu on 7/17/18.
 //
 
-#ifndef SCAR_ENCODER_H
-#define SCAR_ENCODER_H
+#pragma once
 
 #include "Serialization.h"
 #include <folly/String.h>
@@ -48,5 +47,3 @@ template <class T> Decoder &operator>>(Decoder &dec, T &rhs) {
   return dec;
 }
 }; // namespace scar
-
-#endif // SCAR_ENCODER_H

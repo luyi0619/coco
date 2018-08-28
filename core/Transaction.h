@@ -2,8 +2,7 @@
 // Created by Yi Lu on 7/22/18.
 //
 
-#ifndef SCAR_TRANSACTION_H
-#define SCAR_TRANSACTION_H
+#pragma once
 
 #include <vector>
 
@@ -80,4 +79,3 @@ protected:
 
 } // namespace scar
 
-#endif // SCAR_TRANSACTION_H

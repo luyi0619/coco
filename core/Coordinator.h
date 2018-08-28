@@ -2,8 +2,7 @@
 // Created by Yi Lu on 7/24/18.
 //
 
-#ifndef SCAR_COORDINATOR_H
-#define SCAR_COORDINATOR_H
+#pragma once
 
 #include <vector>
 
@@ -21,4 +20,3 @@ private:
 };
 } // namespace scar
 
-#endif // SCAR_COORDINATOR_H

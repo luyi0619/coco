@@ -2,8 +2,7 @@
 // Created by Yi Lu on 7/15/18.
 //
 
-#ifndef SCAR_SCHEMADEF_H
-#define SCAR_SCHEMADEF_H
+#pragma once
 
 // macros for code generation
 
@@ -77,4 +76,4 @@
     };                                                                         \
   }
 
-#endif // SCAR_SCHEMADEF_H
+

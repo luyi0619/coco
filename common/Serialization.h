@@ -2,8 +2,7 @@
 // Created by Yi Lu on 7/17/18.
 //
 
-#ifndef SCAR_SERIALIZATION_H
-#define SCAR_SERIALIZATION_H
+#pragma once
 
 #include <cstring>
 #include <folly/String.h>
@@ -48,5 +47,3 @@ public:
 };
 
 } // namespace scar
-
-#endif // SCAR_SERIALIZATION_H

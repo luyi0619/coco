@@ -2,8 +2,7 @@
 // Created by Yi Lu on 7/25/18.
 //
 
-#ifndef SCAR_YCSB_WORKLOAD_H
-#define SCAR_YCSB_WORKLOAD_H
+#pragma once
 
 #include "core/Transaction.h"
 
@@ -45,5 +44,3 @@ private:
 
 } // namespace ycsb
 } // namespace scar
-
-#endif // SCAR_YCSB_WORKLOAD_H

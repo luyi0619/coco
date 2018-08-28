@@ -2,8 +2,7 @@
 // Created by Yi Lu on 7/14/18.
 //
 
-#ifndef SCAR_FUNCTIONTRAITS_H
-#define SCAR_FUNCTIONTRAITS_H
+#pragma once
 
 #include <tuple>
 
@@ -33,4 +32,3 @@ using Argument1 = typename FunctionTraits<Functor>::template arg<1>::type;
 
 } // namespace scar
 
-#endif // SCAR_FUNCTIONTRAITS_H

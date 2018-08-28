@@ -2,8 +2,7 @@
 // Created by Yi Lu on 7/19/18.
 //
 
-#ifndef SCAR_YCSB_DATABASE_H
-#define SCAR_YCSB_DATABASE_H
+#pragma once
 
 #include "benchmark/ycsb/Context.h"
 #include "benchmark/ycsb/Random.h"
@@ -146,5 +145,3 @@ private:
 };
 } // namespace ycsb
 } // namespace scar
-
-#endif // SCAR_YCSB_DATABASE_H

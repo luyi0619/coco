@@ -2,8 +2,7 @@
 // Created by Yi Lu on 7/18/18.
 //
 
-#ifndef SCAR_SILO_H
-#define SCAR_SILO_H
+#pragma once
 
 #include <atomic>
 #include <glog/logging.h>
@@ -348,4 +347,3 @@ private:
 
 } // namespace scar
 
-#endif // SCAR_SILO_H

@@ -2,8 +2,7 @@
 // Created by Yi Lu on 7/22/18.
 //
 
-#ifndef SCAR_YCSB_TRANSACTION_H
-#define SCAR_YCSB_TRANSACTION_H
+#pragma once
 
 #include "glog/logging.h"
 
@@ -89,4 +88,3 @@ public:
 
 } // namespace scar
 
-#endif // SCAR_YCSB_TRANSACTION_H

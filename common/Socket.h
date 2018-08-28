@@ -2,9 +2,7 @@
 // Created by Yi Lu on 7/24/18.
 //
 
-#ifndef SCAR_SOCKET_H
-#define SCAR_SOCKET_H
-
+#pragma once
 #include <arpa/inet.h>
 #include <cstdlib>
 #include <cstring>
@@ -160,4 +158,3 @@ private:
 };
 } // namespace scar
 
-#endif // SCAR_SOCKET_H

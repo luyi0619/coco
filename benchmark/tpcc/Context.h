@@ -2,8 +2,7 @@
 // Created by Yi Lu on 7/19/18.
 //
 
-#ifndef SCAR_TPCC_CONTEXT_H
-#define SCAR_TPCC_CONTEXT_H
+#pragma once
 
 #include "core/Context.h"
 
@@ -22,4 +21,3 @@ public:
 } // namespace tpcc
 } // namespace scar
 
-#endif // SCAR_TPCC_CONTEXT_H

@@ -2,8 +2,7 @@
 // Created by Yi Lu on 7/19/18.
 //
 
-#ifndef SCAR_CONTEXT_H
-#define SCAR_CONTEXT_H
+#pragma once
 
 #include <cstddef>
 
@@ -23,4 +22,3 @@ public:
 };
 } // namespace scar
 
-#endif // SCAR_CONTEXT_H

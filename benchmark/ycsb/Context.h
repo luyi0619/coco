@@ -2,8 +2,7 @@
 // Created by Yi Lu on 7/19/18.
 //
 
-#ifndef SCAR_YCSB_CONTEXT_H
-#define SCAR_YCSB_CONTEXT_H
+#pragma once
 
 #include "core/Context.h"
 
@@ -52,4 +51,4 @@ public:
 } // namespace ycsb
 } // namespace scar
 
-#endif // SCAR_YCSB_CONTEXT_H
+

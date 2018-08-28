@@ -2,8 +2,7 @@
 // Created by Yi Lu on 7/18/18.
 //
 
-#ifndef SCAR_TPCC_DATABASE_H
-#define SCAR_TPCC_DATABASE_H
+#pragma once
 
 #include "benchmark/tpcc/Context.h"
 #include "benchmark/tpcc/Random.h"
@@ -623,5 +622,3 @@ private:
 };
 } // namespace tpcc
 } // namespace scar
-
-#endif // SCAR_TPCC_DATABASE_H

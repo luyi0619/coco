@@ -2,8 +2,7 @@
 // Created by Yi Lu on 7/13/18.
 //
 
-#ifndef SCAR_HASH_H
-#define SCAR_HASH_H
+#pragma once
 
 #include <functional>
 
@@ -26,4 +25,3 @@ inline std::size_t hash(const T &v, Rest... rest) {
 
 } // namespace scar
 
-#endif // SCAR_HASH_H

@@ -2,8 +2,7 @@
 // Created by Yi Lu on 7/19/18.
 //
 
-#ifndef SCAR_YCSB_QUERY_H
-#define SCAR_YCSB_QUERY_H
+#pragma once
 
 #include "benchmark/ycsb/Context.h"
 #include "benchmark/ycsb/Random.h"
@@ -81,4 +80,3 @@ public:
 } // namespace ycsb
 } // namespace scar
 
-#endif // SCAR_YCSB_QUERY_H

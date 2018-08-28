@@ -2,8 +2,7 @@
 // Created by Yi Lu on 7/14/18.
 //
 
-#ifndef SCAR_YCSB_RANDOM_H
-#define SCAR_YCSB_RANDOM_H
+#pragma once
 
 #include <string>
 #include <vector>
@@ -36,4 +35,4 @@ private:
 };
 } // namespace ycsb
 } // namespace scar
-#endif // SCAR_YCSB_RANDOM_H
+

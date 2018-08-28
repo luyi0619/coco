@@ -2,8 +2,7 @@
 // Created by Yi Lu on 7/15/18.
 //
 
-#ifndef SCAR_TPCC_SCHEMA_H
-#define SCAR_TPCC_SCHEMA_H
+#pragma once
 
 #include "common/FixedString.h"
 #include "common/Hash.h"
@@ -117,4 +116,4 @@ DO_STRUCT(item, ITEM_KEY_FIELDS, ITEM_VALUE_FIELDS, NAMESPACE_FIELDS)
 
 DO_STRUCT(stock, STOCK_KEY_FIELDS, STOCK_VALUE_FIELDS, NAMESPACE_FIELDS)
 
-#endif // SCAR_TPCC_SCHEMA_H
+
