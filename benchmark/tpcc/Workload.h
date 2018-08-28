@@ -52,5 +52,3 @@ private:
 
 } // namespace tpcc
 } // namespace scar
-
-

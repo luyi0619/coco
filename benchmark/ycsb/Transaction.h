@@ -87,4 +87,3 @@ public:
 } // namespace ycsb
 
 } // namespace scar
-

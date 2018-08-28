@@ -31,4 +31,3 @@ private:
   std::atomic_flag lock_ = ATOMIC_FLAG_INIT;
 };
 } // namespace scar
-

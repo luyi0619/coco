@@ -157,4 +157,3 @@ private:
   int fd;
 };
 } // namespace scar
-

@@ -57,4 +57,3 @@ private:
   const std::size_t tableID_;
 };
 } // namespace scar
-

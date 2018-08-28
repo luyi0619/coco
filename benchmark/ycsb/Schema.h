@@ -32,5 +32,3 @@ static constexpr auto YCSB_FIELD_SIZE = 10;
                                       y(FixedString<YCSB_FIELD_SIZE>, Y_F10)
 
 DO_STRUCT(ycsb, YCSB_KEY_FIELDS, YCSB_VALUE_FIELDS, NAMESPACE_FIELDS)
-
-

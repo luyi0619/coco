@@ -64,4 +64,3 @@ private:
   double eta_;
 };
 } // namespace scar
-

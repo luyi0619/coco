@@ -24,4 +24,3 @@ inline std::size_t hash(const T &v, Rest... rest) {
 }
 
 } // namespace scar
-

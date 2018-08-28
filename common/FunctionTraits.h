@@ -31,4 +31,3 @@ template <class Functor>
 using Argument1 = typename FunctionTraits<Functor>::template arg<1>::type;
 
 } // namespace scar
-

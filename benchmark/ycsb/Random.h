@@ -35,4 +35,3 @@ private:
 };
 } // namespace ycsb
 } // namespace scar
-

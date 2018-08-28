@@ -21,4 +21,3 @@ public:
   bool operationReplication_ = false;
 };
 } // namespace scar
-

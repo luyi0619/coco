@@ -346,4 +346,3 @@ private:
 };
 
 } // namespace scar
-

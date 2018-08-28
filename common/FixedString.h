@@ -128,4 +128,3 @@ template <std::size_t N> struct hash<scar::FixedString<N>> {
   }
 };
 } // namespace std
-

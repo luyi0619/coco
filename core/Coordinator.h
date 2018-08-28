@@ -19,4 +19,3 @@ private:
   std::vector<std::unique_ptr<Worker<Workload>>> workers;
 };
 } // namespace scar
-

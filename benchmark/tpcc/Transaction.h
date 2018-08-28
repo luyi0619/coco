@@ -364,4 +364,3 @@ public:
 
 } // namespace tpcc
 } // namespace scar
-
