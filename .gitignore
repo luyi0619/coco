@@ -1,5 +1,6 @@
 # Ignore all
 /*
+cmake/*
 
 
 ## Unignore the following extensions
@@ -11,8 +12,8 @@
 !*.py
 
 # Unignore the following files
-!CMakeLists.txt
-!CMakeLists.txt.in
+!*CMakeLists.txt
+
 !.gitignore
 
 # Unignore source code directories

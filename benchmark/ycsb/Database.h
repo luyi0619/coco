@@ -8,6 +8,7 @@
 #include "benchmark/ycsb/Random.h"
 #include "benchmark/ycsb/Schema.h"
 #include "core/Table.h"
+#include <algorithm>
 #include <chrono>
 #include <glog/logging.h>
 #include <thread>

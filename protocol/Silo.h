@@ -4,9 +4,11 @@
 
 #pragma once
 
+#include <algorithm>
 #include <atomic>
-#include <glog/logging.h>
 #include <thread>
+
+#include <glog/logging.h>
 
 namespace scar {
 

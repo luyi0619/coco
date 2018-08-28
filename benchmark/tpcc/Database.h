@@ -4,16 +4,19 @@
 
 #pragma once
 
+#include <algorithm>
+#include <chrono>
+#include <thread>
+#include <unordered_map>
+#include <vector>
+
 #include "benchmark/tpcc/Context.h"
 #include "benchmark/tpcc/Random.h"
 #include "benchmark/tpcc/Schema.h"
 #include "common/Time.h"
 #include "core/Table.h"
-#include <chrono>
+
 #include <glog/logging.h>
-#include <thread>
-#include <unordered_map>
-#include <vector>
 
 namespace scar {
 namespace tpcc {

@@ -46,4 +46,4 @@ template <class T> Decoder &operator>>(Decoder &dec, T &rhs) {
   dec.bytes.remove_prefix(size);
   return dec;
 }
-}; // namespace scar
+} // namespace scar
