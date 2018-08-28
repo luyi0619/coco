@@ -21,10 +21,11 @@ public:
   using DatabaseType = typename Protocol::DatabaseType;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
-  using DataType = typename DatabaseType::DataType;
+  using MetaDataType = typename DatabaseType::MetaDataType;
 
-  static_assert(std::is_same<DataType, typename Protocol::DataType>::value,
-                "The database datatype is different from the one in protocol.");
+  static_assert(
+      std::is_same<MetaDataType, typename Protocol::MetaDataType>::value,
+      "The database datatype is different from the one in protocol.");
 
   NewOrder(DatabaseType &db, ContextType &context, RandomType &random,
            ProtocolType &protocol)
@@ -229,10 +230,11 @@ public:
   using DatabaseType = typename Protocol::DatabaseType;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
-  using DataType = typename DatabaseType::DataType;
+  using MetaDataType = typename DatabaseType::MetaDataType;
 
-  static_assert(std::is_same<DataType, typename Protocol::DataType>::value,
-                "The database datatype is different from the one in protocol.");
+  static_assert(
+      std::is_same<MetaDataType, typename Protocol::MetaDataType>::value,
+      "The database datatype is different from the one in protocol.");
 
   Payment(DatabaseType &db, ContextType &context, RandomType &random,
           ProtocolType &protocol)

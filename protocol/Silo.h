@@ -85,14 +85,14 @@ private:
 template <class Database> class Silo {
 public:
   using DatabaseType = Database;
-  using DataType = std::atomic<uint64_t>;
+  using MetaDataType = std::atomic<uint64_t>;
   using RWKeyType = SiloRWKey;
 
   Silo(DatabaseType &db, std::atomic<uint64_t> &epoch) : db(db), epoch(epoch) {}
 
   template <class ValueType>
-  void read(std::tuple<DataType, ValueType> &row, ValueType &result) {
-    DataType &tid = std::get<0>(row);
+  void read(std::tuple<MetaDataType, ValueType> &row, ValueType &result) {
+    MetaDataType &tid = std::get<0>(row);
     ValueType &value = std::get<1>(row);
     uint64_t tid_;
     do {
@@ -122,11 +122,14 @@ public:
                 return k1.get_sort_key() < k2.get_sort_key();
               });
 
-    /*
-      for(auto& writeKey: writeSet){
-          std::atomic<uint64_t> &tid =
-      }
-*/
+    for (auto &writeKey : writeSet) {
+      auto tableId = writeKey.get_table_id();
+      auto partitionId = writeKey.get_partition_id();
+      auto table = db.find_table(tableId, partitionId);
+
+      auto key = writeKey.get_key();
+      // std::atomic<uint64_t> &tid =
+    }
 
     return true;
   }

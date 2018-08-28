@@ -17,9 +17,9 @@
 
 namespace scar {
 namespace ycsb {
-template <class DataT> class Database {
+template <class MetaData> class Database {
 public:
-  using DataType = DataT;
+  using MetaDataType = MetaData;
   using ContextType = Context;
   using RandomType = Random;
 
@@ -58,7 +58,8 @@ public:
     for (auto partitionID = 0; partitionID < partitionNum; partitionID++) {
       auto ycsbTableID = ycsb::tableID;
       tbl_ycsb_vec.push_back(
-          std::make_unique<Table<1000007, ycsb::key, ycsb::value, DataType>>(
+          std::make_unique<
+              Table<1000007, ycsb::key, ycsb::value, MetaDataType>>(
               ycsbTableID));
     }
 

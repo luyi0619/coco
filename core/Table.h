@@ -19,10 +19,10 @@ public:
   virtual std::size_t valueNBytes() = 0;
 };
 
-template <std::size_t N, class KeyType, class ValueType, class DataT>
+template <std::size_t N, class KeyType, class ValueType, class MetaData>
 class Table : public ITable {
 public:
-  using DataType = DataT;
+  using MetaDataType = MetaData;
 
   Table(std::size_t tableID) : tableID_(tableID) {}
 
@@ -43,7 +43,7 @@ public:
   std::size_t valueNBytes() override { return sizeof(ValueType); }
 
 private:
-  HashMap<N, KeyType, std::tuple<DataType, ValueType>> map_;
+  HashMap<N, KeyType, std::tuple<MetaDataType, ValueType>> map_;
 
   const std::size_t tableID_;
 };

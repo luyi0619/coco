@@ -19,9 +19,9 @@
 namespace scar {
 namespace tpcc {
 
-template <class DataT> class Database {
+template <class MetaData> class Database {
 public:
-  using DataType = DataT;
+  using MetaDataType = MetaData;
   using ContextType = Context;
   using RandomType = Random;
 
@@ -111,49 +111,51 @@ public:
       auto warehouseTableID = warehouse::tableID;
       tbl_warehouse_vec.push_back(
           std::make_unique<
-              Table<1, warehouse::key, warehouse::value, DataType>>(
+              Table<1, warehouse::key, warehouse::value, MetaDataType>>(
               warehouseTableID));
       auto districtTableID = district::tableID;
       tbl_district_vec.push_back(
-          std::make_unique<Table<11, district::key, district::value, DataType>>(
+          std::make_unique<
+              Table<11, district::key, district::value, MetaDataType>>(
               districtTableID));
       auto customerTableID = customer::tableID;
       tbl_customer_vec.push_back(
           std::make_unique<
-              Table<100007, customer::key, customer::value, DataType>>(
+              Table<100007, customer::key, customer::value, MetaDataType>>(
               customerTableID));
       auto customerNameIdxTableID = customer_name_idx::tableID;
       tbl_customer_name_idx_vec.push_back(
           std::make_unique<Table<100007, customer_name_idx::key,
-                                 customer_name_idx::value, DataType>>(
+                                 customer_name_idx::value, MetaDataType>>(
               customerNameIdxTableID));
       auto historyTableID = history::tableID;
       tbl_history_vec.push_back(
           std::make_unique<
-              Table<1000007, history::key, history::value, DataType>>(
+              Table<1000007, history::key, history::value, MetaDataType>>(
               historyTableID));
       auto newOrderTableID = new_order::tableID;
       tbl_new_order_vec.push_back(
           std::make_unique<
-              Table<1000007, new_order::key, new_order::value, DataType>>(
+              Table<1000007, new_order::key, new_order::value, MetaDataType>>(
               newOrderTableID));
       auto orderTableID = order::tableID;
       tbl_order_vec.push_back(
-          std::make_unique<Table<1000007, order::key, order::value, DataType>>(
+          std::make_unique<
+              Table<1000007, order::key, order::value, MetaDataType>>(
               orderTableID));
       auto orderLineTableID = order_line::tableID;
       tbl_order_line_vec.push_back(
-          std::make_unique<
-              Table<10000007, order_line::key, order_line::value, DataType>>(
-              orderLineTableID));
+          std::make_unique<Table<10000007, order_line::key, order_line::value,
+                                 MetaDataType>>(orderLineTableID));
       auto stockTableID = stock::tableID;
       tbl_stock_vec.push_back(
-          std::make_unique<Table<100007, stock::key, stock::value, DataType>>(
+          std::make_unique<
+              Table<100007, stock::key, stock::value, MetaDataType>>(
               stockTableID));
     }
     auto itemTableID = item::tableID;
     tbl_item_vec.push_back(
-        std::make_unique<Table<100007, item::key, item::value, DataType>>(
+        std::make_unique<Table<100007, item::key, item::value, MetaDataType>>(
             itemTableID));
 
     // there are 10 tables in tpcc
@@ -339,7 +341,7 @@ private:
 
         // no concurrent write, it is ok to read without validation on
         // Protocol::DataType
-        std::tuple<DataType, customer::value> *customer_row =
+        std::tuple<MetaDataType, customer::value> *customer_row =
             static_cast<decltype(customer_row)>(
                 customer_table->search(&customer_key));
 
@@ -480,7 +482,7 @@ private:
 
         // no concurrent write, it is ok to read without validation on
         // Protocol::DataType
-        std::tuple<DataType, order::value> *order_row =
+        std::tuple<MetaDataType, order::value> *order_row =
             static_cast<decltype(order_row)>(order_table->search(&order_key));
         const order::value &order_value = std::get<1>(*order_row);
 

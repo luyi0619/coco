@@ -18,7 +18,7 @@ namespace ycsb {
 template <class Protocol> class Workload {
 public:
   using ProtocolType = Protocol;
-  using DatabaseType = Database<typename ProtocolType::DataType>;
+  using DatabaseType = Database<typename ProtocolType::MetaDataType>;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
   using TransactionType = Transaction<ProtocolType>;
