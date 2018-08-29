@@ -23,7 +23,7 @@ public:
 
     YCSBQuery<N> query;
     int readOnly = random.uniform_dist(1, 100);
-    for (auto i = 0; i < N; i++) {
+    for (auto i = 0u; i < N; i++) {
 
       int32_t key;
 
@@ -44,7 +44,7 @@ public:
 
         if (crossPartition <= context.crossPartitionProbability &&
             context.partitionNum > 1) {
-          int newPartitionID = partitionID;
+          auto newPartitionID = partitionID;
           while (newPartitionID == partitionID) {
             newPartitionID = random.uniform_dist(0, context.partitionNum - 1);
           }

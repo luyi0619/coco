@@ -19,7 +19,7 @@ public:
     auto &characters_ = characters();
     auto characters_len = characters_.length();
     std::string result;
-    for (auto i = 0; i < length; i++) {
+    for (auto i = 0u; i < length; i++) {
       int k = uniform_dist(0, characters_len - 1);
       result += characters_[k];
     }

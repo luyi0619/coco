@@ -38,7 +38,8 @@ public:
   element_type nth(double n) {
     checkSort();
     CHECK(n > 0 && n <= 100);
-    int i = static_cast<int>(ceil(n / 100 * size())) - 1;
+      auto sz = size();
+    auto i = static_cast<decltype(sz)>(ceil(n / 100 * sz)) - 1;
     CHECK(i >= 0 && i < size());
     return data_[i];
   }

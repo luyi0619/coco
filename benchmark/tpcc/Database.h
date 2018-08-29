@@ -89,7 +89,7 @@ public:
                   std::size_t partitionNum, std::size_t threadsNum) {
     std::vector<std::thread> v;
     auto now = std::chrono::steady_clock::now();
-    for (auto threadID = 0; threadID < threadsNum; threadID++) {
+    for (auto threadID = 0u; threadID < threadsNum; threadID++) {
       v.emplace_back([=]() {
         for (auto partitionID = threadID; partitionID < partitionNum;
              partitionID += threadsNum) {
@@ -110,7 +110,7 @@ public:
   void initialize(const Context &context, std::size_t partitionNum,
                   std::size_t threadsNum) {
 
-    for (auto partitionID = 0; partitionID < partitionNum; partitionID++) {
+    for (auto partitionID = 0u; partitionID < partitionNum; partitionID++) {
       auto warehouseTableID = warehouse::tableID;
       tbl_warehouse_vec.push_back(
           std::make_unique<
