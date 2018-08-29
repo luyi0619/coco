@@ -76,7 +76,8 @@ private:
 
     auto sleepTime = std::chrono::milliseconds(40);
 
-    // epoch thread only exits when worker threads have exited, making epoch is larger than the epoch workers read
+    // epoch thread only exits when worker threads have exited, making epoch is
+    // larger than the epoch workers read
 
     while (!epochStopFlag.load()) {
       std::this_thread::sleep_for(sleepTime);

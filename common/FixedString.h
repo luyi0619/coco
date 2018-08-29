@@ -26,33 +26,41 @@ public:
 
   FixedString(const std::string &str) { assign(str); }
 
-  bool operator<(const FixedString &that) const {
-    for (auto i = 0; i < length_; i++) {
-      if (i == that.length_)
-        return false;
-      if (data_[i] < that.data_[i])
-        return true;
-      if (data_[i] > that.data_[i])
-        return false;
-    }
-    return false;
-  }
-
-  bool operator==(const FixedString &that) const {
-
-    if (length_ != that.length_) {
-      return false;
-    }
-
-    for (auto i = 0; i < length_; i++) {
-      if (data_[i] != that.data_[i]) {
-        return false;
+  int compare(const FixedString &that) const {
+    size_type minSize = length_ < that.length_ ? length_ : that.length_;
+    int r = 0;
+    for (auto i = 0u; i < minSize; i++) {
+      if (data_[i] < that.data_[i]) {
+        r = -1;
+        break;
+      }
+      if (data_[i] > that.data_[i]) {
+        r = 1;
+        break;
       }
     }
-    return true;
+    if (r < 0)
+      return -1;
+    if (r > 0)
+      return 1;
+    if (length_ < that.length_)
+      return -1;
+    if (length_ > that.length_)
+      return 1;
+    return 0;
   }
 
-  bool operator!=(const FixedString &that) const { return !((*this) == that); }
+  bool operator<(const FixedString &that) const { return compare(that) < 0; }
+
+  bool operator<=(const FixedString &that) const { return compare(that) <= 0; }
+
+  bool operator>(const FixedString &that) const { return compare(that) > 0; }
+
+  bool operator>=(const FixedString &that) const { return compare(that) >= 0; }
+
+  bool operator==(const FixedString &that) const { return compare(that) == 0; }
+
+  bool operator!=(const FixedString &that) const { return compare(that) != 0; }
 
   FixedString &assign(const std::string &str) {
     return assign(str, str.length());

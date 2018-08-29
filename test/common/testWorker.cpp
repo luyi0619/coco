@@ -22,13 +22,10 @@ TEST(TestWorker, TestTPCC) {
   scar::tpcc::Random random;
 
   scar::tpcc::Database<MetaDataType> db;
-  db.initialize(context, 4, 4);
 
   std::atomic<uint64_t> epoch;
   std::atomic<bool> stopFlag;
-
   scar::Worker<WorkloadType> w(0, db, context, epoch, stopFlag);
-  w.start();
 
   EXPECT_EQ(true, true);
 }
@@ -45,13 +42,10 @@ TEST(TestWorker, TestYCSB) {
   scar::ycsb::Random random;
 
   scar::ycsb::Database<MetaDataType> db;
-  db.initialize(context, 4, 4);
 
   std::atomic<uint64_t> epoch;
   std::atomic<bool> stopFlag;
-
   scar::Worker<WorkloadType> w(0, db, context, epoch, stopFlag);
-  w.start();
 
   EXPECT_EQ(true, true);
 }
