@@ -6,11 +6,9 @@ set(CMAKE_CXX_STANDARD 14)
 
 add_subdirectory(cmake)
 
-# includes
-
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake" ${CMAKE_MODULE_PATH})
-
 find_library(jemalloc_lib jemalloc) # jemalloc 5.0
+find_package(glog REQUIRED)
+find_package(gflags REQUIRED)
 
 # additional target to perform clang-format run, requires clang-format
 
@@ -39,9 +37,9 @@ foreach(_test_file ${TEST_SRC_FILES})
     get_filename_component(_test_name ${_test_file} NAME_WE)
     add_executable(${_test_name} ${_test_file})
     # Now simply link against gtest or gtest_main as needed. Eg
-    target_link_libraries(${_test_name} common gflags glog gtest_main)
+    target_link_libraries(${_test_name} common glog gflags gtest_main)
     add_test(NAME "${_test_name}" COMMAND ${_test_name})
 endforeach()
 
 add_executable(main main.cpp)
-target_link_libraries(main common gflags glog)
+target_link_libraries(main common glog gflags)
