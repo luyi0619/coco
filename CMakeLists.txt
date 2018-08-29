@@ -28,6 +28,8 @@ include_directories(${CMAKE_SOURCE_DIR})
 file(GLOB_RECURSE COMMON_SOURCE_FILES common/*.cpp)
 add_library(common STATIC ${COMMON_SOURCE_FILES})
 
+target_link_libraries(common ${jemalloc_lib} glog gflags)
+
 include(CTest)
 
 file(GLOB_RECURSE TEST_SRC_FILES test/test*.cpp)
@@ -37,9 +39,9 @@ foreach(_test_file ${TEST_SRC_FILES})
     get_filename_component(_test_name ${_test_file} NAME_WE)
     add_executable(${_test_name} ${_test_file})
     # Now simply link against gtest or gtest_main as needed. Eg
-    target_link_libraries(${_test_name} common glog gflags gtest_main)
+    target_link_libraries(${_test_name} common gtest_main)
     add_test(NAME "${_test_name}" COMMAND ${_test_name})
 endforeach()
 
 add_executable(main main.cpp)
-target_link_libraries(main common glog gflags)
+target_link_libraries(main common )

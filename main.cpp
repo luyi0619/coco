@@ -2,38 +2,16 @@
 #include <glog/logging.h>
 #include <iostream>
 
-#include <common/FixedString.h>
-
-#include <chrono>
-#include <thread>
-#include <vector>
+#include "jemalloc/jemalloc.h"
 
 int main(int argc, char *argv[]) {
-  google::InitGoogleLogging(argv[0]);
-  google::InstallFailureSignalHandler();
+    google::InitGoogleLogging(argv[0]);
+    google::InstallFailureSignalHandler();
 
-  scar::FixedString<16> str = "hello world!";
-  std::cout << str << std::endl;
+    const char *j;
+    size_t s = sizeof(j);
+    mallctl("version", &j, &s, NULL, 0);
+    std::cout << j << std::endl;
 
-  std::vector<std::thread> v;
-
-  for (int i = 0; i < 8; i++) {
-    v.emplace_back(std::thread([]() {
-      long sum = 0;
-      for (int i = 0; i < 10000000; i++) {
-        auto start = std::chrono::steady_clock::now();
-        auto stop = std::chrono::steady_clock::now();
-        sum +=
-            std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start)
-                .count();
-      }
-      std::cout << sum << std::endl;
-    }));
-  }
-
-  for (auto &vv : v) {
-    vv.join();
-  }
-
-  return 0;
+    return 0;
 }
