@@ -6,7 +6,6 @@
 #include "benchmark/tpcc/Workload.h"
 #include "core/Coordinator.h"
 #include "protocol/Silo.h"
-#include <gflags/gflags.h>
 #include <gtest/gtest.h>
 
 DEFINE_int32(threads, 1, "the number of threads.");

@@ -5,7 +5,6 @@
 #include "common/Encoder.h"
 #include "common/Message.h"
 #include <gtest/gtest.h>
-#include <string>
 
 TEST(TestMessage, TestBasic) {
   using scar::Message;

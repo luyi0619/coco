@@ -5,7 +5,6 @@
 #include "common/Zipf.h"
 #include <gtest/gtest.h>
 #include <numeric>
-#include <vector>
 
 TEST(TestZipf, TestBasic) {
 

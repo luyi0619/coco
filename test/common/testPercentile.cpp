@@ -4,7 +4,6 @@
 
 #include "common/Percentile.h"
 #include <gtest/gtest.h>
-#include <string>
 
 TEST(TestPercentile, TestBasic) {
 

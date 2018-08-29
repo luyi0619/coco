@@ -86,26 +86,24 @@ public:
 
     // start a listener thread
 
-    std::thread listenerThread(
-        [id = this->id,
-         &peers = static_cast<const std::vector<std::string> &>(peers),
-         &inSockets = this->inSockets, getAddressPort] {
-          auto n = peers.size();
-          std::vector<std::string> addressPort = getAddressPort(peers[id]);
+    std::thread listenerThread([id = this->id, peers = this->peers,
+                                &inSockets = this->inSockets, getAddressPort] {
+      auto n = peers.size();
+      std::vector<std::string> addressPort = getAddressPort(peers[id]);
 
-          Listener l(addressPort[0].c_str(), atoi(addressPort[1].c_str()), 100);
-          LOG(INFO) << "Coordinator " << id << " "
-                    << " listening on " << peers[id];
+      Listener l(addressPort[0].c_str(), atoi(addressPort[1].c_str()), 100);
+      LOG(INFO) << "Coordinator " << id << " "
+                << " listening on " << peers[id];
 
-          for (std::size_t i = 0; i < n - 1; i++) {
-            Socket s = l.accept();
-            int c_id;
-            s.read_number(c_id);
-            inSockets[c_id] = s;
-          }
+      for (std::size_t i = 0; i < n - 1; i++) {
+        Socket s = l.accept();
+        int c_id;
+        s.read_number(c_id);
+        inSockets[c_id] = s;
+      }
 
-          LOG(INFO) << "Listener on coordinator " << id << " exits.";
-        });
+      LOG(INFO) << "Listener on coordinator " << id << " exits.";
+    });
 
     // connect to peers
     auto n = peers.size();

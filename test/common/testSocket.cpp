@@ -3,9 +3,7 @@
 //
 #include "common/Socket.h"
 #include <gtest/gtest.h>
-#include <iostream>
 #include <thread>
-#include <vector>
 
 const int N = 10;
 const int port = 12345;

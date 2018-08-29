@@ -5,7 +5,6 @@
 #include "common/HashMap.h"
 #include <gtest/gtest.h>
 #include <thread>
-#include <vector>
 
 TEST(TestHashMap, TestConcurrent) {
 

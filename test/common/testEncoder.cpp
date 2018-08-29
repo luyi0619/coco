@@ -5,7 +5,6 @@
 #include "common/Encoder.h"
 #include "common/FixedString.h"
 #include <gtest/gtest.h>
-#include <string>
 
 TEST(TestEncoder, TestBasic) {
   std::string bytes;
