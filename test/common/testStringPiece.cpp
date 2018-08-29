@@ -14,6 +14,7 @@
  */
 
 TEST(TestCommonStringPiece, TestCtor) {
+  using scar::StringPiece;
   {
     // Null.
     StringPiece s10;
@@ -57,6 +58,7 @@ TEST(TestCommonStringPiece, TestCtor) {
 }
 
 TEST(TestCommonStringPiece, TestSTLComparator) {
+  using scar::StringPiece;
   std::string s1("foo");
   std::string s2("bar");
   std::string s3("baz");
@@ -100,6 +102,7 @@ TEST(TestCommonStringPiece, TestSTLComparator) {
 }
 
 TEST(TestCommonStringPiece, TestComparisonOperators) {
+  using scar::StringPiece;
 #define COMPARE(result, op, x, y)                                              \
   EXPECT_EQ(result, StringPiece((x)) op StringPiece((y)));                     \
   EXPECT_EQ(result, StringPiece((x)).compare(StringPiece((y))) op 0)
@@ -665,6 +668,7 @@ TEST(TestCommonStringPiece, TestComparisonOperators) {
 //}
 
 TEST(TestCommonStringPiece, TestNullInput) {
+  using scar::StringPiece;
   // we used to crash here, but now we don't.
   StringPiece s(nullptr);
   EXPECT_EQ(s.data(), (const char *)nullptr);

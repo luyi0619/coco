@@ -14,6 +14,8 @@
  *  https://github.com/protocolbuffers/protobuf/blob/master/src/google/protobuf/stubs/stringpiece.h
  */
 
+namespace scar {
+
 class StringPiece {
 
 public:
@@ -121,3 +123,4 @@ private:
   const char *data_;
   size_t length_;
 };
+} // namespace scar

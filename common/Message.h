@@ -6,7 +6,7 @@
 
 #include "StringPiece.h"
 #include <string>
-
+namespace scar {
 class Message {
 public:
   using size_type = uint32_t;
@@ -17,6 +17,7 @@ public:
   }
 
   size_type &size() { return *reinterpret_cast<size_type *>(&data[0]); }
+
   uint32_t &deadbeef() {
     return *reinterpret_cast<uint32_t *>(&data[sizeof(size_type)]);
   }
@@ -38,3 +39,4 @@ public:
   static constexpr int HEADER_SIZE = sizeof(size_type) + sizeof(uint32_t);
   static constexpr uint32_t DEADBEEF = 0xDEADBEEF;
 };
+} // namespace scar

@@ -8,7 +8,7 @@
 #include <string>
 
 TEST(TestMessage, TestBasic) {
-
+  using scar::Message;
   Message message;
 
   scar::Encoder encoder(message.data);
