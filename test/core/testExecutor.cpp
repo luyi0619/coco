@@ -6,11 +6,11 @@
 #include "benchmark/tpcc/Workload.h"
 #include "benchmark/ycsb/Database.h"
 #include "benchmark/ycsb/Workload.h"
-#include "core/Worker.h"
+#include "core/Executor.h"
 #include "protocol/Silo.h"
 #include <gtest/gtest.h>
 
-TEST(TestWorker, TestTPCC) {
+TEST(TestExecutor, TestTPCC) {
 
   using MetaDataType = std::atomic<uint64_t>;
   using ProtocolType = scar::Silo<scar::tpcc::Database<MetaDataType>>;
@@ -25,7 +25,7 @@ TEST(TestWorker, TestTPCC) {
 
   std::atomic<uint64_t> epoch;
   std::atomic<bool> stopFlag;
-  scar::Worker<WorkloadType> w(0, db, context, epoch, stopFlag);
+  scar::Executor<WorkloadType> w(0, db, context, epoch, stopFlag);
 
   EXPECT_EQ(true, true);
 }
@@ -45,7 +45,7 @@ TEST(TestWorker, TestYCSB) {
 
   std::atomic<uint64_t> epoch;
   std::atomic<bool> stopFlag;
-  scar::Worker<WorkloadType> w(0, db, context, epoch, stopFlag);
+  scar::Executor<WorkloadType> w(0, db, context, epoch, stopFlag);
 
   EXPECT_EQ(true, true);
 }

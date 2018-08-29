@@ -5,6 +5,8 @@
 #pragma once
 
 #include "common/Socket.h"
+#include "core/Dispatcher.h"
+#include "core/Executor.h"
 #include "core/Worker.h"
 #include <boost/algorithm/string.hpp>
 #include <glog/logging.h>
@@ -27,6 +29,7 @@ public:
     epoch.store(0);
     workerStopFlag.store(false);
     epochStopFlag.store(false);
+    ioStopFlag.store(false);
   }
 
   void start() {
@@ -34,11 +37,22 @@ public:
     LOG(INFO) << "Coordinator initializes " << context.workerNum << " workers.";
 
     for (auto i = 0u; i < context.workerNum; i++) {
-      workers.push_back(std::make_unique<Worker<WorkloadType>>(
+      workers.push_back(std::make_shared<Executor<WorkloadType>>(
           i, db, context, epoch, workerStopFlag));
     }
 
     std::thread epochThread(&Coordinator::advanceEpoch, this);
+
+    // start dispatcher threads
+    iDispatcher =
+        std::make_unique<IncomingDispatcher>(inSockets, workers, ioStopFlag);
+    oDispatcher =
+        std::make_unique<OutgoingDispatcher>(outSockets, workers, ioStopFlag);
+
+    std::thread iDispatcherThread(&IncomingDispatcher::start,
+                                  iDispatcher.get());
+    std::thread oDispatcherThread(&OutgoingDispatcher::start,
+                                  oDispatcher.get());
 
     std::vector<std::thread> threads;
 
@@ -46,7 +60,7 @@ public:
               << " workers.";
 
     for (auto i = 0u; i < context.workerNum; i++) {
-      threads.emplace_back(&Worker<WorkloadType>::start, workers[i].get());
+      threads.emplace_back(&Worker::start, workers[i].get());
     }
 
     // run timeToRun milliseconds
@@ -66,6 +80,10 @@ public:
 
     epochStopFlag.store(true);
     epochThread.join();
+
+    ioStopFlag.store(true);
+    iDispatcherThread.join();
+    oDispatcherThread.join();
 
     LOG(INFO) << "Coordinator executed " << totalTransaction
               << " transactions in " << timeToRun << " milliseconds.";
@@ -169,9 +187,11 @@ private:
   std::vector<std::string> peers;
   std::vector<Socket> inSockets, outSockets;
   std::atomic<uint64_t> epoch;
-  std::atomic<bool> workerStopFlag, epochStopFlag;
+  std::atomic<bool> workerStopFlag, epochStopFlag, ioStopFlag;
   DatabaseType &db;
   ContextType &context;
-  std::vector<std::unique_ptr<Worker<WorkloadType>>> workers;
+  std::vector<std::shared_ptr<Worker>> workers;
+  std::unique_ptr<IncomingDispatcher> iDispatcher;
+  std::unique_ptr<OutgoingDispatcher> oDispatcher;
 };
 } // namespace scar
