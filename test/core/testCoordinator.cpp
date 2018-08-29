@@ -6,7 +6,10 @@
 #include "benchmark/tpcc/Workload.h"
 #include "core/Coordinator.h"
 #include "protocol/Silo.h"
+#include <gflags/gflags.h>
 #include <gtest/gtest.h>
+
+DEFINE_int32(threads, 1, "the number of threads.");
 
 TEST(TestCoordinator, TestTPCC) {
 
@@ -14,19 +17,18 @@ TEST(TestCoordinator, TestTPCC) {
   using ProtocolType = scar::Silo<scar::tpcc::Database<MetaDataType>>;
   using WorkloadType = scar::tpcc::Workload<ProtocolType>;
 
+  int n = FLAGS_threads;
+
   scar::tpcc::Context context;
-  context.partitionNum = 2;
-  context.workerNum = 2;
-  scar::tpcc::Random random;
+  context.partitionNum = n;
+  context.workerNum = n;
 
   scar::tpcc::Database<MetaDataType> db;
-  db.initialize(context, 2, 2);
 
   std::atomic<uint64_t> epoch;
   std::atomic<bool> stopFlag;
 
   scar::Coordinator<WorkloadType> c(0, db, context);
-  c.start();
 
   EXPECT_EQ(true, true);
 }
