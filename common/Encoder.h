@@ -13,6 +13,8 @@
 namespace scar {
 class Encoder {
 public:
+  Encoder(std::string &bytes) : bytes(bytes) {}
+
   template <class T> friend Encoder &operator<<(Encoder &enc, const T &rhs);
 
   StringPiece toStringPiece() {
@@ -20,7 +22,7 @@ public:
   }
 
 private:
-  std::string bytes;
+  std::string &bytes;
 };
 
 template <class T> Encoder &operator<<(Encoder &enc, const T &rhs) {

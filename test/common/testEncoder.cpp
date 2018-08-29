@@ -8,7 +8,8 @@
 #include <string>
 
 TEST(TestEncoder, TestBasic) {
-  scar::Encoder encoder;
+  std::string bytes;
+  scar::Encoder encoder(bytes);
   int a = 0x1234;
   double b = 123456.7890123;
   char c = 0x78;
@@ -24,7 +25,8 @@ TEST(TestEncoder, TestBasic) {
 }
 
 TEST(TestEncoder, TestString) {
-  scar::Encoder encoder;
+  std::string bytes;
+  scar::Encoder encoder(bytes);
   int a = 0x1234;
   std::string s = "helloworldHELLOWORLDhelloWORLDHELLOworld";
   double c = 123456.7890123;
@@ -43,7 +45,8 @@ TEST(TestEncoder, TestString) {
 }
 
 TEST(TestEncoder, TestFixedString) {
-  scar::Encoder encoder;
+  std::string bytes;
+  scar::Encoder encoder(bytes);
   int a = 0x1234;
   scar::FixedString<40> s = "helloworldHELLOWORLDhelloWORLDHELLOworld";
   double c = 123456.7890123;
