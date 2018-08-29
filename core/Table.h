@@ -12,6 +12,8 @@ template <class MetaData> class ITable {
 public:
   using MetaDataType = MetaData;
 
+  virtual ~ITable() = default;
+
   virtual void *search(const void *key) = 0;
 
   virtual MetaDataType &searchMetaData(const void *key) = 0;
@@ -27,6 +29,8 @@ template <std::size_t N, class KeyType, class ValueType, class MetaData>
 class Table : public ITable<MetaData> {
 public:
   using MetaDataType = MetaData;
+
+  virtual ~Table() override = default;
 
   Table(std::size_t tableID) : tableID_(tableID) {}
 

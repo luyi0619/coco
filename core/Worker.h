@@ -55,12 +55,14 @@ private:
       while (!q.empty()) {
         const auto &ptr = q.front();
         if (ptr->commitEpoch < currentEpoch) {
+          /*
           LOG(INFO) << "Worker " << id << " executes transaction in "
                     << std::chrono::duration_cast<std::chrono::milliseconds>(
                            now - ptr->startTime)
                            .count()
                     << " ms. currentEpoch " << currentEpoch
                     << " , commit epoch " << ptr->commitEpoch;
+          */
           q.pop();
         } else {
           break;

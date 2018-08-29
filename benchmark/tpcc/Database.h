@@ -110,6 +110,10 @@ public:
   void initialize(const Context &context, std::size_t partitionNum,
                   std::size_t threadsNum) {
 
+    auto now = std::chrono::steady_clock::now();
+
+    DLOG(INFO) << "creating hash tables for database...";
+
     for (auto partitionID = 0u; partitionID < partitionNum; partitionID++) {
       auto warehouseTableID = warehouse::tableID;
       tbl_warehouse_vec.push_back(
@@ -187,6 +191,12 @@ public:
                    std::back_inserter(tbl_vecs[8]), tFunc);
     std::transform(tbl_stock_vec.begin(), tbl_stock_vec.end(),
                    std::back_inserter(tbl_vecs[9]), tFunc);
+
+    DLOG(INFO) << "hash tables created in "
+               << std::chrono::duration_cast<std::chrono::milliseconds>(
+                      std::chrono::steady_clock::now() - now)
+                      .count()
+               << " milliseconds.";
 
     using std::placeholders::_1;
     initTables("warehouse", std::bind(&Database::warehouseInit, this, _1),

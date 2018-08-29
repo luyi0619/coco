@@ -46,7 +46,7 @@ public:
     }
 
     // run timeToRun milliseconds
-    auto timeToRun = 250;
+    auto timeToRun = 1000;
     LOG(INFO) << "Coordinator starts to sleep " << timeToRun
               << " milliseconds.";
     std::this_thread::sleep_for(std::chrono::milliseconds(timeToRun));
