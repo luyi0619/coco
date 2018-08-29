@@ -44,4 +44,4 @@ foreach(_test_file ${TEST_SRC_FILES})
 endforeach()
 
 add_executable(main main.cpp)
-target_link_libraries(main common )
+target_link_libraries(main common)
