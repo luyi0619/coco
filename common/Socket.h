@@ -25,21 +25,45 @@ public:
 
   Socket(int fd) : fd(fd) {}
 
+  //Socket is not copyable
+  Socket(const Socket&) = delete;
+  Socket&operator=(const Socket&) = delete;
+
+  //Socket is movable
+  Socket(Socket&& that){
+    CHECK(that.fd >= 0);
+    fd = that.fd;
+    that.fd = -1;
+  }
+
+  Socket&operator=(Socket&& that){
+    CHECK(that.fd >= 0);
+    fd = that.fd;
+    that.fd = -1;
+    return *this;
+  }
+
   int connect(const char *addr, int port) {
+    CHECK(fd >= 0);
     sockaddr_in serv = make_endpoint(addr, port);
     return ::connect(fd, (const sockaddr *)(&serv), sizeof(serv));
   }
 
   void disable_nagle_algorithm() {
+    CHECK(fd >= 0);
     // disable Nagle's algorithm
     int flag = 1;
     int res = setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(int));
     CHECK(res >= 0);
   }
 
-  int close() { return ::close(fd); }
+  int close() {
+    CHECK(fd >= 0);
+    return ::close(fd);
+  }
 
   long read_n_bytes(char *buf, long size) {
+    CHECK(fd >= 0);
     long n = 0;
     while (n < size) {
       long bytes_read = read(buf + n, size - n);
@@ -53,6 +77,7 @@ public:
   }
 
   long read_n_bytes_async(char *buf, long size) {
+    CHECK(fd >= 0);
     long n = 0;
     while (n < size) {
       long bytes_read = read_async(buf + n, size - n);
@@ -73,6 +98,7 @@ public:
   }
 
   long write_n_bytes(const char *buf, long size) {
+    CHECK(fd >= 0);
     long n = 0;
     while (n < size) {
       long bytes_written = write(buf + n, size - n);
@@ -82,18 +108,22 @@ public:
   }
 
   template <class T> long write_number(const T &n) {
+    CHECK(fd >= 0);
     return write_n_bytes(reinterpret_cast<const char *>(&n), sizeof(T));
   }
 
   template <class T> long read_number(T &n) {
+    CHECK(fd >= 0);
     return read_n_bytes(reinterpret_cast<char *>(&n), sizeof(T));
   }
 
   template <class T> long read_number_async(T &n) {
+    CHECK(fd >= 0);
     return read_n_bytes_async(reinterpret_cast<char *>(&n), sizeof(T));
   }
 
   long read(char *buf, long size) {
+    CHECK(fd >= 0);
     if (size > 0) {
       return recv(fd, buf, size, 0);
     }
@@ -101,6 +131,7 @@ public:
   }
 
   long read_async(char *buf, long size) {
+    CHECK(fd >= 0);
     if (size > 0) {
       return recv(fd, buf, size, MSG_DONTWAIT);
     }
@@ -108,6 +139,7 @@ public:
   }
 
   long write(const char *buf, long size) {
+    CHECK(fd >= 0);
     if (size > 0) {
       return send(fd, buf, size, 0);
     }

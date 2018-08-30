@@ -25,7 +25,7 @@ public:
 
   Coordinator(std::size_t id, const std::vector<std::string> &peers,
               DatabaseType &db, ContextType &context)
-      : id(id), peers(peers), inSockets(peers.size()), outSockets(peers.size()),
+      : id(id), peers(peers),
         db(db), context(context) {
     epoch.store(0);
     workerStopFlag.store(false);
@@ -45,9 +45,9 @@ public:
     std::thread epochThread(&Coordinator::advanceEpoch, this);
 
     // start dispatcher threads
-    iDispatcher = std::make_unique<IncomingDispatcher>(id, inSockets, workers,
+    iDispatcher = std::make_unique<IncomingDispatcher>(id, std::move(inSockets), workers,
                                                        ioStopFlag);
-    oDispatcher = std::make_unique<OutgoingDispatcher>(id, outSockets, workers,
+    oDispatcher = std::make_unique<OutgoingDispatcher>(id, std::move(outSockets), workers,
                                                        ioStopFlag);
 
     std::thread iDispatcherThread(&IncomingDispatcher::start,
@@ -98,6 +98,9 @@ public:
     if (peers.size() <= 1)
       return;
 
+    inSockets = std::vector<Socket>(peers.size());
+    outSockets = std::vector<Socket>(peers.size());
+
     auto getAddressPort = [](const std::string &addressPort) {
       std::vector<std::string> result;
       boost::algorithm::split(result, addressPort, boost::is_any_of(":"));
@@ -116,10 +119,10 @@ public:
                 << " listening on " << peers[id];
 
       for (std::size_t i = 0; i < n - 1; i++) {
-        Socket s = l.accept();
+        Socket socket = l.accept();
         int c_id;
-        s.read_number(c_id);
-        inSockets[c_id] = s;
+        socket.read_number(c_id);
+        inSockets[c_id] = std::move(socket);
       }
 
       LOG(INFO) << "Listener on coordinator " << id << " exits.";
@@ -135,12 +138,12 @@ public:
 
       std::vector<std::string> addressPort = getAddressPort(peers[i]);
       for (auto k = 0u; k < retryLimit; k++) {
-        Socket s;
+        Socket socket;
 
         int ret =
-            s.connect(addressPort[0].c_str(), atoi(addressPort[1].c_str()));
+            socket.connect(addressPort[0].c_str(), atoi(addressPort[1].c_str()));
         if (ret == -1) {
-          s.close();
+          socket.close();
           if (k == retryLimit - 1) {
             LOG(FATAL) << "failed to connect to peers, exiting ...";
             exit(1);
@@ -153,10 +156,10 @@ public:
           continue;
         }
 
-        s.disable_nagle_algorithm();
+        socket.disable_nagle_algorithm();
         LOG(INFO) << "Coordinator " << id << " connected to " << i;
-        s.write_number(id);
-        outSockets[i] = s;
+        socket.write_number(id);
+        outSockets[i] = std::move(socket);
         break;
       }
     }
