@@ -19,6 +19,8 @@ public:
 
   virtual void start() = 0;
 
+  virtual void onExit() {}
+
 public:
   std::size_t id;
   LockfreeQueue<Message *> inQueue, outQueue;

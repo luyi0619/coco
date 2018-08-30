@@ -10,6 +10,7 @@
 #include "core/Worker.h"
 #include <boost/algorithm/string.hpp>
 #include <glog/logging.h>
+#include <thread>
 #include <vector>
 
 namespace scar {
@@ -75,6 +76,7 @@ public:
 
     for (auto i = 0u; i < context.workerNum; i++) {
       threads[i].join();
+      workers[i]->onExit();
       totalTransaction += workers[i]->transactionId + 1;
     }
 

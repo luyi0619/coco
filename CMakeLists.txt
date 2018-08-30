@@ -20,6 +20,7 @@ add_custom_target(
         COMMAND clang-format
         -style=LLVM
         -i
+        -sort-includes
         ${ALL_SOURCE_FILES}
 )
 

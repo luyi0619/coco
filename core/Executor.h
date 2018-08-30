@@ -4,7 +4,11 @@
 
 #pragma once
 
+#include "common/Percentile.h"
 #include "core/Worker.h"
+#include "glog/logging.h"
+
+#include <chrono>
 
 namespace scar {
 
@@ -24,8 +28,7 @@ public:
     transactionId.store(0);
   }
 
-  void start() {
-
+  void start() override {
     std::queue<std::unique_ptr<Transaction<ProtocolType>>> q;
 
     while (!stopFlag.load()) {
@@ -42,25 +45,27 @@ public:
     LOG(INFO) << "Worker " << id << " exits.";
   }
 
+  void onExit() override {
+    LOG(INFO) << "Worker " << id << " latency: " << percentile.nth(50)
+              << "ms (50%) " << percentile.nth(75) << "ms (75%) "
+              << percentile.nth(99.9)
+              << "ms (99.9%), size: " << percentile.size() * sizeof(int64_t)
+              << " bytes.";
+  }
+
 private:
   void
   commitTransactions(std::queue<std::unique_ptr<Transaction<ProtocolType>>> &q,
                      bool retry = false) {
-
+    using namespace std::chrono;
     do {
       auto currentEpoch = epoch.load();
-      auto now = std::chrono::steady_clock::now();
+      auto now = steady_clock::now();
       while (!q.empty()) {
         const auto &ptr = q.front();
         if (ptr->commitEpoch < currentEpoch) {
-          /*
-          LOG(INFO) << "Worker " << id << " executes transaction in "
-                    << std::chrono::duration_cast<std::chrono::milliseconds>(
-                           now - ptr->startTime)
-                           .count()
-                    << " ms. currentEpoch " << currentEpoch
-                    << " , commit epoch " << ptr->commitEpoch;
-          */
+          auto latency = duration_cast<milliseconds>(now - ptr->startTime);
+          percentile.add(latency.count());
           q.pop();
         } else {
           break;
@@ -77,6 +82,7 @@ private:
   RandomType random;
   ProtocolType protocol;
   WorkloadType workload;
+  Percentile<int64_t> percentile;
   std::unique_ptr<Message> syncMessage, asyncMessage;
 };
 } // namespace scar
