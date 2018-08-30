@@ -14,6 +14,7 @@ namespace scar {
  * | Message type (7 => 128) | Message length (12 => 4096) | table id (5 => 32)
  * | partition id (8 => 256) |
  *
+ * Note that, the header is included in the message length.
  */
 
 class MessagePiece {
@@ -43,8 +44,8 @@ public:
   }
 
   StringPiece toStringPiece() {
-    return StringPiece(stringPiece.data() + sizeof(header_type),
-                       get_message_length());
+    return StringPiece(stringPiece.data() + get_header_size(),
+                       get_message_length() - get_header_size());
   }
 
   bool operator==(const MessagePiece &that) const {
@@ -64,6 +65,8 @@ public:
   StringPiece stringPiece;
 
 public:
+  static uint32_t get_header_size() { return sizeof(header_type); }
+
   static uint32_t construct_message_piece_header(uint32_t message_type,
                                                  uint32_t message_length,
                                                  std::size_t table_id,
@@ -79,7 +82,7 @@ public:
            (partition_id << PARTITION_ID_OFFSET);
   }
 
-  static uint32_t get_message_length(uint32_t header) {
+  static constexpr uint32_t get_message_length(uint32_t header) {
     return (header >> MESSAGE_LENGTH_OFFSET) & MESSAGE_LENGTH_MASK;
   }
 

@@ -14,9 +14,9 @@ namespace scar {
  * Message header format
  *
  * | source node id (7=> 128) | dest node id (7=> 128) | worker id (8 => 256)
- * | count (15 => 2^15 = 32768) | size (27 => 2^27 = 134217728) |
+ * | count (15 => 2^15 = 32768) | length (27 => 2^27 = 134217728) |
  *
- * Note that, the size of each message piece is 2^12 = 4096.
+ * Note that, the header is included in the message size.
  *
  * Message format
  *
@@ -45,9 +45,8 @@ public:
 
     // Prefix ++ overload
     Iterator &operator++() {
-      const char *ptr = messagePiece.stringPiece.data() +
-                        sizeof(MessagePiece::header_type) +
-                        messagePiece.get_message_length();
+      const char *ptr =
+          messagePiece.stringPiece.data() + messagePiece.get_message_length();
       messagePiece = get_message_piece(ptr);
       return *this;
     }
@@ -78,8 +77,7 @@ public:
       if (ptr == eof) {
         return MessagePiece(StringPiece());
       }
-      return MessagePiece(StringPiece(ptr, sizeof(MessagePiece::header_type) +
-                                               get_message_length(ptr)));
+      return MessagePiece(StringPiece(ptr, get_message_length(ptr)));
     }
 
   private:
@@ -91,48 +89,47 @@ public:
   using deadbeef_type = uint32_t;
   using iterator_type = Iterator;
 
-  Message() : data(sizeof(header_type) + sizeof(deadbeef_type), 0) {
+  Message() : data(get_header_size(), 0) {
+    set_message_length(data.size());
     get_deadbeef_ref() = DEADBEEF;
   }
 
   void resize(std::size_t size) {
-    CHECK(data.size() == sizeof(header_type) + sizeof(deadbeef_type));
-    data.resize(data.size() + size);
+    CHECK(data.size() == get_header_size());
+    data.resize(size);
+    set_message_length(data.size());
+    get_deadbeef_ref() = DEADBEEF;
   }
 
-  char *get_raw_ptr() {
-    return &data[0] + sizeof(header_type) + sizeof(deadbeef_type);
-  }
+  char *get_raw_ptr() { return &data[0] + get_header_size(); }
 
   void clear() {
-    data = std::string(sizeof(header_type) + sizeof(deadbeef_type), 0);
+    data = std::string(get_header_size(), 0);
+    set_message_length(data.size());
     get_deadbeef_ref() = DEADBEEF;
   }
 
   void flush() {
     auto message_count = get_message_count();
     set_message_count(message_count + 1);
-    set_message_length(data.length() - sizeof(header_type) -
-                       sizeof(deadbeef_type));
+    set_message_length(data.length());
   }
 
-  bool checkSize() {
-    return get_message_length() ==
-           data.size() - sizeof(header_type) - sizeof(deadbeef_type);
-  }
+  bool check_size() { return get_message_length() == data.size(); }
 
-  bool checkDeadbeef() {
+  bool check_deadbeef() {
     auto deadbeef = get_deadbeef_ref();
     return deadbeef == DEADBEEF;
   }
 
   Iterator begin() {
-    return Iterator(&data[0] + sizeof(header_type) + sizeof(deadbeef_type),
-                    &data[0] + data.size());
+    auto eof = &data[0] + data.size();
+    return Iterator(&data[0] + get_header_size(), eof);
   }
 
   Iterator end() {
-    return Iterator(&data[0] + data.size(), &data[0] + data.size());
+    auto eof = &data[0] + data.size();
+    return Iterator(eof, eof);
   }
 
 public:
@@ -215,6 +212,11 @@ private:
 
 public:
   std::string data;
+
+public:
+  static constexpr uint32_t get_header_size() {
+    return sizeof(header_type) + sizeof(deadbeef_type);
+  }
 
 public:
   static constexpr uint64_t SOURCE_NODE_ID_MASK = 0x7f;

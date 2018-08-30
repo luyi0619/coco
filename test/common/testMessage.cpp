@@ -25,7 +25,7 @@ TEST(TestMessage, TestBasic) {
   int64_t message_content1 = 0x5678;
 
   Message message;
-  EXPECT_TRUE(message.checkDeadbeef());
+  EXPECT_TRUE(message.check_deadbeef());
 
   message.set_source_node_id(source_node_id);
   message.set_dest_node_id(dest_node_id);
@@ -37,29 +37,30 @@ TEST(TestMessage, TestBasic) {
 
   scar::Encoder encoder(message.data);
   auto message_piece_header0 = MessagePiece::construct_message_piece_header(
-      message_type, sizeof(int32_t), table_id, partition_id);
+      message_type, sizeof(int32_t) + MessagePiece::get_header_size(), table_id,
+      partition_id);
   encoder << message_piece_header0 << message_content0;
 
-  EXPECT_FALSE(message.checkSize());
+  EXPECT_FALSE(message.check_size());
   message.flush();
-  EXPECT_TRUE(message.checkSize());
+  EXPECT_TRUE(message.check_size());
 
   auto message_piece_header1 = MessagePiece::construct_message_piece_header(
-      message_type, sizeof(int64_t), table_id, partition_id);
+      message_type, sizeof(int64_t) + MessagePiece::get_header_size(), table_id,
+      partition_id);
   encoder << message_piece_header1 << message_content1;
 
-  EXPECT_FALSE(message.checkSize());
+  EXPECT_FALSE(message.check_size());
   message.flush();
-  EXPECT_TRUE(message.checkSize());
+  EXPECT_TRUE(message.check_size());
 
   EXPECT_EQ(message.get_message_count(), 2);
   EXPECT_EQ(message.get_message_length(),
-            2 * sizeof(MessagePiece::header_type) + sizeof(message_content0) +
-                sizeof(message_content1));
+            sizeof(Message::header_type) + sizeof(Message::deadbeef_type) +
+                2 * sizeof(MessagePiece::header_type) +
+                sizeof(message_content0) + sizeof(message_content1));
 
-  EXPECT_EQ(message.data.size(), sizeof(Message::header_type) +
-                                     sizeof(Message::deadbeef_type) +
-                                     message.get_message_length());
+  EXPECT_EQ(message.get_message_length(), message.data.size());
 
   for (auto it = message.begin(); it != message.end(); it++) {
     MessagePiece messagePiece = *it;
@@ -74,6 +75,8 @@ TEST(TestMessage, TestBasic) {
   int32_t decoded_message_content0;
   dec >> decoded_message_content0;
   EXPECT_EQ(decoded_message_content0, message_content0);
+  EXPECT_EQ((*it).get_message_length(),
+            sizeof(MessagePiece::header_type) + sizeof(int32_t));
 
   it++;
 
@@ -81,7 +84,8 @@ TEST(TestMessage, TestBasic) {
   int64_t decoded_message_content1;
   dec >> decoded_message_content1;
   EXPECT_EQ(decoded_message_content1, message_content1);
-
+  EXPECT_EQ((*it).get_message_length(),
+            sizeof(MessagePiece::header_type) + sizeof(int64_t));
   ++it;
 
   EXPECT_EQ(it, message.end());
