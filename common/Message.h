@@ -5,6 +5,7 @@
 #pragma once
 
 #include "StringPiece.h"
+#include "common/MessagePiece.h"
 #include <string>
 
 namespace scar {
@@ -35,31 +36,77 @@ namespace scar {
 
 class Message {
 public:
+  // TODO: make it a C++ compatible forward iterator
+
+  class Iterator {
+  public:
+    Iterator(const char *ptr, const char *eof)
+        : eof(eof), messagePiece(get_message_piece(ptr)) {}
+
+    // Prefix ++ overload
+    Iterator &operator++() {
+      const char *ptr = messagePiece.stringPiece.data() +
+                        sizeof(MessagePiece::header_type) +
+                        messagePiece.get_message_length();
+      messagePiece = get_message_piece(ptr);
+      return *this;
+    }
+
+    // Postfix ++ overload
+    Iterator operator++(int) {
+      Iterator iterator = *this;
+      ++(*this);
+      return iterator;
+    }
+
+    bool operator==(const Iterator &that) const {
+      return messagePiece == that.messagePiece && eof == that.eof;
+    }
+
+    bool operator!=(const Iterator &that) const { return !(*this == that); }
+
+    MessagePiece &operator*() { return messagePiece; }
+
+  private:
+    uint32_t get_message_length(const char *ptr) {
+      return MessagePiece::get_message_length(
+          *reinterpret_cast<const MessagePiece::header_type *>(ptr));
+    }
+
+    MessagePiece get_message_piece(const char *ptr) {
+      CHECK(ptr <= eof);
+      if (ptr == eof) {
+        return MessagePiece(StringPiece());
+      }
+      return MessagePiece(StringPiece(ptr, sizeof(MessagePiece::header_type) +
+                                               get_message_length(ptr)));
+    }
+
+  private:
+    const char *eof;
+    MessagePiece messagePiece;
+  };
+
   using header_type = uint64_t;
   using deadbeef_type = uint32_t;
-
-  /* the following contructor is used when creating a message */
+  using iterator_type = Iterator;
 
   Message() : data(sizeof(header_type) + sizeof(deadbeef_type), 0) {
     get_deadbeef_ref() = DEADBEEF;
   }
 
-  /* the following contructor is used when parsing a message */
+  void resize(std::size_t size) {
+    CHECK(data.size() == sizeof(header_type) + sizeof(deadbeef_type));
+    data.resize(data.size() + size);
+  }
 
-  Message(const char *str, std::size_t len) : data(str, len) {
-    CHECK(get_message_length() ==
-          len - sizeof(header_type) - sizeof(deadbeef_type));
-    CHECK(get_deadbeef_ref() == DEADBEEF);
+  char *get_raw_ptr() {
+    return &data[0] + sizeof(header_type) + sizeof(deadbeef_type);
   }
 
   void clear() {
     data = std::string(sizeof(header_type) + sizeof(deadbeef_type), 0);
     get_deadbeef_ref() = DEADBEEF;
-  }
-
-  StringPiece toStringPiece() {
-    return StringPiece(&data[0] + sizeof(header_type) + sizeof(deadbeef_type),
-                       get_message_length());
   }
 
   void flush() {
@@ -77,6 +124,15 @@ public:
   bool checkDeadbeef() {
     auto deadbeef = get_deadbeef_ref();
     return deadbeef == DEADBEEF;
+  }
+
+  Iterator begin() {
+    return Iterator(&data[0] + sizeof(header_type) + sizeof(deadbeef_type),
+                    &data[0] + data.size());
+  }
+
+  Iterator end() {
+    return Iterator(&data[0] + data.size(), &data[0] + data.size());
   }
 
 public:
