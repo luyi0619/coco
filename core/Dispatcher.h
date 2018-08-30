@@ -45,6 +45,11 @@ public:
         if (message == nullptr) {
           continue;
         }
+
+        auto workerId = message->get_worker_id();
+        // release the unique ptr
+        workers[workerId]->outQueue.push(message.release());
+        CHECK(message == nullptr);
       }
     }
 
