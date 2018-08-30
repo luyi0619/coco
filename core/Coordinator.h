@@ -45,10 +45,10 @@ public:
     std::thread epochThread(&Coordinator::advanceEpoch, this);
 
     // start dispatcher threads
-    iDispatcher =
-        std::make_unique<IncomingDispatcher>(inSockets, workers, ioStopFlag);
-    oDispatcher =
-        std::make_unique<OutgoingDispatcher>(outSockets, workers, ioStopFlag);
+    iDispatcher = std::make_unique<IncomingDispatcher>(id, inSockets, workers,
+                                                       ioStopFlag);
+    oDispatcher = std::make_unique<OutgoingDispatcher>(id, outSockets, workers,
+                                                       ioStopFlag);
 
     std::thread iDispatcherThread(&IncomingDispatcher::start,
                                   iDispatcher.get());
