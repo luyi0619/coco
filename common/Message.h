@@ -89,22 +89,22 @@ public:
   using deadbeef_type = uint32_t;
   using iterator_type = Iterator;
 
-  Message() : data(get_header_size(), 0) {
+  Message() : data(get_prefix_size(), 0) {
     set_message_length(data.size());
     get_deadbeef_ref() = DEADBEEF;
   }
 
   void resize(std::size_t size) {
-    CHECK(data.size() == get_header_size());
+    CHECK(data.size() == get_prefix_size());
     data.resize(size);
     set_message_length(data.size());
     get_deadbeef_ref() = DEADBEEF;
   }
 
-  char *get_raw_ptr() { return &data[0] + get_header_size(); }
+  char *get_raw_ptr() { return &data[0] + get_prefix_size(); }
 
   void clear() {
-    data = std::string(get_header_size(), 0);
+    data = std::string(get_prefix_size(), 0);
     set_message_length(data.size());
     get_deadbeef_ref() = DEADBEEF;
   }
@@ -124,7 +124,7 @@ public:
 
   Iterator begin() {
     auto eof = &data[0] + data.size();
-    return Iterator(&data[0] + get_header_size(), eof);
+    return Iterator(&data[0] + get_prefix_size(), eof);
   }
 
   Iterator end() {
@@ -214,8 +214,12 @@ public:
   std::string data;
 
 public:
-  static constexpr uint32_t get_header_size() {
+  static constexpr uint32_t get_prefix_size() {
     return sizeof(header_type) + sizeof(deadbeef_type);
+  }
+
+  static uint64_t get_message_length(uint64_t v) {
+    return (v >> MESSAGE_LENGTH_OFFSET) & MESSAGE_LENGTH_MASK;
   }
 
 public:

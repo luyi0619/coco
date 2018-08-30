@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "common/BufferedReader.h"
 #include "common/LockfreeQueue.h"
 #include "common/Message.h"
 #include "common/Socket.h"
@@ -16,13 +17,18 @@ namespace scar {
 class IncomingDispatcher {
 
 public:
-  IncomingDispatcher(std::size_t id, const std::vector<Socket> &sockets,
+  IncomingDispatcher(std::size_t id, std::vector<Socket> &sockets,
                      const std::vector<std::shared_ptr<Worker>> &workers,
                      std::atomic<bool> &stopFlag)
-      : id(id), sockets(sockets), workers(workers), stopFlag(stopFlag) {}
+      : id(id), workers(workers), stopFlag(stopFlag) {
+
+    for (auto i = 0u; i < sockets.size(); i++) {
+      buffered_readers.emplace_back(sockets[i]);
+    }
+  }
 
   void start() {
-    auto numCoordinators = sockets.size();
+    auto numCoordinators = buffered_readers.size();
     auto numWorkers = workers.size();
     LOG(INFO) << "Incoming Dispatcher started, numCoordinators = "
               << numCoordinators << " numWorkers = " << numWorkers;
@@ -34,7 +40,7 @@ public:
           continue;
         }
 
-        auto message = fetchMessage(sockets[i]);
+        auto message = buffered_readers[i].next_message();
 
         if (message == nullptr) {
           continue;
@@ -49,7 +55,7 @@ public:
 
 private:
   std::size_t id;
-  std::vector<Socket> sockets;
+  std::vector<BufferedReader> buffered_readers;
   std::vector<std::shared_ptr<Worker>> workers;
   std::atomic<bool> &stopFlag;
 };
