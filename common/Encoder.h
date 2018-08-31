@@ -21,6 +21,10 @@ public:
     return StringPiece(bytes.data(), bytes.size());
   }
 
+  void write_n_bytes(const void *ptr, std::size_t size) {
+    bytes.append(static_cast<const char *>(ptr), size);
+  }
+
 private:
   std::string &bytes;
 };
@@ -36,6 +40,12 @@ public:
   Decoder(StringPiece bytes) : bytes(bytes) {}
 
   template <class T> friend Decoder &operator>>(Decoder &dec, T &rhs);
+
+  void read_n_bytes(void *ptr, std::size_t size) {
+    CHECK(bytes.size() >= size);
+    std::memcpy(ptr, bytes.data(), size);
+    bytes.remove_prefix(size);
+  }
 
 private:
   StringPiece bytes;

@@ -11,6 +11,7 @@
 #include <glog/logging.h>
 
 #include "core/Table.h"
+#include "protocol/Silo/SiloMessage.h"
 #include "protocol/Silo/SiloRWKey.h"
 
 namespace scar {
@@ -26,7 +27,8 @@ public:
       std::is_same<typename DatabaseType::TableType, TableType>::value,
       "The database table type is different from the one in protocol.");
 
-  Silo(DatabaseType &db, std::atomic<uint64_t> &epoch) : db(db), epoch(epoch) {}
+  Silo(DatabaseType &db, std::atomic<uint64_t> &epoch)
+      : db(db), messageFactory(db), messageHandler(db), epoch(epoch) {}
 
   template <class KeyType, class ValueType>
   RWKeyType search(std::size_t table_id, std::size_t partition_id,
@@ -305,6 +307,8 @@ private:
 
 private:
   DatabaseType &db;
+  SiloMessageFactory<DatabaseType> messageFactory;
+  SiloMessageHandler<DatabaseType> messageHandler;
   std::atomic<uint64_t> &epoch;
   uint64_t maxTID = 0;
 
