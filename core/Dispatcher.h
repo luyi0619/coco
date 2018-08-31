@@ -17,7 +17,7 @@ namespace scar {
 class IncomingDispatcher {
 
 public:
-  IncomingDispatcher(std::size_t id, std::vector<Socket> &&sockets,
+  IncomingDispatcher(std::size_t id, std::vector<Socket> &sockets,
                      const std::vector<std::shared_ptr<Worker>> &workers,
                      std::atomic<bool> &stopFlag)
       : id(id), workers(workers), stopFlag(stopFlag) {
@@ -67,10 +67,10 @@ private:
 
 class OutgoingDispatcher {
 public:
-  OutgoingDispatcher(std::size_t id, std::vector<Socket> &&sockets,
+  OutgoingDispatcher(std::size_t id, std::vector<Socket> &sockets,
                      const std::vector<std::shared_ptr<Worker>> &workers,
                      std::atomic<bool> &stopFlag)
-      : id(id), sockets(std::move(sockets)), workers(workers), stopFlag(stopFlag) {}
+      : id(id), sockets(sockets), workers(workers), stopFlag(stopFlag) {}
 
   void start() {
 
@@ -111,7 +111,7 @@ public:
 
 private:
   std::size_t id;
-  std::vector<Socket> sockets;
+  std::vector<Socket> &sockets;
   std::vector<std::shared_ptr<Worker>> workers;
   std::atomic<bool> &stopFlag;
 };

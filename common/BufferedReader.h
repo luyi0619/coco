@@ -13,9 +13,35 @@ namespace scar {
 class BufferedReader {
 public:
   BufferedReader(Socket &socket)
-      : socket(socket), bytes_read(0), bytes_total(0) {}
+      : socket(&socket), bytes_read(0), bytes_total(0) {}
+
+  // BufferedReader is not copyable
+  BufferedReader(const BufferedReader &) = delete;
+  BufferedReader &operator=(const BufferedReader &) = delete;
+
+  // BufferedReader is movable
+
+  BufferedReader(BufferedReader &&that)
+      : socket(that.socket), bytes_read(that.bytes_read),
+        bytes_total(that.bytes_total) {
+    that.socket = nullptr;
+    that.bytes_read = 0;
+    that.bytes_total = 0;
+  }
+  BufferedReader &operator=(BufferedReader &&that) {
+    socket = that.socket;
+    bytes_read = that.bytes_read;
+    bytes_total = that.bytes_total;
+
+    that.socket = nullptr;
+    that.bytes_read = 0;
+    that.bytes_total = 0;
+    return *this;
+  }
 
   std::unique_ptr<Message> next_message() {
+    CHECK(socket != nullptr);
+
     fetch_message();
     if (!has_message()) {
       return nullptr;
@@ -43,6 +69,8 @@ public:
 
 private:
   void fetch_message() {
+    CHECK(socket != nullptr);
+
     // return if there is a message left
     if (has_message()) {
       return;
@@ -69,7 +97,7 @@ private:
     // read new message
 
     auto bytes_received =
-        socket.read_async(buffer + bytes_total, BUFFER_SIZE - bytes_total);
+        socket->read_async(buffer + bytes_total, BUFFER_SIZE - bytes_total);
 
     if (bytes_received > 0) {
       // successful read
@@ -100,7 +128,7 @@ public:
   static constexpr uint32_t BUFFER_SIZE = 1204 * 1024 * 4; // 4MB
 
 private:
-  Socket &socket;
+  Socket *socket;
   char buffer[BUFFER_SIZE];
   std::size_t bytes_read, bytes_total;
 };

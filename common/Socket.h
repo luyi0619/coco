@@ -25,18 +25,18 @@ public:
 
   Socket(int fd) : fd(fd) {}
 
-  //Socket is not copyable
-  Socket(const Socket&) = delete;
-  Socket&operator=(const Socket&) = delete;
+  // Socket is not copyable
+  Socket(const Socket &) = delete;
+  Socket &operator=(const Socket &) = delete;
 
-  //Socket is movable
-  Socket(Socket&& that){
+  // Socket is movable
+  Socket(Socket &&that) {
     CHECK(that.fd >= 0);
     fd = that.fd;
     that.fd = -1;
   }
 
-  Socket&operator=(Socket&& that){
+  Socket &operator=(Socket &&that) {
     CHECK(that.fd >= 0);
     fd = that.fd;
     that.fd = -1;

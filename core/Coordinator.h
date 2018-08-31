@@ -25,8 +25,7 @@ public:
 
   Coordinator(std::size_t id, const std::vector<std::string> &peers,
               DatabaseType &db, ContextType &context)
-      : id(id), peers(peers),
-        db(db), context(context) {
+      : id(id), peers(peers), db(db), context(context) {
     epoch.store(0);
     workerStopFlag.store(false);
     epochStopFlag.store(false);
@@ -45,9 +44,9 @@ public:
     std::thread epochThread(&Coordinator::advanceEpoch, this);
 
     // start dispatcher threads
-    iDispatcher = std::make_unique<IncomingDispatcher>(id, std::move(inSockets), workers,
+    iDispatcher = std::make_unique<IncomingDispatcher>(id, inSockets, workers,
                                                        ioStopFlag);
-    oDispatcher = std::make_unique<OutgoingDispatcher>(id, std::move(outSockets), workers,
+    oDispatcher = std::make_unique<OutgoingDispatcher>(id, outSockets, workers,
                                                        ioStopFlag);
 
     std::thread iDispatcherThread(&IncomingDispatcher::start,
@@ -140,8 +139,8 @@ public:
       for (auto k = 0u; k < retryLimit; k++) {
         Socket socket;
 
-        int ret =
-            socket.connect(addressPort[0].c_str(), atoi(addressPort[1].c_str()));
+        int ret = socket.connect(addressPort[0].c_str(),
+                                 atoi(addressPort[1].c_str()));
         if (ret == -1) {
           socket.close();
           if (k == retryLimit - 1) {
