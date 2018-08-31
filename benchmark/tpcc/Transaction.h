@@ -345,7 +345,7 @@ public:
     customer_value.C_YTD_PAYMENT += H_AMOUNT;
     customer_value.C_PAYMENT_CNT += 1;
 
-    this->update(customerTableID, C_W_ID - 1, &customer_key, &customer_value);
+    this->update(customerTableID, C_W_ID - 1, customer_key, customer_value);
 
     char H_DATA[25];
     int written;

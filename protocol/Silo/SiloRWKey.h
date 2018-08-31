@@ -49,9 +49,9 @@ public:
   void set_tid(uint64_t tid) { this->tid = tid; }
 
   // key
-  void set_key(void *key) { this->key = key; }
+  void set_key(const void *key) { this->key = key; }
 
-  void *get_key() const { return key; }
+  const void *get_key() const { return key; }
 
   // value
   void set_value(void *value) { this->value = value; }
@@ -60,9 +60,9 @@ public:
 
   // sort_key
 
-  void set_sort_key(void *sort_key) { this->sort_key = sort_key; }
+  void set_sort_key(const void *sort_key) { this->sort_key = sort_key; }
 
-  void *get_sort_key() const { return sort_key; }
+  const void *get_sort_key() const { return sort_key; }
 
 private:
   /*  A bitvec is a 64-bit word. 16 bits for status bits. 16 bits for table id.
@@ -73,9 +73,9 @@ private:
 
   uint64_t bitvec = 0;
   uint64_t tid = 0;
-  void *key = nullptr;
+  const void *key = nullptr;
   void *value = nullptr;
-  void *sort_key = nullptr;
+  const void *sort_key = nullptr;
 
 private:
   static constexpr uint64_t __lock_bit_mask = 0x1ull;

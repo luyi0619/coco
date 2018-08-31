@@ -11,7 +11,7 @@ namespace scar {
 class Partitioner {
 public:
   Partitioner(std::size_t coordinator_id, std::size_t coordinator_nums) {
-    CHECK(coordinator_id >= 0 && coordinator_id < coordinator_nums);
+    CHECK(coordinator_id < coordinator_nums);
     this->coordinator_id = coordinator_id;
     this->coordinator_nums = coordinator_nums;
   }
@@ -54,7 +54,6 @@ public:
   }
 
   std::size_t master_coordinator(std::size_t partition_id) const override {
-    CHECK(partition_id >= 0);
     return partition_id % coordinator_nums;
   }
 
@@ -106,17 +105,15 @@ public:
   }
 
   std::size_t master_coordinator(std::size_t partition_id) const override {
-    CHECK(partition_id >= 0);
     return partition_id % coordinator_nums;
   }
 
   bool is_partition_replicated_on(std::size_t partition_id,
                                   std::size_t coordinator_id) const override {
-    CHECK(partition_id >= 0);
     CHECK(coordinator_id < coordinator_nums);
 
     auto master_id = master_coordinator(partition_id);
-    auto secondary_id = 0; // case 1
+    auto secondary_id = 0u; // case 1
     if (master_id == 0) {
       secondary_id = partition_id % (coordinator_nums - 1) + 1; // case 2
     }

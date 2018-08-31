@@ -10,6 +10,7 @@
 
 #include <glog/logging.h>
 
+#include "core/Table.h"
 #include "protocol/Silo/SiloRWKey.h"
 
 namespace scar {
@@ -17,14 +18,38 @@ namespace scar {
 template <class Database> class Silo {
 public:
   using DatabaseType = Database;
-  using TableType = typename DatabaseType::TableType;
   using MetaDataType = std::atomic<uint64_t>;
+  using TableType = ITable<MetaDataType>;
   using RWKeyType = SiloRWKey;
+
+  static_assert(
+      std::is_same<typename DatabaseType::TableType, TableType>::value,
+      "The database table type is different from the one in protocol.");
 
   Silo(DatabaseType &db, std::atomic<uint64_t> &epoch) : db(db), epoch(epoch) {}
 
+  template <class KeyType, class ValueType>
+  RWKeyType search(std::size_t table_id, std::size_t partition_id,
+                   const KeyType &key, ValueType &value) {
+
+    RWKeyType readKey;
+    readKey.set_key(&key);
+    readKey.set_value(&value);
+    readKey.set_table_id(table_id);
+    readKey.set_partition_id(partition_id);
+
+    TableType *table = db.find_table(table_id, partition_id);
+    std::tuple<MetaDataType, ValueType> *row =
+        static_cast<std::tuple<MetaDataType, ValueType> *>(table->search(&key));
+
+    consistent_read(*row, value);
+
+    return readKey;
+  }
+
   template <class ValueType>
-  void read(std::tuple<MetaDataType, ValueType> &row, ValueType &result) {
+  uint64_t consistent_read(std::tuple<MetaDataType, ValueType> &row,
+                           ValueType &result) {
     MetaDataType &tid = std::get<0>(row);
     ValueType &value = std::get<1>(row);
     uint64_t tid_;
@@ -34,15 +59,25 @@ public:
       } while (isLocked(tid_));
       result = value;
     } while (tid_ != tid.load());
+    return tid_;
   }
 
-  template <class DataType, class ValueType>
-  void update(std::tuple<DataType, ValueType> &row, const ValueType &v) {
-    DataType &tid = std::get<0>(row);
-    ValueType &value = std::get<1>(row);
-    uint64_t tid_ = tid.load();
-    CHECK(isLocked(tid_));
-    value = v;
+  template <class KeyType, class ValueType>
+  RWKeyType update(std::size_t table_id, std::size_t partition_id,
+                   const KeyType &key, const ValueType &value) {
+
+    RWKeyType writeKey;
+    writeKey.set_key(&key);
+    // the ValueType object will not be updated
+    writeKey.set_value(const_cast<ValueType *>(&value));
+    writeKey.set_table_id(table_id);
+    writeKey.set_partition_id(partition_id);
+
+    TableType *table = db.find_table(table_id, partition_id);
+    MetaDataType &metaData = table->searchMetaData(&key);
+    writeKey.set_sort_key(&metaData);
+
+    return writeKey;
   }
 
   void abort(std::vector<SiloRWKey> &writeSet) {
@@ -82,6 +117,7 @@ public:
     // generate tid
     uint64_t commit_tid = generateTid(readSet, writeSet, commitEpoch);
 
+    // write
     for (auto &writeKey : writeSet) {
       auto table_id = writeKey.get_table_id();
       auto partition_id = writeKey.get_partition_id();

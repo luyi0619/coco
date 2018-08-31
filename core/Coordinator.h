@@ -94,9 +94,6 @@ public:
 
   void connectToPeers() {
 
-    if (peers.size() <= 1)
-      return;
-
     inSockets = std::vector<Socket>(peers.size());
     outSockets = std::vector<Socket>(peers.size());
 
