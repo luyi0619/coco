@@ -2,7 +2,7 @@
 // Created by Yi Lu on 7/19/18.
 //
 
-#include "protocol/Silo.h"
+#include "protocol/Silo/Silo.h"
 #include <gtest/gtest.h>
 
 TEST(TestSilo, TestSiloRWKey) {

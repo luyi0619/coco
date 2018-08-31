@@ -4,7 +4,7 @@
 
 #include "benchmark/tpcc/Database.h"
 #include "benchmark/tpcc/Transaction.h"
-#include "protocol/Silo.h"
+#include "protocol/Silo/Silo.h"
 #include <gtest/gtest.h>
 
 TEST(TestTPCCTransaction, TestBasic) {

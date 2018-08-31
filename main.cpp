@@ -1,7 +1,7 @@
 #include "benchmark/tpcc/Database.h"
 #include "benchmark/tpcc/Workload.h"
 #include "core/Coordinator.h"
-#include "protocol/Silo.h"
+#include "protocol/Silo/Silo.h"
 #include <boost/algorithm/string.hpp>
 #include <gflags/gflags.h>
 #include <glog/logging.h>

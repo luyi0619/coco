@@ -7,7 +7,7 @@
 #include "benchmark/ycsb/Database.h"
 #include "benchmark/ycsb/Workload.h"
 #include "core/Executor.h"
-#include "protocol/Silo.h"
+#include "protocol/Silo/Silo.h"
 #include <gtest/gtest.h>
 
 TEST(TestExecutor, TestTPCC) {

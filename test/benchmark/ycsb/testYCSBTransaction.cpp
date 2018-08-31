@@ -4,7 +4,7 @@
 
 #include "benchmark/ycsb/Database.h"
 #include "benchmark/ycsb/Transaction.h"
-#include "protocol/Silo.h"
+#include "protocol/Silo/Silo.h"
 #include <gtest/gtest.h>
 
 TEST(TestYCSBTransaction, TestBasic) {
