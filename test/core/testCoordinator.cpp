@@ -15,8 +15,11 @@ DEFINE_string(servers, "127.0.0.1:10010;127.0.0.1:10011;127.0.0.1:10012",
 TEST(TestCoordinator, TestTPCC) {
 
   using MetaDataType = std::atomic<uint64_t>;
-  using ProtocolType = scar::Silo<scar::tpcc::Database<MetaDataType>>;
-  using WorkloadType = scar::tpcc::Workload<ProtocolType>;
+  using DatabaseType = scar::tpcc::Database<MetaDataType>;
+  using RWKeyType = scar::SiloRWKey;
+  using ProtocolType = scar::Silo<DatabaseType>;
+  using WorkloadType =
+      scar::tpcc::Workload<scar::Transaction<RWKeyType, DatabaseType>>;
 
   int n = FLAGS_threads;
 
@@ -24,12 +27,13 @@ TEST(TestCoordinator, TestTPCC) {
   context.partitionNum = n;
   context.workerNum = n;
 
-  scar::tpcc::Database<MetaDataType> db;
+  DatabaseType db;
 
   std::atomic<uint64_t> epoch;
   std::atomic<bool> stopFlag;
 
-  scar::Coordinator<WorkloadType> c(0, {"127.0.0.1"}, db, context);
+  scar::Coordinator<WorkloadType, ProtocolType> c(0, {"127.0.0.1"}, db,
+                                                  context);
 
   EXPECT_EQ(true, true);
 }
@@ -37,8 +41,11 @@ TEST(TestCoordinator, TestTPCC) {
 TEST(TestCoordinator, TestConnect) {
 
   using MetaDataType = std::atomic<uint64_t>;
-  using ProtocolType = scar::Silo<scar::tpcc::Database<MetaDataType>>;
-  using WorkloadType = scar::tpcc::Workload<ProtocolType>;
+  using DatabaseType = scar::tpcc::Database<MetaDataType>;
+  using RWKeyType = scar::SiloRWKey;
+  using ProtocolType = scar::Silo<DatabaseType>;
+  using WorkloadType =
+      scar::tpcc::Workload<scar::Transaction<RWKeyType, DatabaseType>>;
 
   int n = FLAGS_threads;
 
@@ -50,8 +57,8 @@ TEST(TestCoordinator, TestConnect) {
     context.partitionNum = n;
     context.workerNum = n;
 
-    scar::tpcc::Database<MetaDataType> db;
-    scar::Coordinator<WorkloadType> c(id, peers, db, context);
+    DatabaseType db;
+    scar::Coordinator<WorkloadType, ProtocolType> c(id, peers, db, context);
     c.connectToPeers();
   };
 

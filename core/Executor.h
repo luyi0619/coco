@@ -12,33 +12,36 @@
 
 namespace scar {
 
-template <class Workload> class Executor : public Worker {
+template <class Workload, class Protocol> class Executor : public Worker {
 public:
   using WorkloadType = Workload;
+  using ProtocolType = Protocol;
+  using RWKeyType = typename WorkloadType::RWKeyType;
   using DatabaseType = typename WorkloadType::DatabaseType;
-  using ProtocolType = typename WorkloadType::ProtocolType;
+  using TransactionType = typename WorkloadType::TransactionType;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
 
   Executor(std::size_t id, DatabaseType &db, ContextType &context,
            std::atomic<uint64_t> &epoch, std::atomic<bool> &stopFlag)
       : Worker(id), db(db), context(context), epoch(epoch), stopFlag(stopFlag),
-        protocol(db, epoch), workload(db, context, random, protocol),
+        protocol(db, epoch), workload(db, context, random),
         syncMessage(nullptr), asyncMessage(nullptr) {
     transactionId.store(0);
   }
 
   void start() override {
-    std::queue<std::unique_ptr<Transaction<ProtocolType>>> q;
+    std::queue<std::unique_ptr<TransactionType>> q;
 
     while (!stopFlag.load()) {
       commitTransactions(q);
 
-      std::unique_ptr<Transaction<ProtocolType>> txn =
-          workload.nextTransaction();
-      txn->execute();
+      std::unique_ptr<TransactionType> transaction = workload.nextTransaction();
+      setupHandlers(transaction.get());
+
+      transaction->execute();
       transactionId.fetch_add(1);
-      q.push(std::move(txn));
+      q.push(std::move(transaction));
     }
 
     commitTransactions(q, true);
@@ -53,10 +56,28 @@ public:
               << " bytes.";
   }
 
+  bool process_request() {
+
+    // only support local read request
+    // TODO: support remote request
+
+    return true;
+  }
+
 private:
-  void
-  commitTransactions(std::queue<std::unique_ptr<Transaction<ProtocolType>>> &q,
-                     bool retry = false) {
+  void setupHandlers(TransactionType *transaction) {
+    transaction->readRequestHandler =
+        [protocol = this->protocol](std::size_t table_id,
+                                    std::size_t partition_id, const void *key,
+                                    void *value) {
+          protocol.search(table_id, partition_id, key, value);
+        };
+
+    transaction->remoteRequestHandler = [this]() { return process_request(); };
+  }
+
+  void commitTransactions(std::queue<std::unique_ptr<TransactionType>> &q,
+                          bool retry = false) {
     using namespace std::chrono;
     do {
       auto currentEpoch = epoch.load();

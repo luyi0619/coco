@@ -7,27 +7,24 @@
 #include "glog/logging.h"
 
 #include "benchmark/ycsb/Query.h"
+#include "benchmark/ycsb/Schema.h"
 #include "core/Transaction.h"
 
 namespace scar {
 namespace ycsb {
+template <class RWKey, class Database>
+class ReadModifyWrite : public Transaction<RWKey, Database> {
 
-template <class Protocol> class ReadModifyWrite : public Transaction<Protocol> {
 public:
-  using ProtocolType = Protocol;
-  using RWKeyType = typename Protocol::RWKeyType;
-  using DatabaseType = typename Protocol::DatabaseType;
+  using RWKeyType = RWKey;
+  using DatabaseType = Database;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
   using MetaDataType = typename DatabaseType::MetaDataType;
+  using TableType = ITable<MetaDataType>;
 
-  static_assert(
-      std::is_same<MetaDataType, typename Protocol::MetaDataType>::value,
-      "The database datatype is different from the one in protocol.");
-
-  ReadModifyWrite(DatabaseType &db, ContextType &context, RandomType &random,
-                  ProtocolType &protocol)
-      : Transaction<ProtocolType>(db, context, random, protocol) {}
+  ReadModifyWrite(DatabaseType &db, ContextType &context, RandomType &random)
+      : Transaction<RWKey, Database>(db, context, random) {}
 
   virtual ~ReadModifyWrite() override = default;
 
@@ -48,10 +45,15 @@ public:
     for (auto i = 0; i < YCSB_FIELD_SIZE; i++) {
       auto key = query.Y_KEY[i];
       ycsb_keys[i].Y_KEY = key;
-      if (query.UPDATE[i]) {
-        this->search(ycsbTableID, context.getPartitionID(key), ycsb_keys[i],
-                     ycsb_values[i]);
+      this->search(ycsbTableID, context.getPartitionID(key), ycsb_keys[i],
+                   ycsb_values[i]);
+    }
 
+    this->process_read_request();
+
+    for (auto i = 0; i < YCSB_FIELD_SIZE; i++) {
+      auto key = query.Y_KEY[i];
+      if (query.UPDATE[i]) {
         ycsb_values[i].Y_F01.assign(
             random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
         ycsb_values[i].Y_F02.assign(
@@ -75,13 +77,9 @@ public:
 
         this->update(ycsbTableID, context.getPartitionID(key), ycsb_keys[i],
                      ycsb_values[i]);
-      } else {
-        this->search(ycsbTableID, context.getPartitionID(key), ycsb_keys[i],
-                     ycsb_values[i]);
       }
     }
-
-    return this->commit();
+    return TransactionResult::READY_TO_COMMIT;
   }
 };
 } // namespace ycsb

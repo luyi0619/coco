@@ -30,56 +30,22 @@ public:
   Silo(DatabaseType &db, std::atomic<uint64_t> &epoch)
       : db(db), messageFactory(db), messageHandler(db), epoch(epoch) {}
 
-  template <class KeyType, class ValueType>
-  RWKeyType search(std::size_t table_id, std::size_t partition_id,
-                   const KeyType &key, ValueType &value) {
-
-    RWKeyType readKey;
-    readKey.set_key(&key);
-    readKey.set_value(&value);
-    readKey.set_table_id(table_id);
-    readKey.set_partition_id(partition_id);
+  void search(std::size_t table_id, std::size_t partition_id, const void *key,
+              void *value) const {
 
     TableType *table = db.find_table(table_id, partition_id);
-    std::tuple<MetaDataType, ValueType> *row =
-        static_cast<std::tuple<MetaDataType, ValueType> *>(table->search(&key));
+    auto value_bytes = table->valueNBytes();
+    auto row = table->search(key);
+    MetaDataType &tid = *std::get<0>(row);
 
-    consistent_read(*row, value);
-
-    return readKey;
-  }
-
-  template <class ValueType>
-  uint64_t consistent_read(std::tuple<MetaDataType, ValueType> &row,
-                           ValueType &result) {
-    MetaDataType &tid = std::get<0>(row);
-    ValueType &value = std::get<1>(row);
+    // read from a consistent view
     uint64_t tid_;
     do {
       do {
         tid_ = tid.load();
       } while (isLocked(tid_));
-      result = value;
+      std::memcpy(value, std::get<1>(row), value_bytes);
     } while (tid_ != tid.load());
-    return tid_;
-  }
-
-  template <class KeyType, class ValueType>
-  RWKeyType update(std::size_t table_id, std::size_t partition_id,
-                   const KeyType &key, const ValueType &value) {
-
-    RWKeyType writeKey;
-    writeKey.set_key(&key);
-    // the ValueType object will not be updated
-    writeKey.set_value(const_cast<ValueType *>(&value));
-    writeKey.set_table_id(table_id);
-    writeKey.set_partition_id(partition_id);
-
-    TableType *table = db.find_table(table_id, partition_id);
-    MetaDataType &metaData = table->searchMetaData(&key);
-    writeKey.set_sort_key(&metaData);
-
-    return writeKey;
   }
 
   void abort(std::vector<SiloRWKey> &writeSet) {
@@ -91,8 +57,8 @@ public:
       auto partitionId = writeKey.get_partition_id();
       auto table = db.find_table(tableId, partitionId);
       auto key = writeKey.get_key();
-      std::atomic<uint64_t> &tid = table->searchMetaData(key);
-      if (writeKey.is_lock_bit()) {
+      std::atomic<uint64_t> &tid = table->search_meta_data(key);
+      if (writeKey.get_lock_bit()) {
         unlock(tid);
       }
     }
@@ -136,11 +102,11 @@ public:
   }
 
 private:
-  bool isLocked(uint64_t value) {
+  bool isLocked(uint64_t value) const {
     return (value >> LOCK_BIT_OFFSET) & LOCK_BIT_MASK;
   }
 
-  uint64_t lock(std::atomic<uint64_t> &a) {
+  uint64_t lock(std::atomic<uint64_t> &a) const {
     uint64_t oldValue, newValue;
     do {
       do {
@@ -152,7 +118,7 @@ private:
     return oldValue;
   }
 
-  uint64_t lock(std::atomic<uint64_t> &a, bool &success) {
+  uint64_t lock(std::atomic<uint64_t> &a, bool &success) const {
     uint64_t oldValue = a.load();
 
     if (isLocked(oldValue)) {
@@ -164,7 +130,7 @@ private:
     return oldValue;
   }
 
-  void unlock(std::atomic<uint64_t> &a) {
+  void unlock(std::atomic<uint64_t> &a) const {
     uint64_t oldValue = a.load();
     CHECK(isLocked(oldValue));
     uint64_t newValue = removeLockBit(oldValue);
@@ -172,7 +138,7 @@ private:
     CHECK(ok);
   }
 
-  void unlock(std::atomic<uint64_t> &a, uint64_t newValue) {
+  void unlock(std::atomic<uint64_t> &a, uint64_t newValue) const {
     uint64_t oldValue = a.load();
     CHECK(isLocked(oldValue));
     CHECK(isLocked(newValue) == false);
@@ -180,11 +146,11 @@ private:
     CHECK(ok);
   }
 
-  uint64_t removeLockBit(uint64_t value) {
+  uint64_t removeLockBit(uint64_t value) const {
     return (~(LOCK_BIT_MASK << LOCK_BIT_OFFSET)) & value;
   }
 
-  uint64_t getEpoch(uint64_t value) {
+  uint64_t getEpoch(uint64_t value) const {
     return (value & (SILO_EPOCH_MASK << SILO_EPOCH_OFFSET)) >>
            SILO_EPOCH_OFFSET;
   }

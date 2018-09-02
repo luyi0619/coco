@@ -15,21 +15,26 @@ TEST(TestSilo, TestSiloRWKey) {
   EXPECT_EQ(key.get_tid(), 0);
   EXPECT_EQ(key.get_table_id(), 0);
   EXPECT_EQ(key.get_partition_id(), 0);
-  EXPECT_EQ(key.is_lock_bit(), false);
+  EXPECT_EQ(key.get_lock_bit(), false);
+  EXPECT_EQ(key.get_read_request_bit(), false);
 
-  key.set_table_id(123);
   key.set_lock_bit();
-  key.set_partition_id(0x45678);
+  key.set_read_request_bit();
+  key.set_table_id(23);
+  key.set_partition_id(45);
 
-  EXPECT_EQ(key.get_table_id(), 123);
-  EXPECT_EQ(key.get_partition_id(), 0x45678);
-  EXPECT_EQ(key.is_lock_bit(), true);
+  EXPECT_EQ(key.get_table_id(), 23);
+  EXPECT_EQ(key.get_partition_id(), 45);
+  EXPECT_EQ(key.get_lock_bit(), true);
+  EXPECT_EQ(key.get_read_request_bit(), true);
 
-  key.set_table_id(0x1234);
   key.clear_lock_bit();
-  key.set_partition_id(0x1ffff);
+  key.clear_read_request_bit();
+  key.set_table_id(12);
+  key.set_partition_id(78);
 
-  EXPECT_EQ(key.get_table_id(), 0x1234);
-  EXPECT_EQ(key.get_partition_id(), 0x1ffff);
-  EXPECT_EQ(key.is_lock_bit(), false);
+  EXPECT_EQ(key.get_table_id(), 12);
+  EXPECT_EQ(key.get_partition_id(), 78);
+  EXPECT_EQ(key.get_lock_bit(), false);
+  EXPECT_EQ(key.get_read_request_bit(), false);
 }

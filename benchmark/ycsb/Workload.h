@@ -14,23 +14,22 @@ namespace scar {
 
 namespace ycsb {
 
-template <class Protocol> class Workload {
+template <class Transaction> class Workload {
 public:
-  using ProtocolType = Protocol;
-  using DatabaseType = Database<typename ProtocolType::MetaDataType>;
+  using TransactionType = Transaction;
+  using RWKeyType = typename TransactionType::RWKeyType;
+  using DatabaseType = typename TransactionType::DatabaseType;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
-  using TransactionType = Transaction<ProtocolType>;
 
-  Workload(DatabaseType &db, ContextType &context, RandomType &random,
-           ProtocolType &protocol)
-      : db(db), context(context), random(random), protocol(protocol) {}
+  Workload(DatabaseType &db, ContextType &context, RandomType &random)
+      : db(db), context(context), random(random) {}
 
   std::unique_ptr<TransactionType> nextTransaction() {
 
     std::unique_ptr<TransactionType> p =
-        std::make_unique<ReadModifyWrite<ProtocolType>>(db, context, random,
-                                                        protocol);
+        std::make_unique<ReadModifyWrite<RWKeyType, DatabaseType>>(db, context,
+                                                                   random);
 
     return p;
   }
@@ -39,7 +38,6 @@ private:
   DatabaseType &db;
   ContextType &context;
   RandomType &random;
-  ProtocolType &protocol;
 };
 
 } // namespace ycsb

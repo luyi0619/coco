@@ -18,8 +18,10 @@ int main(int argc, char *argv[]) {
   google::ParseCommandLineFlags(&argc, &argv, true);
 
   using MetaDataType = std::atomic<uint64_t>;
+  using TransactionType =
+      scar::Transaction<scar::SiloRWKey, scar::tpcc::Database<MetaDataType>>;
   using ProtocolType = scar::Silo<scar::tpcc::Database<MetaDataType>>;
-  using WorkloadType = scar::tpcc::Workload<ProtocolType>;
+  using WorkloadType = scar::tpcc::Workload<TransactionType>;
 
   int n = FLAGS_threads;
   scar::tpcc::Context context;
@@ -32,7 +34,7 @@ int main(int argc, char *argv[]) {
   scar::tpcc::Database<MetaDataType> db;
   db.initialize(context, n, n);
 
-  scar::Coordinator<WorkloadType> c(0, peers, db, context);
+  scar::Coordinator<WorkloadType, ProtocolType> c(0, peers, db, context);
   c.start();
   return 0;
 }

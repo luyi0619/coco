@@ -353,12 +353,9 @@ private:
         customer_key.C_ID = j;
 
         // no concurrent write, it is ok to read without validation on
-        // Protocol::DataType
-        std::tuple<MetaDataType, customer::value> *customer_row =
-            static_cast<decltype(customer_row)>(
-                customer_table->search(&customer_key));
-
-        const customer::value &customer_value = std::get<1>(*customer_row);
+        // MetaDataType
+        const customer::value &customer_value = *static_cast<customer::value *>(
+            customer_table->search_value(&customer_key));
         last_name_to_first_names_and_c_ids[customer_value.C_LAST].push_back(
             std::make_pair(customer_value.C_FIRST, customer_key.C_ID));
       }
@@ -476,7 +473,7 @@ private:
   void orderLineInit(std::size_t partitionID) {
 
     Random random;
-    TableType *table = tbl_order_vec[partitionID].get();
+    TableType *table = tbl_order_line_vec[partitionID].get();
 
     // For each row in the WAREHOUSE table, 10 rows in the DISTRICT table
     // For each row in the DISTRICT table, 3,000 rows in the ORDER table
@@ -494,10 +491,9 @@ private:
         order_key.O_ID = j;
 
         // no concurrent write, it is ok to read without validation on
-        // Protocol::DataType
-        std::tuple<MetaDataType, order::value> *order_row =
-            static_cast<decltype(order_row)>(order_table->search(&order_key));
-        const order::value &order_value = std::get<1>(*order_row);
+        // MetaDataType
+        const order::value &order_value =
+            *static_cast<order::value *>(order_table->search_value(&order_key));
 
         for (int k = 1; k <= order_value.O_OL_CNT; k++) {
           order_line::key key;

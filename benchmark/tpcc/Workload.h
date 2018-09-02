@@ -14,17 +14,16 @@ namespace scar {
 
 namespace tpcc {
 
-template <class Protocol> class Workload {
+template <class Transaction> class Workload {
 public:
-  using ProtocolType = Protocol;
-  using DatabaseType = Database<typename ProtocolType::MetaDataType>;
+  using TransactionType = Transaction;
+  using RWKeyType = typename TransactionType::RWKeyType;
+  using DatabaseType = typename TransactionType::DatabaseType;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
-  using TransactionType = Transaction<ProtocolType>;
 
-  Workload(DatabaseType &db, ContextType &context, RandomType &random,
-           ProtocolType &protocol)
-      : db(db), context(context), random(random), protocol(protocol) {}
+  Workload(DatabaseType &db, ContextType &context, RandomType &random)
+      : db(db), context(context), random(random) {}
 
   std::unique_ptr<TransactionType> nextTransaction() {
 
@@ -33,11 +32,11 @@ public:
     std::unique_ptr<TransactionType> p;
 
     if (x <= 50) {
-      p = std::make_unique<NewOrder<ProtocolType>>(db, context, random,
-                                                   protocol);
+      p = std::make_unique<NewOrder<RWKeyType, DatabaseType>>(db, context,
+                                                              random);
     } else {
-      p = std::make_unique<Payment<ProtocolType>>(db, context, random,
-                                                  protocol);
+      p = std::make_unique<Payment<RWKeyType, DatabaseType>>(db, context,
+                                                             random);
     }
 
     return p;
@@ -47,7 +46,6 @@ private:
   DatabaseType &db;
   ContextType &context;
   RandomType &random;
-  ProtocolType &protocol;
 };
 
 } // namespace tpcc

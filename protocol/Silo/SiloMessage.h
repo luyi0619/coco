@@ -191,8 +191,6 @@ public:
 
   SiloMessageHandler(DatabaseType &db) : db(db) {}
 
-
-
 private:
   DatabaseType &db;
 };
