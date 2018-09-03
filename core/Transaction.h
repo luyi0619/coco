@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "common/Message.h"
 #include "core/Table.h"
 #include <chrono>
 #include <glog/logging.h>
@@ -126,7 +127,9 @@ public:
                          void *)>
       readRequestHandler;
   // processed a request?
-  std::function<bool(void)> remoteRequestHandler;
+  std::function<std::size_t(void)> remoteRequestHandler;
+
+  std::function<void(std::vector<std::unique_ptr<Message>> &)> messageFlusher;
 
   DatabaseType &db;
   ContextType &context;

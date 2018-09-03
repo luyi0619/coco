@@ -74,7 +74,9 @@ public:
 
     using std::placeholders::_1;
     initTables("ycsb",
-               std::bind(&Database::ycsbInit, this, std::cref(context), _1),
+               [&context, this](std::size_t partitionID) {
+                 ycsbInit(context, partitionID);
+               },
                partitionNum, threadsNum);
   }
 

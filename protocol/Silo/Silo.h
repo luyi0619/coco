@@ -8,12 +8,12 @@
 #include <atomic>
 #include <thread>
 
-#include <glog/logging.h>
-
+#include "core/Partitioner.h"
 #include "core/Table.h"
 #include "protocol/Silo/SiloHelper.h"
 #include "protocol/Silo/SiloMessage.h"
 #include "protocol/Silo/SiloRWKey.h"
+#include <glog/logging.h>
 
 namespace scar {
 
@@ -34,7 +34,8 @@ public:
       std::is_same<typename DatabaseType::TableType, TableType>::value,
       "The database table type is different from the one in protocol.");
 
-  Silo(DatabaseType &db, std::atomic<uint64_t> &epoch) : db(db), epoch(epoch) {}
+  Silo(DatabaseType &db, std::atomic<uint64_t> &epoch, Partitioner &partitioner)
+      : db(db), epoch(epoch), partitioner(partitioner) {}
 
   uint64_t search(std::size_t table_id, std::size_t partition_id,
                   const void *key, void *value) const {
@@ -45,25 +46,39 @@ public:
     return SiloHelper::read(row, value, value_bytes);
   }
 
-  template <class Transaction> void abort(Transaction &txn) {
+  template <class Transaction>
+  void abort(Transaction &txn,
+             std::vector<std::unique_ptr<Message>> &messages) {
 
     auto &writeSet = txn.writeSet;
 
     // unlock locked records
 
-    for (auto &writeKey : writeSet) {
+    for (auto i = 0u; i < writeSet.size(); i++) {
+      auto &writeKey = writeSet[i];
       auto tableId = writeKey.get_table_id();
       auto partitionId = writeKey.get_partition_id();
       auto table = db.find_table(tableId, partitionId);
-      auto key = writeKey.get_key();
-      std::atomic<uint64_t> &tid = table->search_metadata(key);
-      if (writeKey.get_lock_bit()) {
-        SiloHelper::unlock(tid);
+      if (partitioner.has_master_partition(partitionId)) {
+        auto key = writeKey.get_key();
+        std::atomic<uint64_t> &tid = table->search_metadata(key);
+        if (writeKey.get_lock_bit()) {
+          SiloHelper::unlock(tid);
+        }
+      } else {
+        auto coordinatorID = partitioner.master_coordinator(partitionId);
+        MessageFactoryType<TableType>::new_abort_message(
+            *messages[coordinatorID], *table, writeKey.get_key());
       }
     }
+
+    txn.messageFlusher(messages);
   }
 
-  template <class Transaction> bool commit(Transaction &txn) {
+  template <class Transaction>
+  bool commit(Transaction &txn,
+              std::vector<std::unique_ptr<Message>> &syncMessages,
+              std::vector<std::unique_ptr<Message>> &asyncMessages) {
 
     static_assert(std::is_same<RWKeyType, typename decltype(
                                               txn.readSet)::value_type>::value,
@@ -72,12 +87,9 @@ public:
                                               txn.writeSet)::value_type>::value,
                   "RWKeyType do not match.");
 
-    auto &readSet = txn.readSet;
-    auto &writeSet = txn.writeSet;
-
     // lock write set
-    if (lockWriteSet(txn)) {
-      abort(txn);
+    if (lockWriteSet(txn, syncMessages)) {
+      abort(txn, syncMessages);
       return false;
     }
 
@@ -85,8 +97,8 @@ public:
     txn.commitEpoch = epoch.load();
 
     // commit phase 2, read validation
-    if (!validateReadSet(txn)) {
-      abort(txn);
+    if (!validateReadSet(txn, syncMessages)) {
+      abort(txn, syncMessages);
       return false;
     }
 
@@ -94,67 +106,67 @@ public:
     uint64_t commit_tid = generateTid(txn);
 
     // write
-    for (auto &writeKey : writeSet) {
-      auto table_id = writeKey.get_table_id();
-      auto partition_id = writeKey.get_partition_id();
-      auto key = writeKey.get_key();
-      auto value = writeKey.get_value();
-
-      auto table = db.find_table(table_id, partition_id);
-      std::atomic<uint64_t> &tid = table->search_metadata(key);
-      table->update(key, value);
-      SiloHelper::unlock(tid, commit_tid);
-    }
+    write(txn, commit_tid, syncMessages);
 
     return true;
   }
 
 private:
-  template <class Transaction> bool lockWriteSet(Transaction &txn) {
+  template <class Transaction>
+  bool lockWriteSet(Transaction &txn,
+                    std::vector<std::unique_ptr<Message>> &messages) {
 
     auto &readSet = txn.readSet;
     auto &writeSet = txn.writeSet;
 
-    auto getReadKey = [&readSet](const void *key) -> SiloRWKey * {
-      for (auto &readKey : readSet) {
-        if (readKey.get_key() == key) {
-          return &readKey;
-        }
-      }
-      return nullptr;
-    };
-
-    bool tidChanged = false;
-
-    std::sort(writeSet.begin(), writeSet.end(),
-              [](const SiloRWKey &k1, const SiloRWKey &k2) {
-                return k1.get_sort_key() < k2.get_sort_key();
-              });
-
-    for (auto &writeKey : writeSet) {
+    for (auto i = 0u; i < writeSet.size(); i++) {
+      auto &writeKey = writeSet[i];
       auto tableId = writeKey.get_table_id();
       auto partitionId = writeKey.get_partition_id();
       auto table = db.find_table(tableId, partitionId);
 
-      auto key = writeKey.get_key();
-      std::atomic<uint64_t> &tid = table->search_metadata(key);
-      uint64_t latestTid = SiloHelper::lock(tid);
-      auto readKeyPtr = getReadKey(key);
-      // assume no blind write
-      CHECK(readKeyPtr != nullptr);
-      uint64_t tidOnRead = readKeyPtr->get_tid();
-      if (latestTid != tidOnRead) {
-        tidChanged = true;
-      }
+      // lock local records
+      if (partitioner.has_master_partition(partitionId)) {
+        auto key = writeKey.get_key();
+        std::atomic<uint64_t> &tid = table->search_metadata(key);
+        bool success;
+        uint64_t latestTid = SiloHelper::lock(tid, success);
 
-      writeKey.set_tid(latestTid);
-      writeKey.set_lock_bit();
+        if (!success) {
+          txn.abort_lock = true;
+          break;
+        }
+
+        writeKey.set_lock_bit();
+
+        auto readKeyPtr = txn.get_read_key(key);
+        // assume no blind write
+        CHECK(readKeyPtr != nullptr);
+        uint64_t tidOnRead = readKeyPtr->get_tid();
+        if (latestTid != tidOnRead) {
+          txn.abort_lock = true;
+          break;
+        }
+
+        writeKey.set_tid(latestTid);
+      } else {
+        auto coordinatorID = partitioner.master_coordinator(partitionId);
+        MessageFactoryType<TableType>::new_lock_message(
+            *messages[coordinatorID], *table, writeKey.get_key(), i);
+      }
     }
 
-    return tidChanged;
+    txn.messageFlusher(messages);
+    while (txn.pendingResponses > 0) {
+      txn.remoteRequestHandler();
+    }
+
+    return txn.abort_lock;
   }
 
-  template <class Transaction> bool validateReadSet(Transaction &txn) {
+  template <class Transaction>
+  bool validateReadSet(Transaction &txn,
+                       std::vector<std::unique_ptr<Message>> &messages) {
 
     auto &readSet = txn.readSet;
     auto &writeSet = txn.writeSet;
@@ -168,26 +180,42 @@ private:
       return false;
     };
 
-    for (auto &readKey : readSet) {
+    for (auto i = 0u; i < readSet.size(); i++) {
+      auto &readKey = readSet[i];
       bool in_write_set = isKeyInWriteSet(readKey.get_key());
-      if (in_write_set)
+      if (in_write_set) {
         continue; // already validated in lock write set
+      }
 
       auto tableId = readKey.get_table_id();
       auto partitionId = readKey.get_partition_id();
       auto table = db.find_table(tableId, partitionId);
-      auto key = readKey.get_key();
-      uint64_t tid = table->search_metadata(key).load();
 
-      if (SiloHelper::removeLockBit(tid) != readKey.get_tid()) {
-        return false;
-      }
-
-      if (SiloHelper::isLocked(tid)) { // must be locked by others
-        return false;
+      if (partitioner.has_master_partition(partitionId)) {
+        auto key = readKey.get_key();
+        uint64_t tid = table->search_metadata(key).load();
+        if (SiloHelper::removeLockBit(tid) != readKey.get_tid()) {
+          txn.abort_read_validation = true;
+          break;
+        }
+        if (SiloHelper::isLocked(tid)) { // must be locked by others
+          txn.abort_read_validation = true;
+          break;
+        }
+      } else {
+        auto coordinatorID = partitioner.master_coordinator(partitionId);
+        MessageFactoryType<TableType>::new_read_validation_message(
+            *messages[coordinatorID], *table, readKey.get_key(), i,
+            readKey.get_tid());
       }
     }
-    return true;
+
+    txn.messageFlusher(messages);
+    while (txn.pendingResponses > 0) {
+      txn.remoteRequestHandler();
+    }
+
+    return !txn.abort_read_validation;
   }
 
   template <class Transaction>
@@ -237,9 +265,39 @@ private:
     return maxTID;
   }
 
+  template <class Transaction>
+  void write(Transaction &txn, uint64_t commit_tid,
+             std::vector<std::unique_ptr<Message>> &messages) {
+
+    auto &readSet = txn.readSet;
+    auto &writeSet = txn.writeSet;
+
+    for (auto i = 0u; i < writeSet.size(); i++) {
+      auto &writeKey = writeSet[i];
+      auto tableId = writeKey.get_table_id();
+      auto partitionId = writeKey.get_partition_id();
+      auto table = db.find_table(tableId, partitionId);
+      if (partitioner.has_master_partition(partitionId)) {
+        auto key = writeKey.get_key();
+        auto value = writeKey.get_value();
+
+        std::atomic<uint64_t> &tid = table->search_metadata(key);
+        table->update(key, value);
+        SiloHelper::unlock(tid, commit_tid);
+      } else {
+        auto coordinatorID = partitioner.master_coordinator(partitionId);
+        MessageFactoryType<TableType>::new_write_message(
+            *messages[coordinatorID], *table, writeKey.get_key(),
+            writeKey.get_value(), commit_tid);
+      }
+    }
+    txn.messageFlusher(messages);
+  }
+
 private:
   DatabaseType &db;
   std::atomic<uint64_t> &epoch;
+  Partitioner &partitioner;
   uint64_t maxTID = 0;
 };
 

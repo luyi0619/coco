@@ -199,26 +199,37 @@ public:
                << " milliseconds.";
 
     using std::placeholders::_1;
-    initTables("warehouse", std::bind(&Database::warehouseInit, this, _1),
+    initTables("warehouse",
+               [this](std::size_t partitionID) { warehouseInit(partitionID); },
                partitionNum, threadsNum);
-    initTables("district", std::bind(&Database::districtInit, this, _1),
+    initTables("district",
+               [this](std::size_t partitionID) { districtInit(partitionID); },
                partitionNum, threadsNum);
-    initTables("customer", std::bind(&Database::customerInit, this, _1),
+    initTables("customer",
+               [this](std::size_t partitionID) { customerInit(partitionID); },
                partitionNum, threadsNum);
-    initTables("customer_name_idx",
-               std::bind(&Database::customerNameIdxInit, this, _1),
+    initTables(
+        "customer_name_idx",
+        [this](std::size_t partitionID) { customerNameIdxInit(partitionID); },
+        partitionNum, threadsNum);
+    initTables("history",
+               [this](std::size_t partitionID) { historyInit(partitionID); },
                partitionNum, threadsNum);
-    initTables("history", std::bind(&Database::historyInit, this, _1),
+    initTables("new_order",
+               [this](std::size_t partitionID) { newOrderInit(partitionID); },
                partitionNum, threadsNum);
-    initTables("new_order", std::bind(&Database::newOrderInit, this, _1),
+    initTables("order",
+               [this](std::size_t partitionID) { orderInit(partitionID); },
                partitionNum, threadsNum);
-    initTables("order", std::bind(&Database::orderInit, this, _1), partitionNum,
-               threadsNum);
-    initTables("order_line", std::bind(&Database::orderLineInit, this, _1),
+    initTables("order_line",
+               [this](std::size_t partitionID) { orderLineInit(partitionID); },
                partitionNum, threadsNum);
-    initTables("item", std::bind(&Database::itemInit, this, _1), 1, 1);
-    initTables("stock", std::bind(&Database::stockInit, this, _1), partitionNum,
-               threadsNum);
+    initTables("item",
+               [this](std::size_t partitionID) { itemInit(partitionID); }, 1,
+               1);
+    initTables("stock",
+               [this](std::size_t partitionID) { stockInit(partitionID); },
+               partitionNum, threadsNum);
   }
 
 private:

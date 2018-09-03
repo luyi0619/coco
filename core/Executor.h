@@ -33,12 +33,19 @@ public:
 
   Executor(std::size_t id, DatabaseType &db, ContextType &context,
            std::atomic<uint64_t> &epoch, std::atomic<bool> &stopFlag)
-      : Worker(id), db(db), context(context), epoch(epoch), stopFlag(stopFlag),
-        protocol(db, epoch), workload(db, context, random),
-        syncMessage(nullptr), asyncMessage(nullptr) {
+      : Worker(id), db(db), context(context),
+        partitioner(
+            std::make_unique<HashPartitioner>(id, context.coordinatorNum)),
+        epoch(epoch), stopFlag(stopFlag), protocol(db, epoch, *partitioner),
+        workload(db, context, random) {
     transactionId.store(0);
+
+    for (auto i = 0u; i < context.coordinatorNum; i++) {
+      syncMessages.emplace_back(std::make_unique<Message>());
+      asyncMessages.emplace_back(std::make_unique<Message>());
+    }
+
     messageHandlers = MessageHandlerType::get_message_handlers();
-    partitioner = std::make_unique<HashPartitioner>(id, context.coordinatorNum);
   }
 
   void start() override {
@@ -53,7 +60,8 @@ public:
       auto result = transaction->execute();
 
       if (result == TransactionResult::READY_TO_COMMIT) {
-        protocol.commit(*transaction);
+        protocol.commit(*transaction, syncMessages, asyncMessages);
+
         transactionId.fetch_add(1);
         q.push(std::move(transaction));
       }
@@ -87,7 +95,9 @@ public:
       CHECK(type < messageHandlers.size());
       TableType *table = db.find_table(messagePiece.get_table_id(),
                                        messagePiece.get_partition_id());
-      messageHandlers[type](messagePiece, *syncMessage, *table, *transaction);
+      messageHandlers[type](messagePiece,
+                            *syncMessages[message->get_source_node_id()],
+                            *table, *transaction);
     }
 
     return message->get_message_count();
@@ -102,13 +112,31 @@ private:
         return protocol.search(table_id, partition_id, key, value);
       } else {
         TableType *table = db.find_table(table_id, partition_id);
-        MessageFactoryType::new_search_message(*syncMessage, *table, key,
-                                               key_offset);
+        auto coordinatorID = partitioner->master_coordinator(partition_id);
+        MessageFactoryType::new_search_message(*syncMessages[coordinatorID],
+                                               *table, key, key_offset);
         return 0;
       }
     };
 
     transaction->remoteRequestHandler = [this]() { return process_request(); };
+    transaction->messageFlusher =
+        [this](std::vector<std::unique_ptr<Message>> &messages) {
+          return flushMessages(messages);
+        };
+  };
+
+  void flushMessages(std::vector<std::unique_ptr<Message>> &messages) {
+
+    for (auto i = 0u; i < messages.size(); i++) {
+      if (i == id) {
+        continue;
+      }
+
+      auto message = messages[i].release();
+      outQueue.push(message);
+      messages[i] = std::make_unique<Message>();
+    }
   }
 
   void commitTransactions(std::queue<std::unique_ptr<TransactionType>> &q,
@@ -133,6 +161,7 @@ private:
 private:
   DatabaseType &db;
   ContextType &context;
+  std::unique_ptr<Partitioner> partitioner;
   std::atomic<uint64_t> &epoch;
   std::atomic<bool> &stopFlag;
   RandomType random;
@@ -140,10 +169,9 @@ private:
   WorkloadType workload;
   Percentile<int64_t> percentile;
   std::unique_ptr<TransactionType> transaction;
-  std::unique_ptr<Message> syncMessage, asyncMessage;
+  std::vector<std::unique_ptr<Message>> syncMessages, asyncMessages;
   std::vector<std::function<void(MessagePiece, Message &, TableType &,
                                  TransactionType &)>>
       messageHandlers;
-  std::unique_ptr<Partitioner> partitioner;
 };
 } // namespace scar

@@ -4,6 +4,7 @@
 
 #include "benchmark/tpcc/Database.h"
 #include "benchmark/tpcc/Transaction.h"
+#include "core/Partitioner.h"
 #include "protocol/Silo/Silo.h"
 #include <gtest/gtest.h>
 
@@ -17,8 +18,10 @@ TEST(TestTPCCTransaction, TestBasic) {
   scar::tpcc::Context context;
   scar::tpcc::Random random;
 
+  scar::HashPartitioner partitioner(0, 1);
+
   std::atomic<uint64_t> epoch;
-  scar::Silo<decltype(db)> silo(db, epoch);
+  scar::Silo<decltype(db)> silo(db, epoch, partitioner);
   scar::tpcc::NewOrder<RWKeyType, DatabaseType> t1(db, context, random);
   scar::tpcc::Payment<RWKeyType, DatabaseType> t2(db, context, random);
   EXPECT_EQ(true, true);
