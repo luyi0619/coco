@@ -12,6 +12,12 @@
 
 namespace scar {
 namespace ycsb {
+
+struct Storage {
+  ycsb::key ycsb_keys[YCSB_FIELD_SIZE];
+  ycsb::value ycsb_values[YCSB_FIELD_SIZE];
+};
+
 template <class RWKey, class Database>
 class ReadModifyWrite : public Transaction<RWKey, Database> {
 
@@ -22,9 +28,11 @@ public:
   using RandomType = typename DatabaseType::RandomType;
   using MetaDataType = typename DatabaseType::MetaDataType;
   using TableType = ITable<MetaDataType>;
+  using StorageType = Storage;
 
-  ReadModifyWrite(DatabaseType &db, ContextType &context, RandomType &random)
-      : Transaction<RWKey, Database>(db, context, random) {}
+  ReadModifyWrite(DatabaseType &db, ContextType &context, RandomType &random,
+                  Storage &storage)
+      : Transaction<RWKey, Database>(db, context, random), storage(storage) {}
 
   virtual ~ReadModifyWrite() override = default;
 
@@ -37,16 +45,13 @@ public:
 
     CHECK(context.keysPerTransaction == YCSB_FIELD_SIZE);
 
-    ycsb::key ycsb_keys[YCSB_FIELD_SIZE];
-    ycsb::value ycsb_values[YCSB_FIELD_SIZE];
-
     int ycsbTableID = ycsb::tableID;
 
     for (auto i = 0; i < YCSB_FIELD_SIZE; i++) {
       auto key = query.Y_KEY[i];
-      ycsb_keys[i].Y_KEY = key;
-      this->search(ycsbTableID, context.getPartitionID(key), ycsb_keys[i],
-                   ycsb_values[i]);
+      storage.ycsb_keys[i].Y_KEY = key;
+      this->search(ycsbTableID, context.getPartitionID(key),
+                   storage.ycsb_keys[i], storage.ycsb_values[i]);
     }
 
     this->process_read_request();
@@ -54,33 +59,36 @@ public:
     for (auto i = 0; i < YCSB_FIELD_SIZE; i++) {
       auto key = query.Y_KEY[i];
       if (query.UPDATE[i]) {
-        ycsb_values[i].Y_F01.assign(
+        storage.ycsb_values[i].Y_F01.assign(
             random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        ycsb_values[i].Y_F02.assign(
+        storage.ycsb_values[i].Y_F02.assign(
             random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        ycsb_values[i].Y_F03.assign(
+        storage.ycsb_values[i].Y_F03.assign(
             random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        ycsb_values[i].Y_F04.assign(
+        storage.ycsb_values[i].Y_F04.assign(
             random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        ycsb_values[i].Y_F05.assign(
+        storage.ycsb_values[i].Y_F05.assign(
             random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        ycsb_values[i].Y_F06.assign(
+        storage.ycsb_values[i].Y_F06.assign(
             random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        ycsb_values[i].Y_F07.assign(
+        storage.ycsb_values[i].Y_F07.assign(
             random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        ycsb_values[i].Y_F08.assign(
+        storage.ycsb_values[i].Y_F08.assign(
             random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        ycsb_values[i].Y_F09.assign(
+        storage.ycsb_values[i].Y_F09.assign(
             random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        ycsb_values[i].Y_F10.assign(
+        storage.ycsb_values[i].Y_F10.assign(
             random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
 
-        this->update(ycsbTableID, context.getPartitionID(key), ycsb_keys[i],
-                     ycsb_values[i]);
+        this->update(ycsbTableID, context.getPartitionID(key),
+                     storage.ycsb_keys[i], storage.ycsb_values[i]);
       }
     }
     return TransactionResult::READY_TO_COMMIT;
   }
+
+private:
+  Storage &storage;
 };
 } // namespace ycsb
 

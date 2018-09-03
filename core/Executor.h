@@ -31,6 +31,8 @@ public:
       typename ProtocolType::template MessageHandlerType<TableType,
                                                          TransactionType>;
 
+  using StorageType = typename WorkloadType::StorageType;
+
   Executor(std::size_t id, DatabaseType &db, ContextType &context,
            std::atomic<uint64_t> &epoch, std::atomic<bool> &stopFlag)
       : Worker(id), db(db), context(context),
@@ -50,11 +52,12 @@ public:
 
   void start() override {
     std::queue<std::unique_ptr<TransactionType>> q;
+    StorageType storage;
 
     while (!stopFlag.load()) {
       commitTransactions(q);
 
-      transaction = workload.nextTransaction();
+      transaction = workload.nextTransaction(storage);
       setupHandlers(transaction.get());
 
       auto result = transaction->execute();

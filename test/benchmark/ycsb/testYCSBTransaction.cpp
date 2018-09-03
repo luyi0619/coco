@@ -23,6 +23,9 @@ TEST(TestYCSBTransaction, TestBasic) {
   std::atomic<uint64_t> epoch;
   scar::Silo<decltype(db)> silo(db, epoch, partitioner);
 
-  scar::ycsb::ReadModifyWrite<RWKeyType, DatabaseType> t(db, context, random);
+  scar::ycsb::Storage storage;
+
+  scar::ycsb::ReadModifyWrite<RWKeyType, DatabaseType> t(db, context, random,
+                                                         storage);
   EXPECT_EQ(true, true);
 }
