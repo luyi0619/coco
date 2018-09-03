@@ -23,9 +23,12 @@ public:
   using MetaDataType = std::atomic<uint64_t>;
   using TableType = ITable<MetaDataType>;
   using RWKeyType = SiloRWKey;
+  using MessageType = SiloMessage;
 
-  using MessageFactoryType = SiloMessageFactory;
-  using MessageHandlerType = SiloMessageHandler;
+  template <class Table> using MessageFactoryType = SiloMessageFactory<Table>;
+
+  template <class Table, class Transaction>
+  using MessageHandlerType = SiloMessageHandler<Table, Transaction>;
 
   static_assert(
       std::is_same<typename DatabaseType::TableType, TableType>::value,

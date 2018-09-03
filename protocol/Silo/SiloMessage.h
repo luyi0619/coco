@@ -28,23 +28,23 @@ enum class SiloMessage {
 };
 
 // TODO: for some type T, the serialization string length != sizeof(T)
-class SiloMessageFactory {
+
+template <class Table> class SiloMessageFactory {
 public:
-  template <class Table>
-  static void new_search_message(Message &message, Table *table,
+  static void new_search_message(Message &message, Table &table,
                                  const void *key, uint32_t key_offset) {
 
     /*
      * The structure of a search request: (primary key, read key offset)
      */
 
-    auto key_size = table->keyNBytes();
+    auto key_size = table.keyNBytes();
 
     auto message_size =
         MessagePiece::get_header_size() + key_size + sizeof(key_offset);
     auto message_piece_header = MessagePiece::construct_message_piece_header(
         static_cast<uint32_t>(SiloMessage::SEARCH_REQUEST), message_size,
-        table->tableID(), table->partitionID());
+        table.tableID(), table.partitionID());
 
     Encoder encoder(message.data);
     encoder << message_piece_header;
@@ -53,21 +53,20 @@ public:
     message.flush();
   }
 
-  template <class Table>
-  static void new_lock_message(Message &message, Table *table, const void *key,
+  static void new_lock_message(Message &message, Table &table, const void *key,
                                uint32_t key_offset) {
 
     /*
      * The structure of a lock request: (primary key, write key offset)
      */
 
-    auto key_size = table->keyNBytes();
+    auto key_size = table.keyNBytes();
 
     auto message_size =
         MessagePiece::get_header_size() + key_size + sizeof(key_offset);
     auto message_piece_header = MessagePiece::construct_message_piece_header(
         static_cast<uint32_t>(SiloMessage::LOCK_REQUEST), message_size,
-        table->tableID(), table->partitionID());
+        table.tableID(), table.partitionID());
 
     Encoder encoder(message.data);
     encoder << message_piece_header;
@@ -76,8 +75,7 @@ public:
     message.flush();
   }
 
-  template <class Table>
-  static void new_read_validation_message(Message &message, Table *table,
+  static void new_read_validation_message(Message &message, Table &table,
                                           const void *key, uint32_t key_offset,
                                           uint64_t tid) {
 
@@ -86,13 +84,13 @@ public:
      * offset, tid)
      */
 
-    auto key_size = table->keyNBytes();
+    auto key_size = table.keyNBytes();
 
     auto message_size = MessagePiece::get_header_size() + key_size +
                         sizeof(key_offset) + sizeof(tid);
     auto message_piece_header = MessagePiece::construct_message_piece_header(
         static_cast<uint32_t>(SiloMessage::READ_VALIDATION_REQUEST),
-        message_size, table->tableID(), table->partitionID());
+        message_size, table.tableID(), table.partitionID());
 
     Encoder encoder(message.data);
     encoder << message_piece_header;
@@ -101,20 +99,19 @@ public:
     message.flush();
   }
 
-  template <class Table>
-  static void new_abort_message(Message &message, Table *table,
+  static void new_abort_message(Message &message, Table &table,
                                 const void *key) {
 
     /*
      * The structure of an abort request: (primary key)
      */
 
-    auto key_size = table->keyNBytes();
+    auto key_size = table.keyNBytes();
 
     auto message_size = MessagePiece::get_header_size() + key_size;
     auto message_piece_header = MessagePiece::construct_message_piece_header(
         static_cast<uint32_t>(SiloMessage::ABORT_REQUEST), message_size,
-        table->tableID(), table->partitionID());
+        table.tableID(), table.partitionID());
 
     Encoder encoder(message.data);
     encoder << message_piece_header;
@@ -122,21 +119,20 @@ public:
     message.flush();
   }
 
-  template <class Table>
-  static void new_write_message(Message &message, Table *table, const void *key,
+  static void new_write_message(Message &message, Table &table, const void *key,
                                 const void *value, uint64_t commit_tid) {
 
     /*
      * The structure of a write request: (primary key, value, commit_tid)
      */
 
-    auto key_size = table->keyNBytes();
-    auto value_size = table->valueNBytes();
+    auto key_size = table.keyNBytes();
+    auto value_size = table.valueNBytes();
 
     auto message_size = MessagePiece::get_header_size() + key_size + value_size;
     auto message_piece_header = MessagePiece::construct_message_piece_header(
         static_cast<uint32_t>(SiloMessage::WRITE_REQUEST), message_size,
-        table->tableID(), table->partitionID());
+        table.tableID(), table.partitionID());
 
     Encoder encoder(message.data);
     encoder << message_piece_header;
@@ -146,8 +142,7 @@ public:
     message.flush();
   }
 
-  template <class Table>
-  static void new_replication_message(Message &message, Table *table,
+  static void new_replication_message(Message &message, Table &table,
                                       const void *key, const void *value,
                                       uint64_t commit_tid) {
 
@@ -155,13 +150,13 @@ public:
      * The structure of a replication request: (primary key, value, commit_tid)
      */
 
-    auto key_size = table->keyNBytes();
-    auto value_size = table->valueNBytes();
+    auto key_size = table.keyNBytes();
+    auto value_size = table.valueNBytes();
 
     auto message_size = MessagePiece::get_header_size() + key_size + value_size;
     auto message_piece_header = MessagePiece::construct_message_piece_header(
         static_cast<uint32_t>(SiloMessage::REPLICATION_REQUEST), message_size,
-        table->tableID(), table->partitionID());
+        table.tableID(), table.partitionID());
 
     Encoder encoder(message.data);
     encoder << message_piece_header;
@@ -173,18 +168,18 @@ public:
 };
 
 // TODO: for some type T, the serialization string length != sizeof(T)
-class SiloMessageHandler {
-
-  template <class Table, class Transaction>
-  void search_request_handler(MessagePiece inputPiece, Message &responseMessage,
-                              Table &table, Transaction &txn) {
+template <class Table, class Transaction> class SiloMessageHandler {
+public:
+  static void search_request_handler(MessagePiece inputPiece,
+                                     Message &responseMessage, Table &table,
+                                     Transaction &txn) {
 
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     CHECK(table_id == table.tableID());
     CHECK(partition_id == table.partitionID());
-    auto key_size = table->keyNBytes();
-    auto value_size = table->valueNBytes();
+    auto key_size = table.keyNBytes();
+    auto value_size = table.valueNBytes();
 
     /*
      * The structure of a read request: (primary key, read key offset)
@@ -228,17 +223,16 @@ class SiloMessageHandler {
     responseMessage.flush();
   }
 
-  template <class Table, class Transaction>
-  void search_response_handler(MessagePiece inputPiece,
-                               Message &responseMessage, Table &table,
-                               Transaction &txn) {
+  static void search_response_handler(MessagePiece inputPiece,
+                                      Message &responseMessage, Table &table,
+                                      Transaction &txn) {
 
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     CHECK(table_id == table.tableID());
     CHECK(partition_id == table.partitionID());
-    auto key_size = table->keyNBytes();
-    auto value_size = table->valueNBytes();
+    auto key_size = table.keyNBytes();
+    auto value_size = table.valueNBytes();
 
     /*
      * The structure of a read response: (value, tid, read key offset)
@@ -253,26 +247,25 @@ class SiloMessageHandler {
 
     StringPiece stringPiece = inputPiece.toStringPiece();
     stringPiece.remove_prefix(value_size);
-
     Decoder dec(stringPiece);
     dec >> tid >> key_offset;
 
     SiloRWKey &readKey = txn.readSet[key_offset];
-    dec.read_n_bytes(inputPiece.toStringPiece().data(), value_size);
-
+    dec = Decoder(inputPiece.toStringPiece());
+    dec.read_n_bytes(readKey.get_value(), value_size);
     txn.pendingResponses--;
   }
 
-  template <class Table, class Transaction>
-  void lock_request_handler(MessagePiece inputPiece, Message &responseMessage,
-                            Table &table, Transaction &txn) {
+  static void lock_request_handler(MessagePiece inputPiece,
+                                   Message &responseMessage, Table &table,
+                                   Transaction &txn) {
 
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     CHECK(table_id == table.tableID());
     CHECK(partition_id == table.partitionID());
-    auto key_size = table->keyNBytes();
-    auto value_size = table->valueNBytes();
+    auto key_size = table.keyNBytes();
+    auto value_size = table.valueNBytes();
 
     /*
      * The structure of a lock request: (primary key, write key offset)
@@ -311,16 +304,16 @@ class SiloMessageHandler {
     responseMessage.flush();
   }
 
-  template <class Table, class Transaction>
-  void lock_response_handler(MessagePiece inputPiece, Message &responseMessage,
-                             Table &table, Transaction &txn) {
+  static void lock_response_handler(MessagePiece inputPiece,
+                                    Message &responseMessage, Table &table,
+                                    Transaction &txn) {
 
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     CHECK(table_id == table.tableID());
     CHECK(partition_id == table.partitionID());
-    auto key_size = table->keyNBytes();
-    auto value_size = table->valueNBytes();
+    auto key_size = table.keyNBytes();
+    auto value_size = table.valueNBytes();
 
     /*
      * The structure of a lock response: (success?, tid, write key offset)
@@ -367,16 +360,15 @@ class SiloMessageHandler {
     }
   }
 
-  template <class Table, class Transaction>
-  void read_validation_request_handler(MessagePiece inputPiece,
-                                       Message &responseMessage, Table &table,
-                                       Transaction &txn) {
+  static void read_validation_request_handler(MessagePiece inputPiece,
+                                              Message &responseMessage,
+                                              Table &table, Transaction &txn) {
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     CHECK(table_id == table.tableID());
     CHECK(partition_id == table.partitionID());
-    auto key_size = table->keyNBytes();
-    auto value_size = table->valueNBytes();
+    auto key_size = table.keyNBytes();
+    auto value_size = table.valueNBytes();
 
     /*
      * The structure of a read validation request: (primary key, read key
@@ -390,7 +382,7 @@ class SiloMessageHandler {
 
     auto stringPiece = inputPiece.toStringPiece();
     const void *key = stringPiece.data();
-    auto latest_tid = table->search_metadata(key).load();
+    auto latest_tid = table.search_metadata(key).load();
     stringPiece.remove_prefix(key_size);
 
     uint32_t key_offset;
@@ -422,17 +414,16 @@ class SiloMessageHandler {
     responseMessage.flush();
   }
 
-  template <class Table, class Transaction>
-  void read_validation_response_handler(MessagePiece inputPiece,
-                                        Message &responseMessage, Table &table,
-                                        Transaction &txn) {
+  static void read_validation_response_handler(MessagePiece inputPiece,
+                                               Message &responseMessage,
+                                               Table &table, Transaction &txn) {
 
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     CHECK(table_id == table.tableID());
     CHECK(partition_id == table.partitionID());
-    auto key_size = table->keyNBytes();
-    auto value_size = table->valueNBytes();
+    auto key_size = table.keyNBytes();
+    auto value_size = table.valueNBytes();
 
     /*
      * The structure of a read validation response: (success?, read key offset)
@@ -458,15 +449,15 @@ class SiloMessageHandler {
     }
   }
 
-  template <class Table, class Transaction>
-  void abort_request_handler(MessagePiece inputPiece, Message &responseMessage,
-                             Table &table, Transaction &txn) {
+  static void abort_request_handler(MessagePiece inputPiece,
+                                    Message &responseMessage, Table &table,
+                                    Transaction &txn) {
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     CHECK(table_id == table.tableID());
     CHECK(partition_id == table.partitionID());
-    auto key_size = table->keyNBytes();
-    auto value_size = table->valueNBytes();
+    auto key_size = table.keyNBytes();
+    auto value_size = table.valueNBytes();
 
     /*
      * The structure of an abort request: (primary key)
@@ -484,16 +475,16 @@ class SiloMessageHandler {
     SiloHelper::unlock(tid);
   }
 
-  template <class Table, class Transaction>
-  void write_request_handler(MessagePiece inputPiece, Message &responseMessage,
-                             Table &table, Transaction &txn) {
+  static void write_request_handler(MessagePiece inputPiece,
+                                    Message &responseMessage, Table &table,
+                                    Transaction &txn) {
 
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     CHECK(table_id == table.tableID());
     CHECK(partition_id == table.partitionID());
-    auto key_size = table->keyNBytes();
-    auto value_size = table->valueNBytes();
+    auto key_size = table.keyNBytes();
+    auto value_size = table.valueNBytes();
 
     /*
      * The structure of a write request: (primary key, value, commit_tid)
@@ -523,17 +514,16 @@ class SiloMessageHandler {
     SiloHelper::unlock(tid, commit_tid);
   }
 
-  template <class Table, class Transaction>
-  void replication_request_handler(MessagePiece inputPiece,
-                                   Message &responseMessage, Table &table,
-                                   Transaction &txn) {
+  static void replication_request_handler(MessagePiece inputPiece,
+                                          Message &responseMessage,
+                                          Table &table, Transaction &txn) {
 
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     CHECK(table_id == table.tableID());
     CHECK(partition_id == table.partitionID());
-    auto key_size = table->keyNBytes();
-    auto value_size = table->valueNBytes();
+    auto key_size = table.keyNBytes();
+    auto value_size = table.valueNBytes();
 
     /*
      * The structure of a replication request: (primary key, value, commit_tid)
@@ -562,11 +552,28 @@ class SiloMessageHandler {
     uint64_t last_tid = SiloHelper::lock(tid);
 
     if (commit_tid > last_tid) {
-      table->update(key, value);
+      table.update(key, value);
       SiloHelper::unlock(tid, commit_tid);
     } else {
       SiloHelper::unlock(tid);
     }
+  }
+
+  static std::vector<
+      std::function<void(MessagePiece, Message &, Table &, Transaction &)>>
+  get_message_handlers() {
+    std::vector<
+        std::function<void(MessagePiece, Message &, Table &, Transaction &)>>
+        v;
+    v.push_back(SiloMessageHandler::search_response_handler);
+    v.push_back(SiloMessageHandler::lock_request_handler);
+    v.push_back(SiloMessageHandler::lock_response_handler);
+    v.push_back(SiloMessageHandler::read_validation_request_handler);
+    v.push_back(SiloMessageHandler::read_validation_response_handler);
+    v.push_back(SiloMessageHandler::abort_request_handler);
+    v.push_back(SiloMessageHandler::write_request_handler);
+    v.push_back(SiloMessageHandler::replication_request_handler);
+    return v;
   }
 };
 

@@ -23,13 +23,14 @@ int main(int argc, char *argv[]) {
   using ProtocolType = scar::Silo<scar::tpcc::Database<MetaDataType>>;
   using WorkloadType = scar::tpcc::Workload<TransactionType>;
 
-  int n = FLAGS_threads;
-  scar::tpcc::Context context;
-  context.partitionNum = n;
-  context.workerNum = n;
-
   std::vector<std::string> peers;
   boost::algorithm::split(peers, FLAGS_servers, boost::is_any_of(";"));
+
+  int n = FLAGS_threads;
+  scar::tpcc::Context context;
+  context.coordinatorNum = peers.size();
+  context.partitionNum = n;
+  context.workerNum = n;
 
   scar::tpcc::Database<MetaDataType> db;
   db.initialize(context, n, n);

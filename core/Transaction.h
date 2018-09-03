@@ -77,9 +77,11 @@ public:
 
       // process local read;
       const RWKeyType &readKey = readSet[i];
-      readRequestHandler(readKey.get_table_id(), readKey.get_partition_id(),
-                         readKey.get_key(), readKey.get_value());
+      auto tid =
+          readRequestHandler(readKey.get_table_id(), readKey.get_partition_id(),
+                             i, readKey.get_key(), readKey.get_value());
       readSet[i].set_read_request_bit();
+      readSet[i].set_tid(tid);
 
       pendingResponses--;
     }
@@ -87,9 +89,7 @@ public:
     CHECK(pendingResponses == 0);
 
     while (pendingResponses > 0) {
-      if (remoteRequestHandler()) {
-        pendingResponses--;
-      }
+      remoteRequestHandler();
     }
   }
 
@@ -122,7 +122,8 @@ public:
   bool abort_lock, abort_read_validation;
 
   // table id, partition id, key, value
-  std::function<uint64_t(std::size_t, std::size_t, const void *, void *)>
+  std::function<uint64_t(std::size_t, std::size_t, uint32_t, const void *,
+                         void *)>
       readRequestHandler;
   // processed a request?
   std::function<bool(void)> remoteRequestHandler;

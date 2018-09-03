@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "core/Partitioner.h"
+
 #include "common/Percentile.h"
 #include "core/Worker.h"
 #include "glog/logging.h"
@@ -18,11 +20,16 @@ public:
   using ProtocolType = Protocol;
   using RWKeyType = typename WorkloadType::RWKeyType;
   using DatabaseType = typename WorkloadType::DatabaseType;
+  using TableType = typename DatabaseType::TableType;
   using TransactionType = typename WorkloadType::TransactionType;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
-  using MessageFactoryType = typename ProtocolType::MessageFactoryType;
-  using MessageHandlerType = typename ProtocolType::MessageHandlerType;
+  using MessageType = typename ProtocolType::MessageType;
+  using MessageFactoryType =
+      typename ProtocolType::template MessageFactoryType<TableType>;
+  using MessageHandlerType =
+      typename ProtocolType::template MessageHandlerType<TableType,
+                                                         TransactionType>;
 
   Executor(std::size_t id, DatabaseType &db, ContextType &context,
            std::atomic<uint64_t> &epoch, std::atomic<bool> &stopFlag)
@@ -30,6 +37,8 @@ public:
         protocol(db, epoch), workload(db, context, random),
         syncMessage(nullptr), asyncMessage(nullptr) {
     transactionId.store(0);
+    messageHandlers = MessageHandlerType::get_message_handlers();
+    partitioner = std::make_unique<HashPartitioner>(id, context.coordinatorNum);
   }
 
   void start() override {
@@ -38,7 +47,7 @@ public:
     while (!stopFlag.load()) {
       commitTransactions(q);
 
-      std::unique_ptr<TransactionType> transaction = workload.nextTransaction();
+      transaction = workload.nextTransaction();
       setupHandlers(transaction.get());
 
       auto result = transaction->execute();
@@ -62,22 +71,42 @@ public:
               << " bytes.";
   }
 
-  bool process_request() {
+  std::size_t process_request() {
 
-    // only support local read request
-    // TODO: support remote request
+    if (inQueue.empty())
+      return 0;
 
-    return true;
+    std::unique_ptr<Message> message(inQueue.front());
+    bool ok = inQueue.pop();
+    CHECK(ok);
+
+    for (auto it = message->begin(); it != message->end(); it++) {
+
+      MessagePiece messagePiece = *it;
+      auto type = messagePiece.get_message_type();
+      CHECK(type < messageHandlers.size());
+      TableType *table = db.find_table(messagePiece.get_table_id(),
+                                       messagePiece.get_partition_id());
+      messageHandlers[type](messagePiece, *syncMessage, *table, *transaction);
+    }
+
+    return message->get_message_count();
   }
 
 private:
   void setupHandlers(TransactionType *transaction) {
     transaction->readRequestHandler =
-        [protocol = this->protocol](std::size_t table_id,
-                                    std::size_t partition_id, const void *key,
-                                    void *value) {
-          return protocol.search(table_id, partition_id, key, value);
-        };
+        [this](std::size_t table_id, std::size_t partition_id,
+               uint32_t key_offset, const void *key, void *value) -> uint64_t {
+      if (partitioner->has_master_partition(partition_id)) {
+        return protocol.search(table_id, partition_id, key, value);
+      } else {
+        TableType *table = db.find_table(table_id, partition_id);
+        MessageFactoryType::new_search_message(*syncMessage, *table, key,
+                                               key_offset);
+        return 0;
+      }
+    };
 
     transaction->remoteRequestHandler = [this]() { return process_request(); };
   }
@@ -110,6 +139,11 @@ private:
   ProtocolType protocol;
   WorkloadType workload;
   Percentile<int64_t> percentile;
+  std::unique_ptr<TransactionType> transaction;
   std::unique_ptr<Message> syncMessage, asyncMessage;
+  std::vector<std::function<void(MessagePiece, Message &, TableType &,
+                                 TransactionType &)>>
+      messageHandlers;
+  std::unique_ptr<Partitioner> partitioner;
 };
 } // namespace scar

@@ -29,6 +29,10 @@ public:
   virtual std::size_t keyNBytes() = 0;
 
   virtual std::size_t valueNBytes() = 0;
+
+  virtual std::size_t tableID() = 0;
+
+  virtual std::size_t partitionID() = 0;
 };
 
 template <std::size_t N, class KeyType, class ValueType, class MetaData>
@@ -77,9 +81,9 @@ public:
 
   std::size_t valueNBytes() override { return sizeof(ValueType); }
 
-  std::size_t tableID() { return tableID_; }
+  std::size_t tableID() override { return tableID_; }
 
-  std::size_t partitionID() { return partitionID_; }
+  std::size_t partitionID() override { return partitionID_; }
 
 private:
   HashMap<N, KeyType, std::tuple<MetaDataType, ValueType>> map_;
