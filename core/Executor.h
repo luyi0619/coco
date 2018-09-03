@@ -39,9 +39,13 @@ public:
       std::unique_ptr<TransactionType> transaction = workload.nextTransaction();
       setupHandlers(transaction.get());
 
-      transaction->execute();
-      transactionId.fetch_add(1);
-      q.push(std::move(transaction));
+      auto result = transaction->execute();
+
+      if (result == TransactionResult::READY_TO_COMMIT) {
+        protocol.commit(*transaction);
+        transactionId.fetch_add(1);
+        q.push(std::move(transaction));
+      }
     }
 
     commitTransactions(q, true);

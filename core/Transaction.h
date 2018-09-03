@@ -34,6 +34,8 @@ public:
   void search(std::size_t table_id, std::size_t partition_id,
               const KeyType &key, ValueType &value) {
 
+    pendingRequests ++;
+
     RWKeyType readKey;
 
     readKey.set_table_id(table_id);
@@ -65,10 +67,8 @@ public:
 
   void process_read_request() {
 
-    if (readSet.empty())
-      return;
-
-    for (auto i = readSet.size() - 1; i >= 0; i--) {
+    // cannot use unsigned type in reverse iteration
+    for (int i = int(readSet.size()) - 1; i >= 0; i--) {
       // early return
       if (readSet[i].get_read_request_bit()) {
         break;
@@ -82,6 +82,8 @@ public:
 
       pendingRequests--;
     }
+
+    CHECK(pendingRequests == 0);
 
     while (pendingRequests > 0) {
       if (remoteRequestHandler()) {
@@ -111,7 +113,6 @@ public:
   // processed a request?
   std::function<bool(void)> remoteRequestHandler;
 
-protected:
   DatabaseType &db;
   ContextType &context;
   RandomType &random;

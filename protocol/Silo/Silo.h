@@ -48,7 +48,9 @@ public:
     } while (tid_ != tid.load());
   }
 
-  void abort(std::vector<SiloRWKey> &writeSet) {
+  template <class Transaction> void abort(Transaction &txn) {
+
+    auto &writeSet = txn.writeSet;
 
     // unlock locked records
 
@@ -57,33 +59,40 @@ public:
       auto partitionId = writeKey.get_partition_id();
       auto table = db.find_table(tableId, partitionId);
       auto key = writeKey.get_key();
-      std::atomic<uint64_t> &tid = table->search_meta_data(key);
+      std::atomic<uint64_t> &tid = table->search_metadata(key);
       if (writeKey.get_lock_bit()) {
         unlock(tid);
       }
     }
   }
 
-  bool commit(std::vector<SiloRWKey> &readSet, std::vector<SiloRWKey> &writeSet,
-              uint64_t &commitEpoch) {
+  template <class Transaction> bool commit(Transaction &txn) {
+
+    static_assert(std::is_same<RWKeyType, typename decltype(txn.readSet)::value_type>::value,
+                  "RWKeyType do not match.");
+    static_assert(std::is_same<RWKeyType, typename decltype(txn.writeSet)::value_type>::value,
+                  "RWKeyType do not match.");
+
+    auto &readSet = txn.readSet;
+    auto &writeSet = txn.writeSet;
 
     // lock write set
-    if (lockWriteSet(readSet, writeSet)) {
-      abort(writeSet);
+    if (lockWriteSet(txn)) {
+      abort(txn);
       return false;
     }
 
     // read epoch E
-    commitEpoch = epoch.load();
+    txn.commitEpoch = epoch.load();
 
     // commit phase 2, read validation
-    if (!validateReadSet(readSet, writeSet)) {
-      abort(writeSet);
+    if (!validateReadSet(txn)) {
+      abort(txn);
       return false;
     }
 
     // generate tid
-    uint64_t commit_tid = generateTid(readSet, writeSet, commitEpoch);
+    uint64_t commit_tid = generateTid(txn);
 
     // write
     for (auto &writeKey : writeSet) {
@@ -93,8 +102,8 @@ public:
       auto value = writeKey.get_value();
 
       auto table = db.find_table(table_id, partition_id);
-      std::atomic<uint64_t> &tid = table->searchMetaData(key);
-      table->insert(key, value);
+      std::atomic<uint64_t> &tid = table->search_metadata(key);
+      table->update(key, value);
       unlock(tid, commit_tid);
     }
 
@@ -155,8 +164,11 @@ private:
            SILO_EPOCH_OFFSET;
   }
 
-  bool lockWriteSet(std::vector<SiloRWKey> &readSet,
-                    std::vector<SiloRWKey> &writeSet) {
+  template <class Transaction> bool lockWriteSet(Transaction &txn) {
+
+    auto &readSet = txn.readSet;
+    auto &writeSet = txn.writeSet;
+
     auto getReadKey = [&readSet](const void *key) -> SiloRWKey * {
       for (auto &readKey : readSet) {
         if (readKey.get_key() == key) {
@@ -179,7 +191,7 @@ private:
       auto table = db.find_table(tableId, partitionId);
 
       auto key = writeKey.get_key();
-      std::atomic<uint64_t> &tid = table->searchMetaData(key);
+      std::atomic<uint64_t> &tid = table->search_metadata(key);
       uint64_t latestTid = lock(tid);
       auto readKeyPtr = getReadKey(key);
       // assume no blind write
@@ -196,8 +208,10 @@ private:
     return tidChanged;
   }
 
-  bool validateReadSet(std::vector<SiloRWKey> &readSet,
-                       std::vector<SiloRWKey> &writeSet) {
+  template <class Transaction> bool validateReadSet(Transaction &txn) {
+
+    auto &readSet = txn.readSet;
+    auto &writeSet = txn.writeSet;
 
     auto isKeyInWriteSet = [&writeSet](const void *key) {
       for (auto &writeKey : writeSet) {
@@ -217,7 +231,7 @@ private:
       auto partitionId = readKey.get_partition_id();
       auto table = db.find_table(tableId, partitionId);
       auto key = readKey.get_key();
-      uint64_t tid = table->searchMetaData(key).load();
+      uint64_t tid = table->search_metadata(key).load();
 
       if (removeLockBit(tid) != readKey.get_tid()) {
         return false;
@@ -230,8 +244,14 @@ private:
     return true;
   }
 
-  uint64_t generateTid(std::vector<SiloRWKey> &readSet,
-                       std::vector<SiloRWKey> &writeSet, uint64_t epoch) {
+  template <class Transaction>
+
+  uint64_t generateTid(Transaction &txn) {
+
+    auto &readSet = txn.readSet;
+    auto &writeSet = txn.writeSet;
+
+    auto epoch = txn.commitEpoch;
 
     // in the current global epoch
     uint64_t next_tid = epoch << SILO_EPOCH_OFFSET;
