@@ -38,7 +38,8 @@ public:
 
   virtual ~Table() override = default;
 
-  Table(std::size_t tableID) : tableID_(tableID) {}
+  Table(std::size_t tableID, std::size_t partitionID)
+      : tableID_(tableID), partitionID_(partitionID) {}
 
   std::tuple<MetaData *, void *> search(const void *key) override {
     const auto &k = *static_cast<const KeyType *>(key);
@@ -76,9 +77,13 @@ public:
 
   std::size_t valueNBytes() override { return sizeof(ValueType); }
 
+  std::size_t tableID() { return tableID_; }
+
+  std::size_t partitionID() { return partitionID_; }
+
 private:
   HashMap<N, KeyType, std::tuple<MetaDataType, ValueType>> map_;
-
-  const std::size_t tableID_;
+  std::size_t tableID_;
+  std::size_t partitionID_;
 };
 } // namespace scar

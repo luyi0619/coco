@@ -41,6 +41,24 @@ public:
     return (bitvec >> READ_REQUEST_BIT_OFFSET) & READ_REQUEST_BIT_MASK;
   }
 
+  // read validation success bit
+
+  void set_read_validation_success_bit() {
+    clear_read_validation_success_bit();
+    bitvec |= READ_VALIDATION_SUCCESS_BIT_MASK
+              << READ_VALIDATION_SUCCESS_BIT_OFFSET;
+  }
+
+  void clear_read_validation_success_bit() {
+    bitvec &= ~(READ_VALIDATION_SUCCESS_BIT_MASK
+                << READ_VALIDATION_SUCCESS_BIT_OFFSET);
+  }
+
+  uint32_t get_read_validation_success_bit() const {
+    return (bitvec >> READ_VALIDATION_SUCCESS_BIT_OFFSET) &
+           READ_VALIDATION_SUCCESS_BIT_MASK;
+  }
+
   // table id
 
   void set_table_id(uint32_t table_id) {
@@ -95,8 +113,8 @@ private:
   /*
    * A bitvec is a 32-bit word.
    *
-   * [ table id (5) ] | partition id (8) | unused bit (17) | read request bit
-   * (1) | lock bit(1) ]
+   * [ table id (5) ] | partition id (8) | unused bit (17) |
+   *  read validation success bit (1)  | read request bit (1) | lock bit(1) ]
    *
    * read request bit is set when the read response is received.
    * lock bit is set when a lock is acquired.
@@ -114,6 +132,8 @@ public:
   static constexpr uint32_t TABLE_ID_OFFSET = 27;
   static constexpr uint32_t PARTITION_ID_MASK = 0xff;
   static constexpr uint32_t PARTITION_ID_OFFSET = 19;
+  static constexpr uint32_t READ_VALIDATION_SUCCESS_BIT_MASK = 0x1;
+  static constexpr uint32_t READ_VALIDATION_SUCCESS_BIT_OFFSET = 2;
   static constexpr uint32_t READ_REQUEST_BIT_MASK = 0x1;
   static constexpr uint32_t READ_REQUEST_BIT_OFFSET = 1;
   static constexpr uint32_t LOCK_BIT_MASK = 0x1;

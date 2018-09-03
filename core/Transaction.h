@@ -24,7 +24,8 @@ public:
 
   Transaction(DatabaseType &db, ContextType &context, RandomType &random)
       : startTime(std::chrono::steady_clock::now()), commitEpoch(0),
-        pendingRequests(0), db(db), context(context), random(random) {}
+        pendingResponses(0), abort_lock(false), abort_read_validation(false),
+        db(db), context(context), random(random) {}
 
   virtual ~Transaction() = default;
 
@@ -34,7 +35,7 @@ public:
   void search(std::size_t table_id, std::size_t partition_id,
               const KeyType &key, ValueType &value) {
 
-    pendingRequests ++;
+    pendingResponses++;
 
     RWKeyType readKey;
 
@@ -80,16 +81,27 @@ public:
                          readKey.get_key(), readKey.get_value());
       readSet[i].set_read_request_bit();
 
-      pendingRequests--;
+      pendingResponses--;
     }
 
-    CHECK(pendingRequests == 0);
+    CHECK(pendingResponses == 0);
 
-    while (pendingRequests > 0) {
+    while (pendingResponses > 0) {
       if (remoteRequestHandler()) {
-        pendingRequests--;
+        pendingResponses--;
       }
     }
+  }
+
+  RWKeyType *get_read_key(const void *key) {
+
+    for (auto i = 0u; i < readSet.size(); i++) {
+      if (readSet[i].get_key() == key) {
+        return &readSet[i];
+      }
+    }
+
+    return nullptr;
   }
 
   std::size_t add_to_read_set(const RWKeyType &key) {
@@ -105,10 +117,12 @@ public:
 public:
   std::chrono::steady_clock::time_point startTime;
   uint64_t commitEpoch;
-  std::size_t pendingRequests;
+  std::size_t pendingResponses;
+
+  bool abort_lock, abort_read_validation;
 
   // table id, partition id, key, value
-  std::function<void(std::size_t, std::size_t, const void *, void *)>
+  std::function<uint64_t(std::size_t, std::size_t, const void *, void *)>
       readRequestHandler;
   // processed a request?
   std::function<bool(void)> remoteRequestHandler;

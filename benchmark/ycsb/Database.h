@@ -61,7 +61,7 @@ public:
       tbl_ycsb_vec.push_back(
           std::make_unique<
               Table<1000007, ycsb::key, ycsb::value, MetaDataType>>(
-              ycsbTableID));
+              ycsbTableID, partitionID));
     }
 
     // there is 1 table in ycsb

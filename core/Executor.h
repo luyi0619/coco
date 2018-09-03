@@ -21,6 +21,8 @@ public:
   using TransactionType = typename WorkloadType::TransactionType;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
+  using MessageFactoryType = typename ProtocolType::MessageFactoryType;
+  using MessageHandlerType = typename ProtocolType::MessageHandlerType;
 
   Executor(std::size_t id, DatabaseType &db, ContextType &context,
            std::atomic<uint64_t> &epoch, std::atomic<bool> &stopFlag)
@@ -74,7 +76,7 @@ private:
         [protocol = this->protocol](std::size_t table_id,
                                     std::size_t partition_id, const void *key,
                                     void *value) {
-          protocol.search(table_id, partition_id, key, value);
+          return protocol.search(table_id, partition_id, key, value);
         };
 
     transaction->remoteRequestHandler = [this]() { return process_request(); };

@@ -47,6 +47,8 @@ public:
     bytes.remove_prefix(size);
   }
 
+  std::size_t size() { return bytes.size(); }
+
 private:
   StringPiece bytes;
 };
