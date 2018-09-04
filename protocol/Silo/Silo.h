@@ -72,7 +72,7 @@ public:
       }
     }
 
-    txn.messageFlusher(messages);
+    txn.messageFlusher();
   }
 
   template <class Transaction>
@@ -156,7 +156,7 @@ private:
       }
     }
 
-    txn.messageFlusher(messages);
+    txn.messageFlusher();
     while (txn.pendingResponses > 0) {
       txn.remoteRequestHandler();
     }
@@ -210,7 +210,7 @@ private:
       }
     }
 
-    txn.messageFlusher(messages);
+    txn.messageFlusher();
     while (txn.pendingResponses > 0) {
       txn.remoteRequestHandler();
     }
@@ -291,7 +291,7 @@ private:
             writeKey.get_value(), commit_tid);
       }
     }
-    txn.messageFlusher(messages);
+    txn.messageFlusher();
   }
 
 private:

@@ -38,7 +38,7 @@ public:
 
     for (auto i = 0u; i < context.workerNum; i++) {
       workers.push_back(std::make_shared<Executor<WorkloadType, ProtocolType>>(
-          i, db, context, epoch, workerStopFlag));
+          id, i, db, context, epoch, workerStopFlag));
     }
 
     std::thread epochThread(&Coordinator::advanceEpoch, this);
@@ -64,7 +64,7 @@ public:
     }
 
     // run timeToRun milliseconds
-    auto timeToRun = 1000;
+    auto timeToRun = 1000000;
     LOG(INFO) << "Coordinator starts to sleep " << timeToRun
               << " milliseconds.";
     std::this_thread::sleep_for(std::chrono::milliseconds(timeToRun));

@@ -28,8 +28,10 @@ public:
           typename Payment<RWKeyType, DatabaseType>::StorageType>::value,
       "storage types do not match");
 
-  Workload(DatabaseType &db, ContextType &context, RandomType &random)
-      : db(db), context(context), random(random) {}
+  Workload(std::size_t coordinator_id, std::size_t worker_id, DatabaseType &db,
+           ContextType &context, RandomType &random)
+      : coordinator_id(coordinator_id), worker_id(worker_id), db(db),
+        context(context), random(random) {}
 
   std::unique_ptr<TransactionType> nextTransaction(StorageType &storage) {
 
@@ -38,17 +40,19 @@ public:
     std::unique_ptr<TransactionType> p;
 
     if (x <= 50) {
-      p = std::make_unique<NewOrder<RWKeyType, DatabaseType>>(db, context,
-                                                              random, storage);
+      p = std::make_unique<NewOrder<RWKeyType, DatabaseType>>(
+          coordinator_id, worker_id, db, context, random, storage);
     } else {
-      p = std::make_unique<Payment<RWKeyType, DatabaseType>>(db, context,
-                                                             random, storage);
+      p = std::make_unique<Payment<RWKeyType, DatabaseType>>(
+          coordinator_id, worker_id, db, context, random, storage);
     }
 
     return p;
   }
 
 private:
+  std::size_t coordinator_id;
+  std::size_t worker_id;
   DatabaseType &db;
   ContextType &context;
   RandomType &random;

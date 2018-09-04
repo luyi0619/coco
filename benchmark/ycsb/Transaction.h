@@ -30,9 +30,12 @@ public:
   using TableType = ITable<MetaDataType>;
   using StorageType = Storage;
 
-  ReadModifyWrite(DatabaseType &db, ContextType &context, RandomType &random,
+  ReadModifyWrite(std::size_t coordinator_id, std::size_t worker_id,
+                  DatabaseType &db, ContextType &context, RandomType &random,
                   Storage &storage)
-      : Transaction<RWKey, Database>(db, context, random), storage(storage) {}
+      : Transaction<RWKey, Database>(coordinator_id, worker_id, db, context,
+                                     random),
+        storage(storage) {}
 
   virtual ~ReadModifyWrite() override = default;
 

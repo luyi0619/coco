@@ -24,8 +24,9 @@ TEST(TestTPCCTransaction, TestBasic) {
 
   std::atomic<uint64_t> epoch;
   scar::Silo<decltype(db)> silo(db, epoch, partitioner);
-  scar::tpcc::NewOrder<RWKeyType, DatabaseType> t1(db, context, random,
+  scar::tpcc::NewOrder<RWKeyType, DatabaseType> t1(0, 0, db, context, random,
                                                    storage);
-  scar::tpcc::Payment<RWKeyType, DatabaseType> t2(db, context, random, storage);
+  scar::tpcc::Payment<RWKeyType, DatabaseType> t2(0, 0, db, context, random,
+                                                  storage);
   EXPECT_EQ(true, true);
 }

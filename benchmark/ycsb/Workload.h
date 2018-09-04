@@ -24,19 +24,23 @@ public:
   using StorageType =
       typename ReadModifyWrite<RWKeyType, DatabaseType>::StorageType;
 
-  Workload(DatabaseType &db, ContextType &context, RandomType &random)
-      : db(db), context(context), random(random) {}
+  Workload(std::size_t coordinator_id, std::size_t worker_id, DatabaseType &db,
+           ContextType &context, RandomType &random)
+      : coordinator_id(coordinator_id), worker_id(worker_id), db(db),
+        context(context), random(random) {}
 
   std::unique_ptr<TransactionType> nextTransaction(StorageType &storage) {
 
     std::unique_ptr<TransactionType> p =
         std::make_unique<ReadModifyWrite<RWKeyType, DatabaseType>>(
-            db, context, random, storage);
+            coordinator_id, worker_id, db, context, random, storage);
 
     return p;
   }
 
 private:
+  std::size_t coordinator_id;
+  std::size_t worker_id;
   DatabaseType &db;
   ContextType &context;
   RandomType &random;

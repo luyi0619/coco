@@ -6,11 +6,12 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 
-DEFINE_int32(threads, 1, "the number of threads.");
+DEFINE_int32(id, 0, "coordinator id");
+DEFINE_int32(threads, 1, "the number of threads");
 DEFINE_string(servers, "127.0.0.1:10010",
               "semicolon-separated list of servers");
 
-// ./main --logtostderr=1 -threads=2
+// ./main --logtostderr=1 --id=1 --servers="127.0.0.1:10010;127.0.0.1:10011"
 
 int main(int argc, char *argv[]) {
   google::InitGoogleLogging(argv[0]);
@@ -29,13 +30,13 @@ int main(int argc, char *argv[]) {
   int n = FLAGS_threads;
   scar::tpcc::Context context;
   context.coordinatorNum = peers.size();
-  context.partitionNum = n;
+  context.partitionNum = n * context.coordinatorNum;
   context.workerNum = n;
 
   scar::tpcc::Database<MetaDataType> db;
-  db.initialize(context, n, n);
+  db.initialize(context, context.partitionNum, n);
 
-  scar::Coordinator<WorkloadType, ProtocolType> c(0, peers, db, context);
+  scar::Coordinator<WorkloadType, ProtocolType> c(FLAGS_id, peers, db, context);
   c.start();
   return 0;
 }

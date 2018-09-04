@@ -15,13 +15,17 @@ namespace scar {
 
 class Worker {
 public:
-  Worker(std::size_t id) : id(id) { transactionId.store(0); }
+  Worker(std::size_t coordinator_id, std::size_t id)
+      : coordinator_id(coordinator_id), id(id) {
+    transactionId.store(0);
+  }
 
   virtual void start() = 0;
 
   virtual void onExit() {}
 
 public:
+  std::size_t coordinator_id;
   std::size_t id;
   LockfreeQueue<Message *> inQueue, outQueue;
   std::atomic<uint64_t> transactionId;

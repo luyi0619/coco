@@ -56,9 +56,11 @@ public:
   using TableType = ITable<MetaDataType>;
   using StorageType = Storage;
 
-  NewOrder(DatabaseType &db, ContextType &context, RandomType &random,
-           Storage &storage)
-      : Transaction<RWKey, Database>(db, context, random), storage(storage) {}
+  NewOrder(std::size_t coordinator_id, std::size_t worker_id, DatabaseType &db,
+           ContextType &context, RandomType &random, Storage &storage)
+      : Transaction<RWKey, Database>(coordinator_id, worker_id, db, context,
+                                     random),
+        storage(storage) {}
 
   virtual ~NewOrder() override = default;
 
@@ -282,9 +284,11 @@ public:
   using TableType = ITable<MetaDataType>;
   using StorageType = Storage;
 
-  Payment(DatabaseType &db, ContextType &context, RandomType &random,
-          Storage &storage)
-      : Transaction<RWKey, Database>(db, context, random), storage(storage) {}
+  Payment(std::size_t coordinator_id, std::size_t worker_id, DatabaseType &db,
+          ContextType &context, RandomType &random, Storage &storage)
+      : Transaction<RWKey, Database>(coordinator_id, worker_id, db, context,
+                                     random),
+        storage(storage) {}
 
   virtual ~Payment() override = default;
 

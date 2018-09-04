@@ -28,7 +28,8 @@ TEST(TestExecutor, TestTPCC) {
 
   std::atomic<uint64_t> epoch;
   std::atomic<bool> stopFlag;
-  scar::Executor<WorkloadType, ProtocolType> w(0, db, context, epoch, stopFlag);
+  scar::Executor<WorkloadType, ProtocolType> w(0, 0, db, context, epoch,
+                                               stopFlag);
 
   EXPECT_EQ(true, true);
 }
@@ -51,7 +52,8 @@ TEST(TestWorker, TestYCSB) {
 
   std::atomic<uint64_t> epoch;
   std::atomic<bool> stopFlag;
-  scar::Executor<WorkloadType, ProtocolType> w(0, db, context, epoch, stopFlag);
+  scar::Executor<WorkloadType, ProtocolType> w(0, 0, db, context, epoch,
+                                               stopFlag);
 
   EXPECT_EQ(true, true);
 }

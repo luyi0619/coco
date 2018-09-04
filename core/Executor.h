@@ -33,18 +33,21 @@ public:
 
   using StorageType = typename WorkloadType::StorageType;
 
-  Executor(std::size_t id, DatabaseType &db, ContextType &context,
-           std::atomic<uint64_t> &epoch, std::atomic<bool> &stopFlag)
-      : Worker(id), db(db), context(context),
+  Executor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
+           ContextType &context, std::atomic<uint64_t> &epoch,
+           std::atomic<bool> &stopFlag)
+      : Worker(coordinator_id, id), db(db), context(context),
         partitioner(
             std::make_unique<HashPartitioner>(id, context.coordinatorNum)),
         epoch(epoch), stopFlag(stopFlag), protocol(db, epoch, *partitioner),
-        workload(db, context, random) {
+        workload(coordinator_id, id, db, context, random) {
     transactionId.store(0);
 
     for (auto i = 0u; i < context.coordinatorNum; i++) {
       syncMessages.emplace_back(std::make_unique<Message>());
+      init_message(syncMessages[i].get(), i);
       asyncMessages.emplace_back(std::make_unique<Message>());
+      init_message(asyncMessages[i].get(), i);
     }
 
     messageHandlers = MessageHandlerType::get_message_handlers();
@@ -123,11 +126,12 @@ private:
     };
 
     transaction->remoteRequestHandler = [this]() { return process_request(); };
-    transaction->messageFlusher =
-        [this](std::vector<std::unique_ptr<Message>> &messages) {
-          return flushMessages(messages);
-        };
+    transaction->messageFlusher = [this]() { flushSyncMessages(); };
   };
+
+  void flushSyncMessages() { flushMessages(syncMessages); }
+
+  void flushAsyncMessages() { flushMessages(asyncMessages); }
 
   void flushMessages(std::vector<std::unique_ptr<Message>> &messages) {
 
@@ -136,9 +140,14 @@ private:
         continue;
       }
 
+      if (messages[i]->get_message_count() == 0) {
+        continue;
+      }
+
       auto message = messages[i].release();
       outQueue.push(message);
       messages[i] = std::make_unique<Message>();
+      init_message(messages[i].get(), i);
     }
   }
 
@@ -159,6 +168,12 @@ private:
         }
       }
     } while (!q.empty() && retry);
+  }
+
+  void init_message(Message *message, std::size_t dest_node_id) {
+    message->set_source_node_id(coordinator_id);
+    message->set_dest_node_id(dest_node_id);
+    message->set_worker_id(id);
   }
 
 private:

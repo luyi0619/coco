@@ -23,8 +23,10 @@ public:
   using MetaDataType = typename DatabaseType::MetaDataType;
   using TableType = ITable<MetaDataType>;
 
-  Transaction(DatabaseType &db, ContextType &context, RandomType &random)
-      : startTime(std::chrono::steady_clock::now()), commitEpoch(0),
+  Transaction(std::size_t coordinator_id, std::size_t worker_id,
+              DatabaseType &db, ContextType &context, RandomType &random)
+      : coordinator_id(coordinator_id), worker_id(worker_id),
+        startTime(std::chrono::steady_clock::now()), commitEpoch(0),
         pendingResponses(0), abort_lock(false), abort_read_validation(false),
         db(db), context(context), random(random) {}
 
@@ -76,7 +78,6 @@ public:
         break;
       }
 
-      // process local read;
       const RWKeyType &readKey = readSet[i];
       auto tid =
           readRequestHandler(readKey.get_table_id(), readKey.get_partition_id(),
@@ -87,7 +88,7 @@ public:
       pendingResponses--;
     }
 
-    CHECK(pendingResponses == 0);
+    messageFlusher();
 
     while (pendingResponses > 0) {
       remoteRequestHandler();
@@ -116,6 +117,7 @@ public:
   }
 
 public:
+  std::size_t coordinator_id, worker_id;
   std::chrono::steady_clock::time_point startTime;
   uint64_t commitEpoch;
   std::size_t pendingResponses;
@@ -129,7 +131,7 @@ public:
   // processed a request?
   std::function<std::size_t(void)> remoteRequestHandler;
 
-  std::function<void(std::vector<std::unique_ptr<Message>> &)> messageFlusher;
+  std::function<void()> messageFlusher;
 
   DatabaseType &db;
   ContextType &context;
