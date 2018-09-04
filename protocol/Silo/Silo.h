@@ -56,6 +56,9 @@ public:
 
     for (auto i = 0u; i < writeSet.size(); i++) {
       auto &writeKey = writeSet[i];
+      // only unlock locked records
+      if (!writeKey.get_lock_bit())
+        continue;
       auto tableId = writeKey.get_table_id();
       auto partitionId = writeKey.get_partition_id();
       auto table = db.find_table(tableId, partitionId);
@@ -66,6 +69,7 @@ public:
           SiloHelper::unlock(tid);
         }
       } else {
+        txn.pendingResponses++;
         auto coordinatorID = partitioner.master_coordinator(partitionId);
         MessageFactoryType<TableType>::new_abort_message(
             *messages[coordinatorID], *table, writeKey.get_key());
@@ -150,6 +154,7 @@ private:
 
         writeKey.set_tid(latestTid);
       } else {
+        txn.pendingResponses++;
         auto coordinatorID = partitioner.master_coordinator(partitionId);
         MessageFactoryType<TableType>::new_lock_message(
             *messages[coordinatorID], *table, writeKey.get_key(), i);
@@ -203,6 +208,7 @@ private:
           break;
         }
       } else {
+        txn.pendingResponses++;
         auto coordinatorID = partitioner.master_coordinator(partitionId);
         MessageFactoryType<TableType>::new_read_validation_message(
             *messages[coordinatorID], *table, readKey.get_key(), i,

@@ -32,9 +32,9 @@ public:
 
   ReadModifyWrite(std::size_t coordinator_id, std::size_t worker_id,
                   DatabaseType &db, ContextType &context, RandomType &random,
-                  Storage &storage)
+                  Partitioner &partitioner, Storage &storage)
       : Transaction<RWKey, Database>(coordinator_id, worker_id, db, context,
-                                     random),
+                                     random, partitioner),
         storage(storage) {}
 
   virtual ~ReadModifyWrite() override = default;

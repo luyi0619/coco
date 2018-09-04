@@ -10,6 +10,7 @@
 #include "benchmark/tpcc/Random.h"
 #include "benchmark/tpcc/Transaction.h"
 
+#include "core/Partitioner.h"
 namespace scar {
 
 namespace tpcc {
@@ -29,9 +30,9 @@ public:
       "storage types do not match");
 
   Workload(std::size_t coordinator_id, std::size_t worker_id, DatabaseType &db,
-           ContextType &context, RandomType &random)
+           ContextType &context, RandomType &random, Partitioner &partitioner)
       : coordinator_id(coordinator_id), worker_id(worker_id), db(db),
-        context(context), random(random) {}
+        context(context), random(random), partitioner(partitioner) {}
 
   std::unique_ptr<TransactionType> nextTransaction(StorageType &storage) {
 
@@ -41,10 +42,10 @@ public:
 
     if (x <= 50) {
       p = std::make_unique<NewOrder<RWKeyType, DatabaseType>>(
-          coordinator_id, worker_id, db, context, random, storage);
+          coordinator_id, worker_id, db, context, random, partitioner, storage);
     } else {
       p = std::make_unique<Payment<RWKeyType, DatabaseType>>(
-          coordinator_id, worker_id, db, context, random, storage);
+          coordinator_id, worker_id, db, context, random, partitioner, storage);
     }
 
     return p;
@@ -56,6 +57,7 @@ private:
   DatabaseType &db;
   ContextType &context;
   RandomType &random;
+  Partitioner &partitioner;
 };
 
 } // namespace tpcc

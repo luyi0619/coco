@@ -34,6 +34,8 @@ public:
   static void new_search_message(Message &message, Table &table,
                                  const void *key, uint32_t key_offset) {
 
+    LOG(INFO) << "new search table_id " << table.tableID() << " partition id "
+              << table.partitionID();
     /*
      * The structure of a search request: (primary key, read key offset)
      */
@@ -55,6 +57,9 @@ public:
 
   static void new_lock_message(Message &message, Table &table, const void *key,
                                uint32_t key_offset) {
+
+    LOG(INFO) << "new lock table_id " << table.tableID() << " partition id "
+              << table.partitionID();
 
     /*
      * The structure of a lock request: (primary key, write key offset)
@@ -79,6 +84,8 @@ public:
                                           const void *key, uint32_t key_offset,
                                           uint64_t tid) {
 
+    LOG(INFO) << "new validation table_id " << table.tableID()
+              << " partition id " << table.partitionID();
     /*
      * The structure of a read validation request: (primary key, read key
      * offset, tid)
@@ -95,13 +102,15 @@ public:
     Encoder encoder(message.data);
     encoder << message_piece_header;
     encoder.write_n_bytes(key, key_size);
-    encoder << tid;
+    encoder << key_offset << tid;
     message.flush();
   }
 
   static void new_abort_message(Message &message, Table &table,
                                 const void *key) {
 
+    LOG(INFO) << "new abort table_id " << table.tableID() << " partition id "
+              << table.partitionID();
     /*
      * The structure of an abort request: (primary key)
      */
@@ -122,6 +131,8 @@ public:
   static void new_write_message(Message &message, Table &table, const void *key,
                                 const void *value, uint64_t commit_tid) {
 
+    LOG(INFO) << "new write table_id " << table.tableID() << " partition id "
+              << table.partitionID();
     /*
      * The structure of a write request: (primary key, value, commit_tid)
      */
@@ -129,7 +140,8 @@ public:
     auto key_size = table.keyNBytes();
     auto value_size = table.valueNBytes();
 
-    auto message_size = MessagePiece::get_header_size() + key_size + value_size;
+    auto message_size = MessagePiece::get_header_size() + key_size +
+                        value_size + sizeof(commit_tid);
     auto message_piece_header = MessagePiece::construct_message_piece_header(
         static_cast<uint32_t>(SiloMessage::WRITE_REQUEST), message_size,
         table.tableID(), table.partitionID());
@@ -173,7 +185,8 @@ public:
   static void search_request_handler(MessagePiece inputPiece,
                                      Message &responseMessage, Table &table,
                                      Transaction &txn) {
-
+    CHECK(inputPiece.get_message_type() ==
+          static_cast<uint32_t>(SiloMessage::SEARCH_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     CHECK(table_id == table.tableID());
@@ -221,12 +234,17 @@ public:
 
     encoder << tid << key_offset;
     responseMessage.flush();
+
+    LOG(INFO) << "search_request_handler table id " << table_id
+              << " partition id " << partition_id << " message size "
+              << message_size;
   }
 
   static void search_response_handler(MessagePiece inputPiece,
                                       Message &responseMessage, Table &table,
                                       Transaction &txn) {
-
+    CHECK(inputPiece.get_message_type() ==
+          static_cast<uint32_t>(SiloMessage::SEARCH_RESPONSE));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     CHECK(table_id == table.tableID());
@@ -259,7 +277,8 @@ public:
   static void lock_request_handler(MessagePiece inputPiece,
                                    Message &responseMessage, Table &table,
                                    Transaction &txn) {
-
+    CHECK(inputPiece.get_message_type() ==
+          static_cast<uint32_t>(SiloMessage::LOCK_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     CHECK(table_id == table.tableID());
@@ -302,12 +321,17 @@ public:
     encoder << message_piece_header;
     encoder << success << latest_tid << key_offset;
     responseMessage.flush();
+
+    LOG(INFO) << "lock_request_handler table id " << table_id
+              << " partition id " << partition_id << " message size "
+              << message_size;
   }
 
   static void lock_response_handler(MessagePiece inputPiece,
                                     Message &responseMessage, Table &table,
                                     Transaction &txn) {
-
+    CHECK(inputPiece.get_message_type() ==
+          static_cast<uint32_t>(SiloMessage::LOCK_RESPONSE));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     CHECK(table_id == table.tableID());
@@ -363,6 +387,8 @@ public:
   static void read_validation_request_handler(MessagePiece inputPiece,
                                               Message &responseMessage,
                                               Table &table, Transaction &txn) {
+    CHECK(inputPiece.get_message_type() ==
+          static_cast<uint32_t>(SiloMessage::READ_VALIDATION_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     CHECK(table_id == table.tableID());
@@ -412,12 +438,17 @@ public:
     encoder << success << key_offset;
 
     responseMessage.flush();
+
+    LOG(INFO) << "read_validation_request_handler table id " << table_id
+              << " partition id " << partition_id << " message size "
+              << message_size;
   }
 
   static void read_validation_response_handler(MessagePiece inputPiece,
                                                Message &responseMessage,
                                                Table &table, Transaction &txn) {
-
+    CHECK(inputPiece.get_message_type() ==
+          static_cast<uint32_t>(SiloMessage::READ_VALIDATION_RESPONSE));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     CHECK(table_id == table.tableID());
@@ -452,6 +483,8 @@ public:
   static void abort_request_handler(MessagePiece inputPiece,
                                     Message &responseMessage, Table &table,
                                     Transaction &txn) {
+    CHECK(inputPiece.get_message_type() ==
+          static_cast<uint32_t>(SiloMessage::ABORT_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     CHECK(table_id == table.tableID());
@@ -478,7 +511,8 @@ public:
   static void write_request_handler(MessagePiece inputPiece,
                                     Message &responseMessage, Table &table,
                                     Transaction &txn) {
-
+    CHECK(inputPiece.get_message_type() ==
+          static_cast<uint32_t>(SiloMessage::WRITE_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     CHECK(table_id == table.tableID());
@@ -517,7 +551,8 @@ public:
   static void replication_request_handler(MessagePiece inputPiece,
                                           Message &responseMessage,
                                           Table &table, Transaction &txn) {
-
+    CHECK(inputPiece.get_message_type() ==
+          static_cast<uint32_t>(SiloMessage::REPLICATION_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     CHECK(table_id == table.tableID());
@@ -565,6 +600,7 @@ public:
     std::vector<
         std::function<void(MessagePiece, Message &, Table &, Transaction &)>>
         v;
+    v.push_back(SiloMessageHandler::search_request_handler);
     v.push_back(SiloMessageHandler::search_response_handler);
     v.push_back(SiloMessageHandler::lock_request_handler);
     v.push_back(SiloMessageHandler::lock_response_handler);

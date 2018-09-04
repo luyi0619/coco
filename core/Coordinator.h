@@ -116,7 +116,7 @@ public:
 
       for (std::size_t i = 0; i < n - 1; i++) {
         Socket socket = l.accept();
-        int c_id;
+        std::size_t c_id;
         socket.read_number(c_id);
         inSockets[c_id] = std::move(socket);
       }

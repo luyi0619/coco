@@ -25,7 +25,7 @@ TEST(TestYCSBTransaction, TestBasic) {
 
   scar::ycsb::Storage storage;
 
-  scar::ycsb::ReadModifyWrite<RWKeyType, DatabaseType> t(0, 0, db, context,
-                                                         random, storage);
+  scar::ycsb::ReadModifyWrite<RWKeyType, DatabaseType> t(
+      0, 0, db, context, random, partitioner, storage);
   EXPECT_EQ(true, true);
 }

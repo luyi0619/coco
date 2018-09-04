@@ -37,6 +37,7 @@ int main(int argc, char *argv[]) {
   db.initialize(context, context.partitionNum, n);
 
   scar::Coordinator<WorkloadType, ProtocolType> c(FLAGS_id, peers, db, context);
+  c.connectToPeers();
   c.start();
   return 0;
 }

@@ -52,6 +52,7 @@ public:
         *reinterpret_cast<Message::header_type *>(buffer + bytes_read);
     auto deadbeef = *reinterpret_cast<Message::deadbeef_type *>(
         buffer + bytes_read + sizeof(header));
+
     // check deadbeaf
     CHECK(deadbeef == Message::DEADBEEF);
     auto message = std::make_unique<Message>();

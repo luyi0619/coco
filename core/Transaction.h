@@ -5,6 +5,7 @@
 #pragma once
 
 #include "common/Message.h"
+#include "core/Partitioner.h"
 #include "core/Table.h"
 #include <chrono>
 #include <glog/logging.h>
@@ -24,11 +25,12 @@ public:
   using TableType = ITable<MetaDataType>;
 
   Transaction(std::size_t coordinator_id, std::size_t worker_id,
-              DatabaseType &db, ContextType &context, RandomType &random)
+              DatabaseType &db, ContextType &context, RandomType &random,
+              Partitioner &partitioner)
       : coordinator_id(coordinator_id), worker_id(worker_id),
         startTime(std::chrono::steady_clock::now()), commitEpoch(0),
         pendingResponses(0), abort_lock(false), abort_read_validation(false),
-        db(db), context(context), random(random) {}
+        db(db), context(context), random(random), partitioner(partitioner) {}
 
   virtual ~Transaction() = default;
 
@@ -38,7 +40,9 @@ public:
   void search(std::size_t table_id, std::size_t partition_id,
               const KeyType &key, ValueType &value) {
 
-    pendingResponses++;
+    if (!partitioner.has_master_partition(partition_id)) {
+      pendingResponses++;
+    }
 
     RWKeyType readKey;
 
@@ -84,8 +88,6 @@ public:
                              i, readKey.get_key(), readKey.get_value());
       readSet[i].set_read_request_bit();
       readSet[i].set_tid(tid);
-
-      pendingResponses--;
     }
 
     messageFlusher();
@@ -136,6 +138,7 @@ public:
   DatabaseType &db;
   ContextType &context;
   RandomType &random;
+  Partitioner &partitioner;
   std::vector<RWKeyType> readSet, writeSet;
 };
 

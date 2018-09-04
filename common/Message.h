@@ -101,7 +101,7 @@ public:
     get_deadbeef_ref() = DEADBEEF;
   }
 
-  char *get_raw_ptr() { return &data[0] + get_prefix_size(); }
+  char *get_raw_ptr() { return &data[0]; }
 
   void clear() {
     data = std::string(get_prefix_size(), 0);

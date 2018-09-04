@@ -21,16 +21,15 @@ public:
     MetaDataType &tid = *std::get<0>(row);
     void *src = std::get<1>(row);
 
-    // read from a consistent view
+    // read from a consistent view. read the value even it's locked by others.
+    // abort in read validation phase
     uint64_t tid_;
     do {
-      do {
-        tid_ = tid.load();
-      } while (SiloHelper::isLocked(tid_));
+      tid_ = tid.load();
       std::memcpy(dest, src, size);
     } while (tid_ != tid.load());
 
-    return tid_;
+    return SiloHelper::removeLockBit(tid_);
   }
 
   static bool isLocked(uint64_t value) {

@@ -37,10 +37,10 @@ public:
            ContextType &context, std::atomic<uint64_t> &epoch,
            std::atomic<bool> &stopFlag)
       : Worker(coordinator_id, id), db(db), context(context),
-        partitioner(
-            std::make_unique<HashPartitioner>(id, context.coordinatorNum)),
+        partitioner(std::make_unique<HashPartitioner>(coordinator_id,
+                                                      context.coordinatorNum)),
         epoch(epoch), stopFlag(stopFlag), protocol(db, epoch, *partitioner),
-        workload(coordinator_id, id, db, context, random) {
+        workload(coordinator_id, id, db, context, random, *partitioner) {
     transactionId.store(0);
 
     for (auto i = 0u; i < context.coordinatorNum; i++) {
@@ -58,6 +58,7 @@ public:
     StorageType storage;
 
     while (!stopFlag.load()) {
+      process_request();
       commitTransactions(q);
 
       transaction = workload.nextTransaction(storage);
@@ -87,31 +88,39 @@ public:
 
   std::size_t process_request() {
 
-    if (inQueue.empty())
-      return 0;
+    std::size_t size = 0;
 
-    std::unique_ptr<Message> message(inQueue.front());
-    bool ok = inQueue.pop();
-    CHECK(ok);
+    while (!inQueue.empty()) {
+      std::unique_ptr<Message> message(inQueue.front());
+      bool ok = inQueue.pop();
+      CHECK(ok);
 
-    for (auto it = message->begin(); it != message->end(); it++) {
+      LOG(INFO) << "message count " << message->get_message_count()
+                << " length " << message->get_message_length();
 
-      MessagePiece messagePiece = *it;
-      auto type = messagePiece.get_message_type();
-      CHECK(type < messageHandlers.size());
-      TableType *table = db.find_table(messagePiece.get_table_id(),
-                                       messagePiece.get_partition_id());
-      messageHandlers[type](messagePiece,
-                            *syncMessages[message->get_source_node_id()],
-                            *table, *transaction);
+      for (auto it = message->begin(); it != message->end(); it++) {
+
+        MessagePiece messagePiece = *it;
+        auto type = messagePiece.get_message_type();
+        CHECK(type < messageHandlers.size());
+        LOG(INFO) << "message type " << type << " "
+                  << messagePiece.get_message_length();
+        TableType *table = db.find_table(messagePiece.get_table_id(),
+                                         messagePiece.get_partition_id());
+        messageHandlers[type](messagePiece,
+                              *syncMessages[message->get_source_node_id()],
+                              *table, *transaction);
+      }
+
+      size += message->get_message_count();
+      flushMessages(syncMessages);
     }
-
-    return message->get_message_count();
+    return size;
   }
 
 private:
-  void setupHandlers(TransactionType *transaction) {
-    transaction->readRequestHandler =
+  void setupHandlers(TransactionType *txn) {
+    txn->readRequestHandler =
         [this](std::size_t table_id, std::size_t partition_id,
                uint32_t key_offset, const void *key, void *value) -> uint64_t {
       if (partitioner->has_master_partition(partition_id)) {
@@ -125,8 +134,8 @@ private:
       }
     };
 
-    transaction->remoteRequestHandler = [this]() { return process_request(); };
-    transaction->messageFlusher = [this]() { flushSyncMessages(); };
+    txn->remoteRequestHandler = [this]() { return process_request(); };
+    txn->messageFlusher = [this]() { flushSyncMessages(); };
   };
 
   void flushSyncMessages() { flushMessages(syncMessages); }
@@ -136,7 +145,7 @@ private:
   void flushMessages(std::vector<std::unique_ptr<Message>> &messages) {
 
     for (auto i = 0u; i < messages.size(); i++) {
-      if (i == id) {
+      if (i == coordinator_id) {
         continue;
       }
 
@@ -145,6 +154,11 @@ private:
       }
 
       auto message = messages[i].release();
+      LOG(INFO) << "put " << (void *)message << " dst id "
+                << message->get_dest_node_id() << " count "
+                << message->get_message_count() << " lentgth "
+                << message->get_message_length();
+
       outQueue.push(message);
       messages[i] = std::make_unique<Message>();
       init_message(messages[i].get(), i);

@@ -46,9 +46,11 @@ public:
           continue;
         }
 
+        LOG(INFO) << "get source id " << message->get_source_node_id()
+                  << " length " << message->get_message_length();
         auto workerId = message->get_worker_id();
         // release the unique ptr
-        workers[workerId]->outQueue.push(message.release());
+        workers[workerId]->inQueue.push(message.release());
         CHECK(message == nullptr);
       }
     }
@@ -99,12 +101,12 @@ public:
     std::unique_ptr<Message> message(queue.front());
     bool ok = queue.pop();
     CHECK(ok);
-
     // send the message
     auto dest_node_id = message->get_dest_node_id();
     CHECK(dest_node_id >= 0 && dest_node_id < sockets.size() &&
           dest_node_id != id);
     CHECK(message->get_message_length() == message->data.length());
+
     sockets[dest_node_id].write_n_bytes(message->get_raw_ptr(),
                                         message->get_message_length());
   }

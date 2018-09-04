@@ -10,6 +10,8 @@
 #include "benchmark/ycsb/Random.h"
 #include "benchmark/ycsb/Transaction.h"
 
+#include "core/Partitioner.h"
+
 namespace scar {
 
 namespace ycsb {
@@ -25,15 +27,16 @@ public:
       typename ReadModifyWrite<RWKeyType, DatabaseType>::StorageType;
 
   Workload(std::size_t coordinator_id, std::size_t worker_id, DatabaseType &db,
-           ContextType &context, RandomType &random)
+           ContextType &context, RandomType &random, Partitioner &partitioner)
       : coordinator_id(coordinator_id), worker_id(worker_id), db(db),
-        context(context), random(random) {}
+        context(context), random(random), partitioner(partitioner) {}
 
   std::unique_ptr<TransactionType> nextTransaction(StorageType &storage) {
 
     std::unique_ptr<TransactionType> p =
         std::make_unique<ReadModifyWrite<RWKeyType, DatabaseType>>(
-            coordinator_id, worker_id, db, context, random, storage);
+            coordinator_id, worker_id, db, context, random, partitioner,
+            storage);
 
     return p;
   }
@@ -44,6 +47,7 @@ private:
   DatabaseType &db;
   ContextType &context;
   RandomType &random;
+  Partitioner &partitioner;
 };
 
 } // namespace ycsb

@@ -9,6 +9,7 @@
 #include "benchmark/tpcc/Query.h"
 #include "benchmark/tpcc/Schema.h"
 #include "common/Time.h"
+#include "core/Partitioner.h"
 #include "core/Transaction.h"
 
 namespace scar {
@@ -57,9 +58,10 @@ public:
   using StorageType = Storage;
 
   NewOrder(std::size_t coordinator_id, std::size_t worker_id, DatabaseType &db,
-           ContextType &context, RandomType &random, Storage &storage)
+           ContextType &context, RandomType &random, Partitioner &partitioner,
+           Storage &storage)
       : Transaction<RWKey, Database>(coordinator_id, worker_id, db, context,
-                                     random),
+                                     random, partitioner),
         storage(storage) {}
 
   virtual ~NewOrder() override = default;
@@ -285,9 +287,10 @@ public:
   using StorageType = Storage;
 
   Payment(std::size_t coordinator_id, std::size_t worker_id, DatabaseType &db,
-          ContextType &context, RandomType &random, Storage &storage)
+          ContextType &context, RandomType &random, Partitioner &partitioner,
+          Storage &storage)
       : Transaction<RWKey, Database>(coordinator_id, worker_id, db, context,
-                                     random),
+                                     random, partitioner),
         storage(storage) {}
 
   virtual ~Payment() override = default;
