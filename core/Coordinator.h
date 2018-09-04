@@ -111,8 +111,7 @@ public:
       std::vector<std::string> addressPort = getAddressPort(peers[id]);
 
       Listener l(addressPort[0].c_str(), atoi(addressPort[1].c_str()), 100);
-      LOG(INFO) << "Coordinator " << id << " "
-                << " listening on " << peers[id];
+      LOG(INFO) << "Coordinator " << id << " listening on " << peers[id];
 
       for (std::size_t i = 0; i < n - 1; i++) {
         Socket socket = l.accept();

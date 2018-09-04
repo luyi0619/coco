@@ -46,8 +46,6 @@ public:
           continue;
         }
 
-        LOG(INFO) << "get source id " << message->get_source_node_id()
-                  << " length " << message->get_message_length();
         auto workerId = message->get_worker_id();
         // release the unique ptr
         workers[workerId]->inQueue.push(message.release());

@@ -112,6 +112,9 @@ public:
     // write
     write(txn, commit_tid, syncMessages);
 
+    // replicate
+    replicate(txn, commit_tid, asyncMessages);
+
     return true;
   }
 
@@ -271,6 +274,7 @@ private:
     return maxTID;
   }
 
+
   template <class Transaction>
   void write(Transaction &txn, uint64_t commit_tid,
              std::vector<std::unique_ptr<Message>> &messages) {
@@ -298,6 +302,58 @@ private:
       }
     }
     txn.messageFlusher();
+  }
+
+  template <class Transaction>
+
+  void replicate(Transaction &txn, uint64_t commit_tid,
+             std::vector<std::unique_ptr<Message>> &messages) {
+
+    auto &readSet = txn.readSet;
+    auto &writeSet = txn.writeSet;
+
+    for (auto i = 0u; i < writeSet.size(); i++) {
+      auto &writeKey = writeSet[i];
+      auto tableId = writeKey.get_table_id();
+      auto partitionId = writeKey.get_partition_id();
+      auto table = db.find_table(tableId, partitionId);
+
+      for(auto k = 0u; k < partitioner.total_coordinators(); k ++){
+
+        // k does not have this partition
+        if (!partitioner.is_partition_replicated_on(partitionId, k)){
+          continue;
+        }
+
+        // already write
+        if(k == partitioner.master_coordinator(partitionId)){
+          continue;
+        }
+
+        // local replicate
+        if (k == txn.coordinator_id){
+          auto key = writeKey.get_key();
+          auto value = writeKey.get_value();
+          std::atomic<uint64_t> &tid = table->search_metadata(key);
+
+          uint64_t last_tid = SiloHelper::lock(tid);
+
+          if (commit_tid > last_tid) {
+            table->update(key, value);
+            SiloHelper::unlock(tid, commit_tid);
+          } else {
+            SiloHelper::unlock(tid);
+          }
+
+        } else {
+          auto coordinatorID = k;
+          MessageFactoryType<TableType>::new_replication_message(
+              *messages[coordinatorID], *table, writeKey.get_key(),
+              writeKey.get_value(), commit_tid);
+        }
+      }
+    }
+
   }
 
 private:

@@ -37,10 +37,13 @@ public:
            ContextType &context, std::atomic<uint64_t> &epoch,
            std::atomic<bool> &stopFlag)
       : Worker(coordinator_id, id), db(db), context(context),
-        partitioner(std::make_unique<HashPartitioner>(coordinator_id,
+        partitioner(std::make_unique<HashReplicatedPartitioner<2> >(coordinator_id,
                                                       context.coordinatorNum)),
         epoch(epoch), stopFlag(stopFlag), protocol(db, epoch, *partitioner),
         workload(coordinator_id, id, db, context, random, *partitioner) {
+
+    n_commit.store(0);
+    n_abort.store(0);
     transactionId.store(0);
 
     for (auto i = 0u; i < context.coordinatorNum; i++) {
@@ -57,6 +60,8 @@ public:
     std::queue<std::unique_ptr<TransactionType>> q;
     StorageType storage;
 
+    auto lastPrint = std::chrono::steady_clock::now();
+
     while (!stopFlag.load()) {
       process_request();
       commitTransactions(q);
@@ -67,11 +72,28 @@ public:
       auto result = transaction->execute();
 
       if (result == TransactionResult::READY_TO_COMMIT) {
-        protocol.commit(*transaction, syncMessages, asyncMessages);
+        if (protocol.commit(*transaction, syncMessages, asyncMessages)){
+          n_commit.fetch_add(1);
+        } else {
+          n_abort.fetch_add(1);
+        }
 
         transactionId.fetch_add(1);
         q.push(std::move(transaction));
+      } else {
+        n_abort.fetch_add(1);
       }
+
+      flushAsyncMessages();
+
+      auto now = std::chrono::steady_clock::now();
+      if (std::chrono::duration_cast<std::chrono::seconds>(now - lastPrint).count() >= 1){
+        lastPrint = now;
+        LOG(INFO) << "Worker " << id << " commit " << n_commit.load() << " abort: " << n_abort.load();
+        n_commit.store(0);
+        n_abort.store(0);
+      }
+
     }
 
     commitTransactions(q, true);
@@ -95,16 +117,11 @@ public:
       bool ok = inQueue.pop();
       CHECK(ok);
 
-      LOG(INFO) << "message count " << message->get_message_count()
-                << " length " << message->get_message_length();
-
       for (auto it = message->begin(); it != message->end(); it++) {
 
         MessagePiece messagePiece = *it;
         auto type = messagePiece.get_message_type();
         CHECK(type < messageHandlers.size());
-        LOG(INFO) << "message type " << type << " "
-                  << messagePiece.get_message_length();
         TableType *table = db.find_table(messagePiece.get_table_id(),
                                          messagePiece.get_partition_id());
         messageHandlers[type](messagePiece,
@@ -154,10 +171,6 @@ private:
       }
 
       auto message = messages[i].release();
-      LOG(INFO) << "put " << (void *)message << " dst id "
-                << message->get_dest_node_id() << " count "
-                << message->get_message_count() << " lentgth "
-                << message->get_message_length();
 
       outQueue.push(message);
       messages[i] = std::make_unique<Message>();
@@ -200,6 +213,7 @@ private:
   ProtocolType protocol;
   WorkloadType workload;
   Percentile<int64_t> percentile;
+  std::atomic<uint64_t> n_commit, n_abort;
   std::unique_ptr<TransactionType> transaction;
   std::vector<std::unique_ptr<Message>> syncMessages, asyncMessages;
   std::vector<std::function<void(MessagePiece, Message &, TableType &,
