@@ -38,9 +38,10 @@ public:
 
   template <class KeyType, class ValueType>
   void search(std::size_t table_id, std::size_t partition_id,
-              const KeyType &key, ValueType &value) {
+              const KeyType &key, ValueType &value,
+              bool local_index_read = false) {
 
-    if (!partitioner.has_master_partition(partition_id)) {
+    if (!local_index_read && !partitioner.has_master_partition(partition_id)) {
       pendingResponses++;
     }
 
@@ -51,6 +52,10 @@ public:
 
     readKey.set_key(&key);
     readKey.set_value(&value);
+
+    if (local_index_read) {
+      readKey.set_local_index_read_bit();
+    }
 
     add_to_read_set(readKey);
   }
@@ -85,7 +90,8 @@ public:
       const RWKeyType &readKey = readSet[i];
       auto tid =
           readRequestHandler(readKey.get_table_id(), readKey.get_partition_id(),
-                             i, readKey.get_key(), readKey.get_value());
+                             i, readKey.get_key(), readKey.get_value(),
+                             readKey.get_local_index_read_bit());
       readSet[i].set_read_request_bit();
       readSet[i].set_tid(tid);
     }
@@ -128,7 +134,7 @@ public:
 
   // table id, partition id, key, value
   std::function<uint64_t(std::size_t, std::size_t, uint32_t, const void *,
-                         void *)>
+                         void *, bool)>
       readRequestHandler;
   // processed a request?
   std::function<std::size_t(void)> remoteRequestHandler;

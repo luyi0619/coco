@@ -37,8 +37,8 @@ public:
            ContextType &context, std::atomic<uint64_t> &epoch,
            std::atomic<bool> &stopFlag)
       : Worker(coordinator_id, id), db(db), context(context),
-        partitioner(std::make_unique<HashReplicatedPartitioner<2> >(coordinator_id,
-                                                      context.coordinatorNum)),
+        partitioner(std::make_unique<HashReplicatedPartitioner<2>>(
+            coordinator_id, context.coordinatorNum)),
         epoch(epoch), stopFlag(stopFlag), protocol(db, epoch, *partitioner),
         workload(coordinator_id, id, db, context, random, *partitioner) {
 
@@ -72,7 +72,7 @@ public:
       auto result = transaction->execute();
 
       if (result == TransactionResult::READY_TO_COMMIT) {
-        if (protocol.commit(*transaction, syncMessages, asyncMessages)){
+        if (protocol.commit(*transaction, syncMessages, asyncMessages)) {
           n_commit.fetch_add(1);
         } else {
           n_abort.fetch_add(1);
@@ -87,13 +87,14 @@ public:
       flushAsyncMessages();
 
       auto now = std::chrono::steady_clock::now();
-      if (std::chrono::duration_cast<std::chrono::seconds>(now - lastPrint).count() >= 1){
+      if (std::chrono::duration_cast<std::chrono::seconds>(now - lastPrint)
+              .count() >= 1) {
         lastPrint = now;
-        LOG(INFO) << "Worker " << id << " commit " << n_commit.load() << " abort: " << n_abort.load();
+        LOG(INFO) << "Worker " << id << " commit " << n_commit.load()
+                  << " abort: " << n_abort.load();
         n_commit.store(0);
         n_abort.store(0);
       }
-
     }
 
     commitTransactions(q, true);
@@ -139,8 +140,9 @@ private:
   void setupHandlers(TransactionType *txn) {
     txn->readRequestHandler =
         [this](std::size_t table_id, std::size_t partition_id,
-               uint32_t key_offset, const void *key, void *value) -> uint64_t {
-      if (partitioner->has_master_partition(partition_id)) {
+               uint32_t key_offset, const void *key, void *value,
+               bool local_index_read) -> uint64_t {
+      if (partitioner->has_master_partition(partition_id) || local_index_read) {
         return protocol.search(table_id, partition_id, key, value);
       } else {
         TableType *table = db.find_table(table_id, partition_id);

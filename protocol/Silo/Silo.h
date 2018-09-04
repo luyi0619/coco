@@ -274,7 +274,6 @@ private:
     return maxTID;
   }
 
-
   template <class Transaction>
   void write(Transaction &txn, uint64_t commit_tid,
              std::vector<std::unique_ptr<Message>> &messages) {
@@ -307,7 +306,7 @@ private:
   template <class Transaction>
 
   void replicate(Transaction &txn, uint64_t commit_tid,
-             std::vector<std::unique_ptr<Message>> &messages) {
+                 std::vector<std::unique_ptr<Message>> &messages) {
 
     auto &readSet = txn.readSet;
     auto &writeSet = txn.writeSet;
@@ -318,20 +317,20 @@ private:
       auto partitionId = writeKey.get_partition_id();
       auto table = db.find_table(tableId, partitionId);
 
-      for(auto k = 0u; k < partitioner.total_coordinators(); k ++){
+      for (auto k = 0u; k < partitioner.total_coordinators(); k++) {
 
         // k does not have this partition
-        if (!partitioner.is_partition_replicated_on(partitionId, k)){
+        if (!partitioner.is_partition_replicated_on(partitionId, k)) {
           continue;
         }
 
         // already write
-        if(k == partitioner.master_coordinator(partitionId)){
+        if (k == partitioner.master_coordinator(partitionId)) {
           continue;
         }
 
         // local replicate
-        if (k == txn.coordinator_id){
+        if (k == txn.coordinator_id) {
           auto key = writeKey.get_key();
           auto value = writeKey.get_value();
           std::atomic<uint64_t> &tid = table->search_metadata(key);
@@ -353,7 +352,6 @@ private:
         }
       }
     }
-
   }
 
 private:

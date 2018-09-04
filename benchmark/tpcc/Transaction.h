@@ -132,8 +132,8 @@ public:
         return TransactionResult::ABORT_NORETRY;
       }
 
-      this->search(itemTableID, 0, storage.item_keys[i],
-                   storage.item_values[i]);
+      this->search(itemTableID, 0, storage.item_keys[i], storage.item_values[i],
+                   true);
 
       // The row in the STOCK table with matching S_I_ID (equals OL_I_ID) and
       // S_W_ID (equals OL_SUPPLY_W_ID) is selected.

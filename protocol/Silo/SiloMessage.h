@@ -154,8 +154,8 @@ public:
     auto key_size = table.keyNBytes();
     auto value_size = table.valueNBytes();
 
-    auto message_size = MessagePiece::get_header_size() + key_size + value_size +
-        sizeof(commit_tid);
+    auto message_size = MessagePiece::get_header_size() + key_size +
+                        value_size + sizeof(commit_tid);
     auto message_piece_header = MessagePiece::construct_message_piece_header(
         static_cast<uint32_t>(SiloMessage::REPLICATION_REQUEST), message_size,
         table.tableID(), table.partitionID());
