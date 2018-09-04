@@ -71,7 +71,10 @@ public:
     ContextType &context = this->context;
     RandomType &random = this->random;
 
-    int32_t W_ID = random.uniform_dist(1, context.partitionNum);
+    int partition_num_per_node = context.partitionNum / context.coordinatorNum;
+    int partition_id = random.uniform_dist(0, partition_num_per_node - 1) * context.coordinatorNum + this->coordinator_id;
+
+    int32_t W_ID = partition_id + 1;
     NewOrderQuery query = makeNewOrderQuery()(context, W_ID, random);
 
     // The input data (see Clause 2.4.3.2) are communicated to the SUT.
@@ -300,7 +303,10 @@ public:
     ContextType &context = this->context;
     RandomType &random = this->random;
 
-    int32_t W_ID = random.uniform_dist(1, context.partitionNum);
+    int partition_num_per_node = context.partitionNum / context.coordinatorNum;
+    int partition_id = random.uniform_dist(0, partition_num_per_node - 1) * context.coordinatorNum + this->coordinator_id;
+
+    int32_t W_ID = partition_id + 1;
     PaymentQuery query = makePaymentQuery()(context, W_ID, random);
 
     // The input data (see Clause 2.5.3.2) are communicated to the SUT.
