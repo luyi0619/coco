@@ -255,6 +255,7 @@ public:
     SiloRWKey &readKey = txn.readSet[key_offset];
     dec = Decoder(inputPiece.toStringPiece());
     dec.read_n_bytes(readKey.get_value(), value_size);
+    readKey.set_tid(tid);
     txn.pendingResponses--;
   }
 
