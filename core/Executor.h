@@ -56,10 +56,13 @@ public:
     std::queue<std::unique_ptr<TransactionType>> q;
     StorageType storage;
 
+    uint64_t last_seed = 0;
+
     while (!stopFlag.load()) {
       process_request();
       commitTransactions(q);
 
+      last_seed = random.get_seed();
       transaction = workload.nextTransaction(storage);
       setupHandlers(transaction.get());
 
@@ -75,6 +78,7 @@ public:
             DCHECK(transaction->abort_read_validation);
             n_abort_read_validation.fetch_add(1);
           }
+          random.set_seed(last_seed);
         }
         q.push(std::move(transaction));
       } else {

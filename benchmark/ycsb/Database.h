@@ -59,8 +59,7 @@ public:
     for (auto partitionID = 0u; partitionID < partitionNum; partitionID++) {
       auto ycsbTableID = ycsb::tableID;
       tbl_ycsb_vec.push_back(
-          std::make_unique<
-              Table<127, ycsb::key, ycsb::value, MetaDataType>>(
+          std::make_unique<Table<127, ycsb::key, ycsb::value, MetaDataType>>(
               ycsbTableID, partitionID));
     }
 

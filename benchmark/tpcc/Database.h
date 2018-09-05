@@ -147,17 +147,16 @@ public:
               newOrderTableID, partitionID));
       auto orderTableID = order::tableID;
       tbl_order_vec.push_back(
-          std::make_unique<
-              Table<127, order::key, order::value, MetaDataType>>(
+          std::make_unique<Table<127, order::key, order::value, MetaDataType>>(
               orderTableID, partitionID));
       auto orderLineTableID = order_line::tableID;
       tbl_order_line_vec.push_back(
-          std::make_unique<Table<127, order_line::key, order_line::value,
-                                 MetaDataType>>(orderLineTableID, partitionID));
+          std::make_unique<
+              Table<127, order_line::key, order_line::value, MetaDataType>>(
+              orderLineTableID, partitionID));
       auto stockTableID = stock::tableID;
       tbl_stock_vec.push_back(
-          std::make_unique<
-              Table<127, stock::key, stock::value, MetaDataType>>(
+          std::make_unique<Table<127, stock::key, stock::value, MetaDataType>>(
               stockTableID, partitionID));
     }
     auto itemTableID = item::tableID;
