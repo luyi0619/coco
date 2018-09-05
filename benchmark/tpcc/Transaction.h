@@ -351,7 +351,7 @@ public:
           customer_name_idx::key(C_W_ID, C_D_ID, query.C_LAST);
       this->search(customerNameIdxTableID, C_W_ID - 1,
                    storage.customer_name_idx_key,
-                   storage.customer_name_idx_value);
+                   storage.customer_name_idx_value, true);
     }
 
     this->process_read_request();

@@ -190,6 +190,11 @@ private:
 
     for (auto i = 0u; i < readSet.size(); i++) {
       auto &readKey = readSet[i];
+
+      if (readKey.get_local_index_read_bit()) {
+        continue; // read only index does not need to validate
+      }
+
       bool in_write_set = isKeyInWriteSet(readKey.get_key());
       if (in_write_set) {
         continue; // already validated in lock write set

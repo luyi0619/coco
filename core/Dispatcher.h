@@ -102,7 +102,7 @@ public:
     // send the message
     auto dest_node_id = message->get_dest_node_id();
     DCHECK(dest_node_id >= 0 && dest_node_id < sockets.size() &&
-          dest_node_id != id);
+           dest_node_id != id);
     DCHECK(message->get_message_length() == message->data.length());
 
     sockets[dest_node_id].write_n_bytes(message->get_raw_ptr(),

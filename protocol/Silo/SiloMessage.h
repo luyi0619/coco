@@ -174,7 +174,7 @@ public:
                                      Message &responseMessage, Table &table,
                                      Transaction &txn) {
     DCHECK(inputPiece.get_message_type() ==
-          static_cast<uint32_t>(SiloMessage::SEARCH_REQUEST));
+           static_cast<uint32_t>(SiloMessage::SEARCH_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     DCHECK(table_id == table.tableID());
@@ -191,7 +191,7 @@ public:
     uint32_t key_offset;
 
     DCHECK(inputPiece.get_message_length() ==
-          MessagePiece::get_header_size() + key_size + sizeof(key_offset));
+           MessagePiece::get_header_size() + key_size + sizeof(key_offset));
 
     // get row and offset
     const void *key = stringPiece.data();
@@ -228,7 +228,7 @@ public:
                                       Message &responseMessage, Table &table,
                                       Transaction &txn) {
     DCHECK(inputPiece.get_message_type() ==
-          static_cast<uint32_t>(SiloMessage::SEARCH_RESPONSE));
+           static_cast<uint32_t>(SiloMessage::SEARCH_RESPONSE));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     DCHECK(table_id == table.tableID());
@@ -244,8 +244,8 @@ public:
     uint32_t key_offset;
 
     DCHECK(inputPiece.get_message_length() == MessagePiece::get_header_size() +
-                                                 value_size + sizeof(tid) +
-                                                 sizeof(key_offset));
+                                                  value_size + sizeof(tid) +
+                                                  sizeof(key_offset));
 
     StringPiece stringPiece = inputPiece.toStringPiece();
     stringPiece.remove_prefix(value_size);
@@ -262,7 +262,7 @@ public:
                                    Message &responseMessage, Table &table,
                                    Transaction &txn) {
     DCHECK(inputPiece.get_message_type() ==
-          static_cast<uint32_t>(SiloMessage::LOCK_REQUEST));
+           static_cast<uint32_t>(SiloMessage::LOCK_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     DCHECK(table_id == table.tableID());
@@ -279,7 +279,7 @@ public:
     uint32_t key_offset;
 
     DCHECK(inputPiece.get_message_length() ==
-          MessagePiece::get_header_size() + key_size + sizeof(key_offset));
+           MessagePiece::get_header_size() + key_size + sizeof(key_offset));
 
     const void *key = stringPiece.data();
     std::atomic<uint64_t> &tid = table.search_metadata(key);
@@ -310,7 +310,7 @@ public:
                                     Message &responseMessage, Table &table,
                                     Transaction &txn) {
     DCHECK(inputPiece.get_message_type() ==
-          static_cast<uint32_t>(SiloMessage::LOCK_RESPONSE));
+           static_cast<uint32_t>(SiloMessage::LOCK_RESPONSE));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     DCHECK(table_id == table.tableID());
@@ -326,8 +326,8 @@ public:
     uint32_t key_offset;
 
     DCHECK(inputPiece.get_message_length() ==
-          MessagePiece::get_header_size() + sizeof(success) +
-              sizeof(latest_tid) + sizeof(key_offset));
+           MessagePiece::get_header_size() + sizeof(success) +
+               sizeof(latest_tid) + sizeof(key_offset));
 
     StringPiece stringPiece = inputPiece.toStringPiece();
     Decoder dec(stringPiece);
@@ -366,7 +366,7 @@ public:
                                               Message &responseMessage,
                                               Table &table, Transaction &txn) {
     DCHECK(inputPiece.get_message_type() ==
-          static_cast<uint32_t>(SiloMessage::READ_VALIDATION_REQUEST));
+           static_cast<uint32_t>(SiloMessage::READ_VALIDATION_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     DCHECK(table_id == table.tableID());
@@ -380,8 +380,8 @@ public:
      */
 
     DCHECK(inputPiece.get_message_length() == MessagePiece::get_header_size() +
-                                                 key_size + sizeof(uint32_t) +
-                                                 sizeof(uint64_t));
+                                                  key_size + sizeof(uint32_t) +
+                                                  sizeof(uint64_t));
 
     auto stringPiece = inputPiece.toStringPiece();
     const void *key = stringPiece.data();
@@ -421,7 +421,7 @@ public:
                                                Message &responseMessage,
                                                Table &table, Transaction &txn) {
     DCHECK(inputPiece.get_message_type() ==
-          static_cast<uint32_t>(SiloMessage::READ_VALIDATION_RESPONSE));
+           static_cast<uint32_t>(SiloMessage::READ_VALIDATION_RESPONSE));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     DCHECK(table_id == table.tableID());
@@ -456,7 +456,7 @@ public:
                                     Message &responseMessage, Table &table,
                                     Transaction &txn) {
     DCHECK(inputPiece.get_message_type() ==
-          static_cast<uint32_t>(SiloMessage::ABORT_REQUEST));
+           static_cast<uint32_t>(SiloMessage::ABORT_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     DCHECK(table_id == table.tableID());
@@ -469,7 +469,7 @@ public:
      */
 
     DCHECK(inputPiece.get_message_length() ==
-          MessagePiece::get_header_size() + key_size);
+           MessagePiece::get_header_size() + key_size);
 
     auto stringPiece = inputPiece.toStringPiece();
     const void *key = stringPiece.data();
@@ -483,7 +483,7 @@ public:
                                     Message &responseMessage, Table &table,
                                     Transaction &txn) {
     DCHECK(inputPiece.get_message_type() ==
-          static_cast<uint32_t>(SiloMessage::WRITE_REQUEST));
+           static_cast<uint32_t>(SiloMessage::WRITE_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     DCHECK(table_id == table.tableID());
@@ -497,8 +497,8 @@ public:
      */
 
     DCHECK(inputPiece.get_message_length() == MessagePiece::get_header_size() +
-                                                 key_size + field_size +
-                                                 sizeof(uint64_t));
+                                                  key_size + field_size +
+                                                  sizeof(uint64_t));
 
     auto stringPiece = inputPiece.toStringPiece();
 
@@ -523,7 +523,7 @@ public:
                                           Message &responseMessage,
                                           Table &table, Transaction &txn) {
     DCHECK(inputPiece.get_message_type() ==
-          static_cast<uint32_t>(SiloMessage::REPLICATION_REQUEST));
+           static_cast<uint32_t>(SiloMessage::REPLICATION_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     DCHECK(table_id == table.tableID());
@@ -537,8 +537,8 @@ public:
      */
 
     DCHECK(inputPiece.get_message_length() == MessagePiece::get_header_size() +
-                                                 key_size + field_size +
-                                                 sizeof(uint64_t));
+                                                  key_size + field_size +
+                                                  sizeof(uint64_t));
 
     auto stringPiece = inputPiece.toStringPiece();
 

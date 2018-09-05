@@ -27,7 +27,7 @@ public:
 
   std::size_t getGlobalKeyID(std::size_t key, std::size_t partitionID) const {
     DCHECK(key >= 0 && key < keysPerPartition && partitionID >= 0 &&
-          partitionID < partitionNum);
+           partitionID < partitionNum);
 
     if (strategy == PartitionStrategy::ROUND_ROBIN) {
       return key * partitionNum + partitionID;

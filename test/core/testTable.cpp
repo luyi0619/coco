@@ -52,5 +52,4 @@ TEST(TestTable, TestTPCC) {
                                            sizeof(stock::value::S_YTD) +
                                            sizeof(stock::value::S_ORDER_CNT) +
                                            sizeof(stock::value::S_REMOTE_CNT));
-
 }

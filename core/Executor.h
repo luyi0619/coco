@@ -55,7 +55,7 @@ public:
   void start() override {
     std::queue<std::unique_ptr<TransactionType>> q;
     StorageType storage;
-    
+
     while (!stopFlag.load()) {
       process_request();
       commitTransactions(q);
@@ -69,12 +69,16 @@ public:
         if (protocol.commit(*transaction, syncMessages, asyncMessages)) {
           n_commit.fetch_add(1);
         } else {
-          n_abort.fetch_add(1);
+          if (transaction->abort_lock) {
+            n_abort_lock.fetch_add(1);
+          } else {
+            DCHECK(transaction->abort_read_validation);
+            n_abort_read_validation.fetch_add(1);
+          }
         }
-
         q.push(std::move(transaction));
       } else {
-        n_abort.fetch_add(1);
+        n_abort_no_retry.fetch_add(1);
       }
 
       flushAsyncMessages();

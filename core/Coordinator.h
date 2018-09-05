@@ -69,30 +69,37 @@ public:
 
     LOG(INFO) << "Coordinator starts to sleep " << timeToRun << " seconds.";
 
-
-    do{
+    do {
       std::this_thread::sleep_for(std::chrono::seconds(1));
 
-      uint64_t n_commit = 0, n_abort = 0;
+      uint64_t n_commit = 0, n_abort_no_retry = 0, n_abort_lock = 0,
+               n_abort_read_validation = 0;
 
-      for(auto i = 0u; i < workers.size();i ++){
+      for (auto i = 0u; i < workers.size(); i++) {
 
         n_commit += workers[i]->n_commit.load();
         workers[i]->n_commit.store(0);
 
-        n_abort += workers[i]->n_abort.load();
-        workers[i]->n_abort.store(0);
+        n_abort_no_retry += workers[i]->n_abort_no_retry.load();
+        workers[i]->n_abort_no_retry.store(0);
 
+        n_abort_lock += workers[i]->n_abort_lock.load();
+        workers[i]->n_abort_lock.store(0);
+
+        n_abort_read_validation += workers[i]->n_abort_read_validation.load();
+        workers[i]->n_abort_read_validation.store(0);
       }
 
-      LOG(INFO) << "commit: " << n_commit << " abort: " << n_abort;
-
-    }while(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - startTime).count() < timeToRun);
+      LOG(INFO) << "commit: " << n_commit << " abort: "
+                << n_abort_no_retry + n_abort_lock + n_abort_read_validation
+                << " (" << n_abort_no_retry << "/" << n_abort_lock << "/"
+                << n_abort_read_validation << ")";
+    } while (std::chrono::duration_cast<std::chrono::seconds>(
+                 std::chrono::steady_clock::now() - startTime)
+                 .count() < timeToRun);
 
     workerStopFlag.store(true);
     LOG(INFO) << "Coordinator awakes.";
-
-
 
     epochStopFlag.store(true);
     epochThread.join();
