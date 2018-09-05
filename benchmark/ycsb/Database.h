@@ -60,7 +60,7 @@ public:
       auto ycsbTableID = ycsb::tableID;
       tbl_ycsb_vec.push_back(
           std::make_unique<
-              Table<1000007, ycsb::key, ycsb::value, MetaDataType>>(
+              Table<127, ycsb::key, ycsb::value, MetaDataType>>(
               ycsbTableID, partitionID));
     }
 
