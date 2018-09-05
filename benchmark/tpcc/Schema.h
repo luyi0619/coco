@@ -4,8 +4,10 @@
 
 #pragma once
 
+#include "common/ClassOf.h"
 #include "common/FixedString.h"
 #include "common/Hash.h"
+#include "common/Serialization.h"
 #include "core/SchemaDef.h"
 
 // table definition for ycsb
@@ -115,3 +117,135 @@ DO_STRUCT(item, ITEM_KEY_FIELDS, ITEM_VALUE_FIELDS, NAMESPACE_FIELDS)
                               y(FixedString<50>, S_DATA)
 
 DO_STRUCT(stock, STOCK_KEY_FIELDS, STOCK_VALUE_FIELDS, NAMESPACE_FIELDS)
+
+namespace scar {
+
+template <> class Serializer<tpcc::warehouse::value> {
+public:
+  std::string operator()(const tpcc::warehouse::value &v) {
+    return Serializer<decltype(v.W_YTD)>()(v.W_YTD);
+  }
+};
+
+template <> class Deserializer<tpcc::warehouse::value> {
+public:
+  std::size_t operator()(StringPiece str,
+                         tpcc::warehouse::value &result) const {
+    return Deserializer<decltype(result.W_YTD)>()(str, result.W_YTD);
+  }
+};
+
+template <> class ClassOf<tpcc::warehouse::value> {
+public:
+  static constexpr std::size_t size() {
+    return ClassOf<decltype(tpcc::warehouse::value::W_YTD)>::size();
+  }
+};
+
+template <> class Serializer<tpcc::district::value> {
+public:
+  std::string operator()(const tpcc::district::value &v) {
+    return Serializer<decltype(v.D_YTD)>()(v.D_YTD) +
+           Serializer<decltype(v.D_NEXT_O_ID)>()(v.D_NEXT_O_ID);
+  }
+};
+
+template <> class Deserializer<tpcc::district::value> {
+public:
+  std::size_t operator()(StringPiece str, tpcc::district::value &result) const {
+    std::size_t sz_ytd =
+        Deserializer<decltype(result.D_YTD)>()(str, result.D_YTD);
+    str.remove_prefix(sz_ytd);
+    std::size_t sz_next_o_id =
+        Deserializer<decltype(result.D_NEXT_O_ID)>()(str, result.D_NEXT_O_ID);
+    return sz_ytd + sz_next_o_id;
+  }
+};
+
+template <> class ClassOf<tpcc::district::value> {
+public:
+  static constexpr std::size_t size() {
+    return ClassOf<decltype(tpcc::district::value::D_YTD)>::size() +
+           ClassOf<decltype(tpcc::district::value::D_NEXT_O_ID)>::size();
+  }
+};
+
+template <> class Serializer<tpcc::customer::value> {
+public:
+  std::string operator()(const tpcc::customer::value &v) {
+    return Serializer<decltype(v.C_DATA)>()(v.C_DATA) +
+           Serializer<decltype(v.C_BALANCE)>()(v.C_BALANCE) +
+           Serializer<decltype(v.C_YTD_PAYMENT)>()(v.C_YTD_PAYMENT) +
+           Serializer<decltype(v.C_PAYMENT_CNT)>()(v.C_PAYMENT_CNT);
+  }
+};
+
+template <> class Deserializer<tpcc::customer::value> {
+public:
+  std::size_t operator()(StringPiece str, tpcc::customer::value &result) const {
+    std::size_t sz_data =
+        Deserializer<decltype(result.C_DATA)>()(str, result.C_DATA);
+    str.remove_prefix(sz_data);
+    std::size_t sz_balance =
+        Deserializer<decltype(result.C_BALANCE)>()(str, result.C_BALANCE);
+    str.remove_prefix(sz_balance);
+    std::size_t sz_ytd_payment = Deserializer<decltype(result.C_YTD_PAYMENT)>()(
+        str, result.C_YTD_PAYMENT);
+    str.remove_prefix(sz_ytd_payment);
+    std::size_t sz_payment_cnt = Deserializer<decltype(result.C_PAYMENT_CNT)>()(
+        str, result.C_PAYMENT_CNT);
+
+    return sz_data + sz_balance + sz_ytd_payment + sz_payment_cnt;
+  }
+};
+
+template <> class ClassOf<tpcc::customer::value> {
+public:
+  static constexpr std::size_t size() {
+    return ClassOf<decltype(tpcc::customer::value::C_DATA)>::size() +
+           ClassOf<decltype(tpcc::customer::value::C_BALANCE)>::size() +
+           ClassOf<decltype(tpcc::customer::value::C_YTD_PAYMENT)>::size() +
+           ClassOf<decltype(tpcc::customer::value::C_PAYMENT_CNT)>::size();
+  }
+};
+
+template <> class Serializer<tpcc::stock::value> {
+public:
+  std::string operator()(const tpcc::stock::value &v) {
+    return Serializer<decltype(v.S_QUANTITY)>()(v.S_QUANTITY) +
+           Serializer<decltype(v.S_YTD)>()(v.S_YTD) +
+           Serializer<decltype(v.S_ORDER_CNT)>()(v.S_ORDER_CNT) +
+           Serializer<decltype(v.S_REMOTE_CNT)>()(v.S_REMOTE_CNT);
+  }
+};
+
+template <> class Deserializer<tpcc::stock::value> {
+public:
+  std::size_t operator()(StringPiece str, tpcc::stock::value &result) const {
+    std::size_t sz_quantity =
+        Deserializer<decltype(result.S_QUANTITY)>()(str, result.S_QUANTITY);
+    str.remove_prefix(sz_quantity);
+    std::size_t sz_ytd =
+        Deserializer<decltype(result.S_YTD)>()(str, result.S_YTD);
+    str.remove_prefix(sz_ytd);
+    std::size_t sz_order_cnt =
+        Deserializer<decltype(result.S_ORDER_CNT)>()(str, result.S_ORDER_CNT);
+    str.remove_prefix(sz_order_cnt);
+    std::size_t sz_remote_cnt =
+        Deserializer<decltype(result.S_REMOTE_CNT)>()(str, result.S_REMOTE_CNT);
+
+    return sz_quantity + sz_ytd + sz_order_cnt + sz_remote_cnt;
+  }
+};
+
+template <> class ClassOf<tpcc::stock::value> {
+public:
+  static constexpr std::size_t size() {
+    return ClassOf<decltype(tpcc::stock::value::S_QUANTITY)>::size() +
+           ClassOf<decltype(tpcc::stock::value::S_YTD)>::size() +
+           ClassOf<decltype(tpcc::stock::value::S_ORDER_CNT)>::size() +
+           ClassOf<decltype(tpcc::stock::value::S_REMOTE_CNT)>::size();
+  }
+};
+
+} // namespace scar

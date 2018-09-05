@@ -46,7 +46,7 @@ public:
     YCSBQuery<YCSB_FIELD_SIZE> query =
         makeYCSBQuery<YCSB_FIELD_SIZE>()(context, partitionID, random);
 
-    CHECK(context.keysPerTransaction == YCSB_FIELD_SIZE);
+    DCHECK(context.keysPerTransaction == YCSB_FIELD_SIZE);
 
     int ycsbTableID = ycsb::tableID;
 

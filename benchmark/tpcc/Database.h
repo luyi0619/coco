@@ -29,58 +29,58 @@ public:
   using TableType = ITable<MetaDataType>;
 
   TableType *find_table(std::size_t table_id, std::size_t partition_id) {
-    CHECK(table_id < tbl_vecs.size());
-    CHECK(partition_id < tbl_vecs[table_id].size());
+    DCHECK(table_id < tbl_vecs.size());
+    DCHECK(partition_id < tbl_vecs[table_id].size());
     return tbl_vecs[table_id][partition_id];
   }
 
   TableType *tbl_warehouse(std::size_t partition_id) {
-    CHECK(partition_id < tbl_warehouse_vec.size());
+    DCHECK(partition_id < tbl_warehouse_vec.size());
     return tbl_warehouse_vec[partition_id].get();
   }
 
   TableType *tbl_district(std::size_t partition_id) {
-    CHECK(partition_id < tbl_district_vec.size());
+    DCHECK(partition_id < tbl_district_vec.size());
     return tbl_district_vec[partition_id].get();
   }
 
   TableType *tbl_customer(std::size_t partition_id) {
-    CHECK(partition_id < tbl_customer_vec.size());
+    DCHECK(partition_id < tbl_customer_vec.size());
     return tbl_customer_vec[partition_id].get();
   }
 
   TableType *tbl_customer_name_idx(std::size_t partition_id) {
-    CHECK(partition_id < tbl_customer_name_idx_vec.size());
+    DCHECK(partition_id < tbl_customer_name_idx_vec.size());
     return tbl_customer_name_idx_vec[partition_id].get();
   }
 
   TableType *tbl_history(std::size_t partition_id) {
-    CHECK(partition_id < tbl_history_vec.size());
+    DCHECK(partition_id < tbl_history_vec.size());
     return tbl_history_vec[partition_id].get();
   }
 
   TableType *tbl_new_order(std::size_t partition_id) {
-    CHECK(partition_id < tbl_new_order_vec.size());
+    DCHECK(partition_id < tbl_new_order_vec.size());
     return tbl_new_order_vec[partition_id].get();
   }
 
   TableType *tbl_order(std::size_t partition_id) {
-    CHECK(partition_id < tbl_order_vec.size());
+    DCHECK(partition_id < tbl_order_vec.size());
     return tbl_order_vec[partition_id].get();
   }
 
   TableType *tbl_order_line(std::size_t partition_id) {
-    CHECK(partition_id < tbl_order_line_vec.size());
+    DCHECK(partition_id < tbl_order_line_vec.size());
     return tbl_order_line_vec[partition_id].get();
   }
 
   TableType *tbl_item(std::size_t partition_id) {
-    CHECK(partition_id < tbl_item_vec.size());
+    DCHECK(partition_id < tbl_item_vec.size());
     return tbl_item_vec[partition_id].get();
   }
 
   TableType *tbl_stock(std::size_t partition_id) {
-    CHECK(partition_id < tbl_stock_vec.size());
+    DCHECK(partition_id < tbl_stock_vec.size());
     return tbl_stock_vec[partition_id].get();
   }
 

@@ -72,7 +72,9 @@ public:
     RandomType &random = this->random;
 
     int partition_num_per_node = context.partitionNum / context.coordinatorNum;
-    int partition_id = random.uniform_dist(0, partition_num_per_node - 1) * context.coordinatorNum + this->coordinator_id;
+    int partition_id = random.uniform_dist(0, partition_num_per_node - 1) *
+                           context.coordinatorNum +
+                       this->coordinator_id;
 
     int32_t W_ID = partition_id + 1;
     NewOrderQuery query = makeNewOrderQuery()(context, W_ID, random);
@@ -265,7 +267,7 @@ public:
             storage.stock_values[i].S_DIST_10;
         break;
       default:
-        CHECK(false);
+        DCHECK(false);
         break;
       }
       total_amount += OL_AMOUNT * (1 - C_DISCOUNT) * (1 + W_TAX + D_TAX);
@@ -304,7 +306,9 @@ public:
     RandomType &random = this->random;
 
     int partition_num_per_node = context.partitionNum / context.coordinatorNum;
-    int partition_id = random.uniform_dist(0, partition_num_per_node - 1) * context.coordinatorNum + this->coordinator_id;
+    int partition_id = random.uniform_dist(0, partition_num_per_node - 1) *
+                           context.coordinatorNum +
+                       this->coordinator_id;
 
     int32_t W_ID = partition_id + 1;
     PaymentQuery query = makePaymentQuery()(context, W_ID, random);

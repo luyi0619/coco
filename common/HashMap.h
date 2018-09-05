@@ -71,7 +71,7 @@ public:
 private:
   template <class ApplyFunc>
   auto &_applyAtRef(ApplyFunc applyFunc, std::size_t i) {
-    CHECK(i < N) << "index " << i << " is greater than " << N;
+    DCHECK(i < N) << "index " << i << " is greater than " << N;
     locks_[i].lock();
     auto &result = applyFunc(maps_[i]);
     locks_[i].unlock();
@@ -79,7 +79,7 @@ private:
   }
 
   template <class ApplyFunc> auto _applyAt(ApplyFunc applyFunc, std::size_t i) {
-    CHECK(i < N) << "index " << i << " is greater than " << N;
+    DCHECK(i < N) << "index " << i << " is greater than " << N;
     locks_[i].lock();
     auto result = applyFunc(maps_[i]);
     locks_[i].unlock();

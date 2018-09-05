@@ -42,10 +42,6 @@ public:
         epoch(epoch), stopFlag(stopFlag), protocol(db, epoch, *partitioner),
         workload(coordinator_id, id, db, context, random, *partitioner) {
 
-    n_commit.store(0);
-    n_abort.store(0);
-    transactionId.store(0);
-
     for (auto i = 0u; i < context.coordinatorNum; i++) {
       syncMessages.emplace_back(std::make_unique<Message>());
       init_message(syncMessages[i].get(), i);
@@ -59,9 +55,7 @@ public:
   void start() override {
     std::queue<std::unique_ptr<TransactionType>> q;
     StorageType storage;
-
-    auto lastPrint = std::chrono::steady_clock::now();
-
+    
     while (!stopFlag.load()) {
       process_request();
       commitTransactions(q);
@@ -78,23 +72,12 @@ public:
           n_abort.fetch_add(1);
         }
 
-        transactionId.fetch_add(1);
         q.push(std::move(transaction));
       } else {
         n_abort.fetch_add(1);
       }
 
       flushAsyncMessages();
-
-      auto now = std::chrono::steady_clock::now();
-      if (std::chrono::duration_cast<std::chrono::seconds>(now - lastPrint)
-              .count() >= 1) {
-        lastPrint = now;
-        LOG(INFO) << "Worker " << id << " commit " << n_commit.load()
-                  << " abort: " << n_abort.load();
-        n_commit.store(0);
-        n_abort.store(0);
-      }
     }
 
     commitTransactions(q, true);
@@ -122,7 +105,7 @@ public:
 
         MessagePiece messagePiece = *it;
         auto type = messagePiece.get_message_type();
-        CHECK(type < messageHandlers.size());
+        DCHECK(type < messageHandlers.size());
         TableType *table = db.find_table(messagePiece.get_table_id(),
                                          messagePiece.get_partition_id());
         messageHandlers[type](messagePiece,
@@ -215,7 +198,6 @@ private:
   ProtocolType protocol;
   WorkloadType workload;
   Percentile<int64_t> percentile;
-  std::atomic<uint64_t> n_commit, n_abort;
   std::unique_ptr<TransactionType> transaction;
   std::vector<std::unique_ptr<Message>> syncMessages, asyncMessages;
   std::vector<std::function<void(MessagePiece, Message &, TableType &,

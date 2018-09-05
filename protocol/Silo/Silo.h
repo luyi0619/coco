@@ -41,7 +41,7 @@ public:
                   const void *key, void *value) const {
 
     TableType *table = db.find_table(table_id, partition_id);
-    auto value_bytes = table->valueNBytes();
+    auto value_bytes = table->value_size();
     auto row = table->search(key);
     return SiloHelper::read(row, value, value_bytes);
   }
@@ -148,7 +148,7 @@ private:
 
         auto readKeyPtr = txn.get_read_key(key);
         // assume no blind write
-        CHECK(readKeyPtr != nullptr);
+        DCHECK(readKeyPtr != nullptr);
         uint64_t tidOnRead = readKeyPtr->get_tid();
         if (latestTid != tidOnRead) {
           txn.abort_lock = true;
@@ -269,7 +269,7 @@ private:
 
     // generated tid must be in the same epoch
 
-    CHECK(SiloHelper::getEpoch(next_tid) == epoch);
+    DCHECK(SiloHelper::getEpoch(next_tid) == epoch);
 
     return maxTID;
   }

@@ -73,7 +73,7 @@ public:
     }
 
     MessagePiece get_message_piece(const char *ptr) {
-      CHECK(ptr <= eof);
+      DCHECK(ptr <= eof);
       if (ptr == eof) {
         return MessagePiece(StringPiece());
       }
@@ -95,7 +95,7 @@ public:
   }
 
   void resize(std::size_t size) {
-    CHECK(data.size() == get_prefix_size());
+    DCHECK(data.size() == get_prefix_size());
     data.resize(size);
     set_message_length(data.size());
     get_deadbeef_ref() = DEADBEEF;
@@ -134,7 +134,7 @@ public:
 
 public:
   void set_source_node_id(uint64_t source_node_id) {
-    CHECK(source_node_id < (1 << 7));
+    DCHECK(source_node_id < (1 << 7));
     clear_source_node_id();
     get_header_ref() |= (source_node_id << SOURCE_NODE_ID_OFFSET);
   }
@@ -144,7 +144,7 @@ public:
   }
 
   void set_dest_node_id(uint64_t dest_node_id) {
-    CHECK(dest_node_id < (1 << 7));
+    DCHECK(dest_node_id < (1 << 7));
     clear_dest_node_id();
     get_header_ref() |= (dest_node_id << DEST_NODE_ID_OFFSET);
   }
@@ -154,7 +154,7 @@ public:
   }
 
   void set_worker_id(uint64_t worker_id) {
-    CHECK(worker_id < (1 << 8));
+    DCHECK(worker_id < (1 << 8));
     clear_worker_id();
     get_header_ref() |= (worker_id << WORKER_ID_OFFSET);
   }
@@ -192,13 +192,13 @@ private:
   }
 
   void set_message_count(uint64_t message_count) {
-    CHECK(message_count < (1 << 15));
+    DCHECK(message_count < (1 << 15));
     clear_message_count();
     get_header_ref() |= (message_count << MESSAGE_COUNT_OFFSET);
   }
 
   void set_message_length(uint64_t message_length) {
-    CHECK(message_length < (1 << 27));
+    DCHECK(message_length < (1 << 27));
     clear_message_length();
     get_header_ref() |= (message_length << MESSAGE_LENGTH_OFFSET);
   }

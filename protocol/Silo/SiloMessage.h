@@ -27,8 +27,6 @@ enum class SiloMessage {
   NFIELDS
 };
 
-// TODO: for some type T, the serialization string length != sizeof(T)
-
 template <class Table> class SiloMessageFactory {
 public:
   static void new_search_message(Message &message, Table &table,
@@ -38,7 +36,7 @@ public:
      * The structure of a search request: (primary key, read key offset)
      */
 
-    auto key_size = table.keyNBytes();
+    auto key_size = table.key_size();
 
     auto message_size =
         MessagePiece::get_header_size() + key_size + sizeof(key_offset);
@@ -60,7 +58,7 @@ public:
      * The structure of a lock request: (primary key, write key offset)
      */
 
-    auto key_size = table.keyNBytes();
+    auto key_size = table.key_size();
 
     auto message_size =
         MessagePiece::get_header_size() + key_size + sizeof(key_offset);
@@ -84,7 +82,7 @@ public:
      * offset, tid)
      */
 
-    auto key_size = table.keyNBytes();
+    auto key_size = table.key_size();
 
     auto message_size = MessagePiece::get_header_size() + key_size +
                         sizeof(key_offset) + sizeof(tid);
@@ -106,7 +104,7 @@ public:
      * The structure of an abort request: (primary key)
      */
 
-    auto key_size = table.keyNBytes();
+    auto key_size = table.key_size();
 
     auto message_size = MessagePiece::get_header_size() + key_size;
     auto message_piece_header = MessagePiece::construct_message_piece_header(
@@ -123,14 +121,14 @@ public:
                                 const void *value, uint64_t commit_tid) {
 
     /*
-     * The structure of a write request: (primary key, value, commit_tid)
+     * The structure of a write request: (primary key, field value, commit_tid)
      */
 
-    auto key_size = table.keyNBytes();
-    auto value_size = table.valueNBytes();
+    auto key_size = table.key_size();
+    auto field_size = table.field_size();
 
     auto message_size = MessagePiece::get_header_size() + key_size +
-                        value_size + sizeof(commit_tid);
+                        field_size + sizeof(commit_tid);
     auto message_piece_header = MessagePiece::construct_message_piece_header(
         static_cast<uint32_t>(SiloMessage::WRITE_REQUEST), message_size,
         table.tableID(), table.partitionID());
@@ -138,7 +136,7 @@ public:
     Encoder encoder(message.data);
     encoder << message_piece_header;
     encoder.write_n_bytes(key, key_size);
-    encoder.write_n_bytes(value, value_size);
+    table.serialize_value(encoder, value);
     encoder << commit_tid;
     message.flush();
   }
@@ -148,14 +146,15 @@ public:
                                       uint64_t commit_tid) {
 
     /*
-     * The structure of a replication request: (primary key, value, commit_tid)
+     * The structure of a replication request: (primary key, field value,
+     * commit_tid)
      */
 
-    auto key_size = table.keyNBytes();
-    auto value_size = table.valueNBytes();
+    auto key_size = table.key_size();
+    auto field_size = table.field_size();
 
     auto message_size = MessagePiece::get_header_size() + key_size +
-                        value_size + sizeof(commit_tid);
+                        field_size + sizeof(commit_tid);
     auto message_piece_header = MessagePiece::construct_message_piece_header(
         static_cast<uint32_t>(SiloMessage::REPLICATION_REQUEST), message_size,
         table.tableID(), table.partitionID());
@@ -163,26 +162,25 @@ public:
     Encoder encoder(message.data);
     encoder << message_piece_header;
     encoder.write_n_bytes(key, key_size);
-    encoder.write_n_bytes(value, value_size);
+    table.serialize_value(encoder, value);
     encoder << commit_tid;
     message.flush();
   }
 };
 
-// TODO: for some type T, the serialization string length != sizeof(T)
 template <class Table, class Transaction> class SiloMessageHandler {
 public:
   static void search_request_handler(MessagePiece inputPiece,
                                      Message &responseMessage, Table &table,
                                      Transaction &txn) {
-    CHECK(inputPiece.get_message_type() ==
+    DCHECK(inputPiece.get_message_type() ==
           static_cast<uint32_t>(SiloMessage::SEARCH_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
-    CHECK(table_id == table.tableID());
-    CHECK(partition_id == table.partitionID());
-    auto key_size = table.keyNBytes();
-    auto value_size = table.valueNBytes();
+    DCHECK(table_id == table.tableID());
+    DCHECK(partition_id == table.partitionID());
+    auto key_size = table.key_size();
+    auto value_size = table.value_size();
 
     /*
      * The structure of a read request: (primary key, read key offset)
@@ -192,7 +190,7 @@ public:
     auto stringPiece = inputPiece.toStringPiece();
     uint32_t key_offset;
 
-    CHECK(inputPiece.get_message_length() ==
+    DCHECK(inputPiece.get_message_length() ==
           MessagePiece::get_header_size() + key_size + sizeof(key_offset));
 
     // get row and offset
@@ -203,7 +201,7 @@ public:
     scar::Decoder dec(stringPiece);
     dec >> key_offset;
 
-    CHECK(dec.size() == 0);
+    DCHECK(dec.size() == 0);
 
     // prepare response message header
     auto message_size = MessagePiece::get_header_size() + value_size +
@@ -229,14 +227,14 @@ public:
   static void search_response_handler(MessagePiece inputPiece,
                                       Message &responseMessage, Table &table,
                                       Transaction &txn) {
-    CHECK(inputPiece.get_message_type() ==
+    DCHECK(inputPiece.get_message_type() ==
           static_cast<uint32_t>(SiloMessage::SEARCH_RESPONSE));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
-    CHECK(table_id == table.tableID());
-    CHECK(partition_id == table.partitionID());
-    auto key_size = table.keyNBytes();
-    auto value_size = table.valueNBytes();
+    DCHECK(table_id == table.tableID());
+    DCHECK(partition_id == table.partitionID());
+    auto key_size = table.key_size();
+    auto value_size = table.value_size();
 
     /*
      * The structure of a read response: (value, tid, read key offset)
@@ -245,7 +243,7 @@ public:
     uint64_t tid;
     uint32_t key_offset;
 
-    CHECK(inputPiece.get_message_length() == MessagePiece::get_header_size() +
+    DCHECK(inputPiece.get_message_length() == MessagePiece::get_header_size() +
                                                  value_size + sizeof(tid) +
                                                  sizeof(key_offset));
 
@@ -263,14 +261,13 @@ public:
   static void lock_request_handler(MessagePiece inputPiece,
                                    Message &responseMessage, Table &table,
                                    Transaction &txn) {
-    CHECK(inputPiece.get_message_type() ==
+    DCHECK(inputPiece.get_message_type() ==
           static_cast<uint32_t>(SiloMessage::LOCK_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
-    CHECK(table_id == table.tableID());
-    CHECK(partition_id == table.partitionID());
-    auto key_size = table.keyNBytes();
-    auto value_size = table.valueNBytes();
+    DCHECK(table_id == table.tableID());
+    DCHECK(partition_id == table.partitionID());
+    auto key_size = table.key_size();
 
     /*
      * The structure of a lock request: (primary key, write key offset)
@@ -281,7 +278,7 @@ public:
 
     uint32_t key_offset;
 
-    CHECK(inputPiece.get_message_length() ==
+    DCHECK(inputPiece.get_message_length() ==
           MessagePiece::get_header_size() + key_size + sizeof(key_offset));
 
     const void *key = stringPiece.data();
@@ -294,7 +291,7 @@ public:
     scar::Decoder dec(stringPiece);
     dec >> key_offset;
 
-    CHECK(dec.size() == 0);
+    DCHECK(dec.size() == 0);
 
     // prepare response message header
     auto message_size = MessagePiece::get_header_size() + sizeof(bool) +
@@ -312,14 +309,13 @@ public:
   static void lock_response_handler(MessagePiece inputPiece,
                                     Message &responseMessage, Table &table,
                                     Transaction &txn) {
-    CHECK(inputPiece.get_message_type() ==
+    DCHECK(inputPiece.get_message_type() ==
           static_cast<uint32_t>(SiloMessage::LOCK_RESPONSE));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
-    CHECK(table_id == table.tableID());
-    CHECK(partition_id == table.partitionID());
-    auto key_size = table.keyNBytes();
-    auto value_size = table.valueNBytes();
+    DCHECK(table_id == table.tableID());
+    DCHECK(partition_id == table.partitionID());
+    auto key_size = table.key_size();
 
     /*
      * The structure of a lock response: (success?, tid, write key offset)
@@ -329,7 +325,7 @@ public:
     uint64_t latest_tid;
     uint32_t key_offset;
 
-    CHECK(inputPiece.get_message_length() ==
+    DCHECK(inputPiece.get_message_length() ==
           MessagePiece::get_header_size() + sizeof(success) +
               sizeof(latest_tid) + sizeof(key_offset));
 
@@ -337,7 +333,7 @@ public:
     Decoder dec(stringPiece);
     dec >> success >> latest_tid >> key_offset;
 
-    CHECK(dec.size() == 0);
+    DCHECK(dec.size() == 0);
 
     SiloRWKey &writeKey = txn.writeSet[key_offset];
 
@@ -347,7 +343,7 @@ public:
 
       SiloRWKey *readKey = txn.get_read_key(writeKey.get_key());
 
-      CHECK(readKey != nullptr);
+      DCHECK(readKey != nullptr);
 
       uint64_t tid_on_read = readKey->get_tid();
 
@@ -369,14 +365,13 @@ public:
   static void read_validation_request_handler(MessagePiece inputPiece,
                                               Message &responseMessage,
                                               Table &table, Transaction &txn) {
-    CHECK(inputPiece.get_message_type() ==
+    DCHECK(inputPiece.get_message_type() ==
           static_cast<uint32_t>(SiloMessage::READ_VALIDATION_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
-    CHECK(table_id == table.tableID());
-    CHECK(partition_id == table.partitionID());
-    auto key_size = table.keyNBytes();
-    auto value_size = table.valueNBytes();
+    DCHECK(table_id == table.tableID());
+    DCHECK(partition_id == table.partitionID());
+    auto key_size = table.key_size();
 
     /*
      * The structure of a read validation request: (primary key, read key
@@ -384,7 +379,7 @@ public:
      * key offset)
      */
 
-    CHECK(inputPiece.get_message_length() == MessagePiece::get_header_size() +
+    DCHECK(inputPiece.get_message_length() == MessagePiece::get_header_size() +
                                                  key_size + sizeof(uint32_t) +
                                                  sizeof(uint64_t));
 
@@ -425,14 +420,13 @@ public:
   static void read_validation_response_handler(MessagePiece inputPiece,
                                                Message &responseMessage,
                                                Table &table, Transaction &txn) {
-    CHECK(inputPiece.get_message_type() ==
+    DCHECK(inputPiece.get_message_type() ==
           static_cast<uint32_t>(SiloMessage::READ_VALIDATION_RESPONSE));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
-    CHECK(table_id == table.tableID());
-    CHECK(partition_id == table.partitionID());
-    auto key_size = table.keyNBytes();
-    auto value_size = table.valueNBytes();
+    DCHECK(table_id == table.tableID());
+    DCHECK(partition_id == table.partitionID());
+    auto key_size = table.key_size();
 
     /*
      * The structure of a read validation response: (success?, read key offset)
@@ -461,21 +455,20 @@ public:
   static void abort_request_handler(MessagePiece inputPiece,
                                     Message &responseMessage, Table &table,
                                     Transaction &txn) {
-    CHECK(inputPiece.get_message_type() ==
+    DCHECK(inputPiece.get_message_type() ==
           static_cast<uint32_t>(SiloMessage::ABORT_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
-    CHECK(table_id == table.tableID());
-    CHECK(partition_id == table.partitionID());
-    auto key_size = table.keyNBytes();
-    auto value_size = table.valueNBytes();
+    DCHECK(table_id == table.tableID());
+    DCHECK(partition_id == table.partitionID());
+    auto key_size = table.key_size();
 
     /*
      * The structure of an abort request: (primary key)
      * The structure of an abort response: null
      */
 
-    CHECK(inputPiece.get_message_length() ==
+    DCHECK(inputPiece.get_message_length() ==
           MessagePiece::get_header_size() + key_size);
 
     auto stringPiece = inputPiece.toStringPiece();
@@ -489,39 +482,39 @@ public:
   static void write_request_handler(MessagePiece inputPiece,
                                     Message &responseMessage, Table &table,
                                     Transaction &txn) {
-    CHECK(inputPiece.get_message_type() ==
+    DCHECK(inputPiece.get_message_type() ==
           static_cast<uint32_t>(SiloMessage::WRITE_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
-    CHECK(table_id == table.tableID());
-    CHECK(partition_id == table.partitionID());
-    auto key_size = table.keyNBytes();
-    auto value_size = table.valueNBytes();
+    DCHECK(table_id == table.tableID());
+    DCHECK(partition_id == table.partitionID());
+    auto key_size = table.key_size();
+    auto field_size = table.field_size();
 
     /*
-     * The structure of a write request: (primary key, value, commit_tid)
+     * The structure of a write request: (primary key, field value, commit_tid)
      * The structure of a write response: null
      */
 
-    CHECK(inputPiece.get_message_length() == MessagePiece::get_header_size() +
-                                                 key_size + value_size +
+    DCHECK(inputPiece.get_message_length() == MessagePiece::get_header_size() +
+                                                 key_size + field_size +
                                                  sizeof(uint64_t));
 
     auto stringPiece = inputPiece.toStringPiece();
 
     const void *key = stringPiece.data();
     stringPiece.remove_prefix(key_size);
-    const void *value = stringPiece.data();
-    stringPiece.remove_prefix(value_size);
+    auto valueStringPiece = stringPiece;
+    stringPiece.remove_prefix(field_size);
 
     uint64_t commit_tid;
     Decoder dec(stringPiece);
     dec >> commit_tid;
 
-    CHECK(dec.size() == 0);
+    DCHECK(dec.size() == 0);
 
     std::atomic<uint64_t> &tid = table.search_metadata(key);
-    table.update(key, value);
+    table.deserialize_value(key, valueStringPiece);
 
     SiloHelper::unlock(tid, commit_tid);
   }
@@ -529,43 +522,43 @@ public:
   static void replication_request_handler(MessagePiece inputPiece,
                                           Message &responseMessage,
                                           Table &table, Transaction &txn) {
-    CHECK(inputPiece.get_message_type() ==
+    DCHECK(inputPiece.get_message_type() ==
           static_cast<uint32_t>(SiloMessage::REPLICATION_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
-    CHECK(table_id == table.tableID());
-    CHECK(partition_id == table.partitionID());
-    auto key_size = table.keyNBytes();
-    auto value_size = table.valueNBytes();
+    DCHECK(table_id == table.tableID());
+    DCHECK(partition_id == table.partitionID());
+    auto key_size = table.key_size();
+    auto field_size = table.field_size();
 
     /*
-     * The structure of a replication request: (primary key, value, commit_tid)
-     * The structure of a replication response: null
+     * The structure of a replication request: (primary key, field value,
+     * commit_tid) The structure of a replication response: null
      */
 
-    CHECK(inputPiece.get_message_length() == MessagePiece::get_header_size() +
-                                                 key_size + value_size +
+    DCHECK(inputPiece.get_message_length() == MessagePiece::get_header_size() +
+                                                 key_size + field_size +
                                                  sizeof(uint64_t));
 
     auto stringPiece = inputPiece.toStringPiece();
 
     const void *key = stringPiece.data();
     stringPiece.remove_prefix(key_size);
-    const void *value = stringPiece.data();
-    stringPiece.remove_prefix(value_size);
+    auto valueStringPiece = stringPiece;
+    stringPiece.remove_prefix(field_size);
 
     uint64_t commit_tid;
     Decoder dec(stringPiece);
     dec >> commit_tid;
 
-    CHECK(dec.size() == 0);
+    DCHECK(dec.size() == 0);
 
     std::atomic<uint64_t> &tid = table.search_metadata(key);
 
     uint64_t last_tid = SiloHelper::lock(tid);
 
     if (commit_tid > last_tid) {
-      table.update(key, value);
+      table.deserialize_value(key, valueStringPiece);
       SiloHelper::unlock(tid, commit_tid);
     } else {
       SiloHelper::unlock(tid);

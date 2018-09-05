@@ -12,8 +12,10 @@ DEFINE_string(servers, "127.0.0.1:10010",
               "semicolon-separated list of servers");
 
 // ./main --logtostderr=1 --id=1 --servers="127.0.0.1:10010;127.0.0.1:10011"
+// cmake -DCMAKE_BUILD_TYPE=Release
 
 int main(int argc, char *argv[]) {
+
   google::InitGoogleLogging(argv[0]);
   google::InstallFailureSignalHandler();
   google::ParseCommandLineFlags(&argc, &argv, true);

@@ -25,6 +25,8 @@ public:
     bytes.append(static_cast<const char *>(ptr), size);
   }
 
+  std::size_t size() { return bytes.size(); }
+
 private:
   std::string &bytes;
 };
@@ -42,7 +44,7 @@ public:
   template <class T> friend Decoder &operator>>(Decoder &dec, T &rhs);
 
   void read_n_bytes(void *ptr, std::size_t size) {
-    CHECK(bytes.size() >= size);
+    DCHECK(bytes.size() >= size);
     std::memcpy(ptr, bytes.data(), size);
     bytes.remove_prefix(size);
   }
@@ -55,8 +57,7 @@ private:
 
 template <class T> Decoder &operator>>(Decoder &dec, T &rhs) {
   Deserializer<T> deserializer;
-  std::size_t size;
-  rhs = deserializer(dec.bytes, size);
+  std::size_t size = deserializer(dec.bytes, rhs);
   dec.bytes.remove_prefix(size);
   return dec;
 }

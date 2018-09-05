@@ -40,7 +40,7 @@ public:
   }
 
   std::unique_ptr<Message> next_message() {
-    CHECK(socket != nullptr);
+    DCHECK(socket != nullptr);
 
     fetch_message();
     if (!has_message()) {
@@ -54,23 +54,23 @@ public:
         buffer + bytes_read + sizeof(header));
 
     // check deadbeaf
-    CHECK(deadbeef == Message::DEADBEEF);
+    DCHECK(deadbeef == Message::DEADBEEF);
     auto message = std::make_unique<Message>();
     auto length = Message::get_message_length(header);
     message->resize(length);
 
     // copy the data
-    CHECK(bytes_read + length <= bytes_total);
+    DCHECK(bytes_read + length <= bytes_total);
     std::memcpy(message->get_raw_ptr(), buffer + bytes_read, length);
     bytes_read += length;
-    CHECK(bytes_read <= bytes_total);
+    DCHECK(bytes_read <= bytes_total);
 
     return message;
   }
 
 private:
   void fetch_message() {
-    CHECK(socket != nullptr);
+    DCHECK(socket != nullptr);
 
     // return if there is a message left
     if (has_message()) {
@@ -78,7 +78,7 @@ private:
     }
 
     // copy left bytes
-    CHECK(bytes_read <= bytes_total);
+    DCHECK(bytes_read <= bytes_total);
     auto bytes_left = bytes_total - bytes_read;
     bytes_total = 0;
 
@@ -119,7 +119,7 @@ private:
         buffer + bytes_read + sizeof(header));
 
     // check deadbeaf
-    CHECK(deadbeef == Message::DEADBEEF);
+    DCHECK(deadbeef == Message::DEADBEEF);
 
     // check if the buffer has a message
     return bytes_read + Message::get_message_length(header) <= bytes_total;

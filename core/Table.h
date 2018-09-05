@@ -4,9 +4,11 @@
 
 #pragma once
 
-#include "common/HashMap.h"
-
 #include "benchmark/tpcc/Schema.h"
+#include "common/ClassOf.h"
+#include "common/Encoder.h"
+#include "common/HashMap.h"
+#include "common/StringPiece.h"
 
 namespace scar {
 
@@ -26,9 +28,15 @@ public:
 
   virtual void update(const void *key, const void *value) = 0;
 
-  virtual std::size_t keyNBytes() = 0;
+  virtual void deserialize_value(const void *key, StringPiece stringPiece) = 0;
 
-  virtual std::size_t valueNBytes() = 0;
+  virtual void serialize_value(Encoder &enc, const void *value) = 0;
+
+  virtual std::size_t key_size() = 0;
+
+  virtual std::size_t value_size() = 0;
+
+  virtual std::size_t field_size() = 0;
 
   virtual std::size_t tableID() = 0;
 
@@ -65,7 +73,7 @@ public:
     const auto &k = *static_cast<const KeyType *>(key);
     const auto &v = *static_cast<const ValueType *>(value);
     bool ok = map_.contains(k);
-    CHECK(ok == false);
+    DCHECK(ok == false);
     auto &row = map_[k];
     std::get<1>(row) = v;
   }
@@ -77,9 +85,33 @@ public:
     std::get<1>(row) = v;
   }
 
-  std::size_t keyNBytes() override { return sizeof(KeyType); }
+  void deserialize_value(const void *key, StringPiece stringPiece) override {
 
-  std::size_t valueNBytes() override { return sizeof(ValueType); }
+    std::size_t size = stringPiece.size();
+    const auto &k = *static_cast<const KeyType *>(key);
+    auto &row = map_[k];
+    auto &v = std::get<1>(row);
+
+    Decoder dec(stringPiece);
+    dec >> v;
+
+    DCHECK(size - dec.size() == ClassOf<ValueType>::size());
+  }
+
+  void serialize_value(Encoder &enc, const void *value) override {
+
+    std::size_t size = enc.size();
+    const auto &v = *static_cast<const ValueType *>(value);
+    enc << v;
+
+    DCHECK(enc.size() - size == ClassOf<ValueType>::size());
+  }
+
+  std::size_t key_size() override { return sizeof(KeyType); }
+
+  std::size_t value_size() override { return sizeof(ValueType); }
+
+  std::size_t field_size() override { return ClassOf<ValueType>::size(); }
 
   std::size_t tableID() override { return tableID_; }
 

@@ -17,7 +17,8 @@ class Worker {
 public:
   Worker(std::size_t coordinator_id, std::size_t id)
       : coordinator_id(coordinator_id), id(id) {
-    transactionId.store(0);
+    n_commit.store(0);
+    n_abort.store(0);
   }
 
   virtual void start() = 0;
@@ -28,7 +29,7 @@ public:
   std::size_t coordinator_id;
   std::size_t id;
   LockfreeQueue<Message *> inQueue, outQueue;
-  std::atomic<uint64_t> transactionId;
+  std::atomic<uint64_t> n_commit, n_abort;
 };
 
 } // namespace scar

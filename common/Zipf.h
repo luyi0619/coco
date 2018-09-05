@@ -33,7 +33,7 @@ public:
     } else {
       v = static_cast<int>(n_ * std::pow(eta_ * u - eta_ + 1, alpha_));
     }
-    CHECK(v >= 0 && v < n_);
+    DCHECK(v >= 0 && v < n_);
     return v;
   }
 
@@ -44,7 +44,7 @@ public:
 
 private:
   double zeta(int n) {
-    CHECK(hasInit);
+    DCHECK(hasInit);
 
     double sum = 0;
 

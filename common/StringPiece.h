@@ -67,18 +67,18 @@ public:
   }
 
   char operator[](size_type i) const {
-    CHECK(i < length_);
+    DCHECK(i < length_);
     return data_[i];
   }
 
   void remove_prefix(size_type len) {
-    CHECK(len <= length_);
+    DCHECK(len <= length_);
     data_ += len;
     length_ -= len;
   }
 
   void remove_suffix(size_type len) {
-    CHECK(len <= length_);
+    DCHECK(len <= length_);
     length_ -= len;
   }
 

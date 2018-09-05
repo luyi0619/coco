@@ -77,7 +77,7 @@ public:
   // table id
 
   void set_table_id(uint32_t table_id) {
-    CHECK(table_id < (1 << 5));
+    DCHECK(table_id < (1 << 5));
     clear_table_id();
     bitvec |= table_id << TABLE_ID_OFFSET;
   }
@@ -90,7 +90,7 @@ public:
   // partition id
 
   void set_partition_id(uint32_t partition_id) {
-    CHECK(partition_id < (1 << 8));
+    DCHECK(partition_id < (1 << 8));
     clear_partition_id();
     bitvec |= partition_id << PARTITION_ID_OFFSET;
   }

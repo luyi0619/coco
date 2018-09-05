@@ -71,10 +71,10 @@ public:
                                                  uint32_t message_length,
                                                  std::size_t table_id,
                                                  std::size_t partition_id) {
-    CHECK(message_type < (1u << 7));
-    CHECK(message_length < (1u << 12));
-    CHECK(table_id < (1u << 5));
-    CHECK(partition_id < (1u << 8));
+    DCHECK(message_type < (1u << 7));
+    DCHECK(message_length < (1u << 12));
+    DCHECK(table_id < (1u << 5));
+    DCHECK(partition_id < (1u << 8));
 
     return (message_type << MESSAGE_TYPE_OFFSET) +
            (message_length << MESSAGE_LENGTH_OFFSET) +

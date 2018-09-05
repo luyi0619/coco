@@ -49,7 +49,7 @@ public:
         auto workerId = message->get_worker_id();
         // release the unique ptr
         workers[workerId]->inQueue.push(message.release());
-        CHECK(message == nullptr);
+        DCHECK(message == nullptr);
       }
     }
 
@@ -101,9 +101,9 @@ public:
     CHECK(ok);
     // send the message
     auto dest_node_id = message->get_dest_node_id();
-    CHECK(dest_node_id >= 0 && dest_node_id < sockets.size() &&
+    DCHECK(dest_node_id >= 0 && dest_node_id < sockets.size() &&
           dest_node_id != id);
-    CHECK(message->get_message_length() == message->data.length());
+    DCHECK(message->get_message_length() == message->data.length());
 
     sockets[dest_node_id].write_n_bytes(message->get_raw_ptr(),
                                         message->get_message_length());

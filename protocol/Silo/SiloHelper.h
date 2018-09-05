@@ -44,7 +44,7 @@ public:
       } while (isLocked(oldValue));
       newValue = (LOCK_BIT_MASK << LOCK_BIT_OFFSET) | oldValue;
     } while (!a.compare_exchange_weak(oldValue, newValue));
-    CHECK(isLocked(oldValue) == false);
+    DCHECK(isLocked(oldValue) == false);
     return oldValue;
   }
 
@@ -62,18 +62,18 @@ public:
 
   static void unlock(std::atomic<uint64_t> &a) {
     uint64_t oldValue = a.load();
-    CHECK(isLocked(oldValue));
+    DCHECK(isLocked(oldValue));
     uint64_t newValue = removeLockBit(oldValue);
     bool ok = a.compare_exchange_strong(oldValue, newValue);
-    CHECK(ok);
+    DCHECK(ok);
   }
 
   static void unlock(std::atomic<uint64_t> &a, uint64_t newValue) {
     uint64_t oldValue = a.load();
-    CHECK(isLocked(oldValue));
-    CHECK(isLocked(newValue) == false);
+    DCHECK(isLocked(oldValue));
+    DCHECK(isLocked(newValue) == false);
     bool ok = a.compare_exchange_strong(oldValue, newValue);
-    CHECK(ok);
+    DCHECK(ok);
   }
 
   static uint64_t removeLockBit(uint64_t value) {

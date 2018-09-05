@@ -21,11 +21,9 @@ public:
 
 template <class T> class Deserializer {
 public:
-  T operator()(StringPiece str, std::size_t &size) const {
-    T result;
-    size = sizeof(T);
-    memcpy(&result, str.data(), size);
-    return result;
+  std::size_t operator()(StringPiece str, T &result) const {
+    std::memcpy(&result, str.data(), sizeof(T));
+    return sizeof(T);
   }
 };
 
@@ -38,12 +36,14 @@ public:
 
 template <> class Deserializer<std::string> {
 public:
-  std::string operator()(StringPiece str, std::size_t &size) const {
-    std::string::size_type len =
-        Deserializer<std::string::size_type>()(str, size);
-    str.remove_prefix(sizeof(len));
-    size += len;
-    return std::string(str.begin(), str.begin() + len);
+  std::size_t operator()(StringPiece str, std::string &result) const {
+    std::string::size_type string_length;
+    std::size_t size =
+        Deserializer<std::string::size_type>()(str, string_length);
+    size += string_length;
+    str.remove_prefix(sizeof(string_length));
+    result = std::string(str.begin(), str.begin() + string_length);
+    return size;
   }
 };
 

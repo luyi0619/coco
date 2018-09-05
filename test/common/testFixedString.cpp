@@ -5,9 +5,18 @@
 #include "common/FixedString.h"
 #include <gtest/gtest.h>
 
+#include "common/ClassOf.h"
+
 TEST(TestCommonFixedString, TestHashCode) {
-  scar::FixedString<10> s1 = "123";
-  scar::FixedString<10> s2;
+  using namespace scar;
+  FixedString<10> s1 = "123";
+  EXPECT_EQ(ClassOf<decltype(s1)>::size(), 10);
+
+  FixedString<10> s2;
   s2.assign("123");
   EXPECT_EQ(s1.hash_code(), s2.hash_code());
+
+  FixedString<10> s3 = "123" + std::string(7, ' ');
+  EXPECT_EQ(s1, s3);
+  EXPECT_EQ(s1.hash_code(), s3.hash_code());
 }

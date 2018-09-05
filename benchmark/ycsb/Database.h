@@ -25,8 +25,8 @@ public:
   using TableType = ITable<MetaDataType>;
 
   TableType *find_table(std::size_t table_id, std::size_t partition_id) {
-    CHECK(table_id < tbl_vecs.size());
-    CHECK(partition_id < tbl_vecs[table_id].size());
+    DCHECK(table_id < tbl_vecs.size());
+    DCHECK(partition_id < tbl_vecs[table_id].size());
     return tbl_vecs[table_id][partition_id];
   }
 
@@ -98,7 +98,7 @@ private:
       for (auto i = partitionID * keysPerPartition;
            i < (partitionID + 1) * keysPerPartition; i++) {
 
-        CHECK(context.getPartitionID(i) == partitionID);
+        DCHECK(context.getPartitionID(i) == partitionID);
 
         ycsb::key key(i);
         ycsb::value value;
@@ -122,7 +122,7 @@ private:
 
       for (auto i = partitionID; i < totalKeys; i += partitionNum) {
 
-        CHECK(context.getPartitionID(i) == partitionID);
+        DCHECK(context.getPartitionID(i) == partitionID);
 
         ycsb::key key(i);
         ycsb::value value;
