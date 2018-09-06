@@ -418,11 +418,11 @@ public:
 
     bool success = true;
 
-    if (SiloHelper::removeLockBit(latest_tid) != tid) {
+    if (SiloHelper::remove_lock_bit(latest_tid) != tid) {
       success = false;
     }
 
-    if (SiloHelper::isLocked(latest_tid)) { // must be locked by others
+    if (SiloHelper::is_locked(latest_tid)) { // must be locked by others
       success = false;
     }
 

@@ -26,9 +26,7 @@ public:
   Coordinator(std::size_t id, const std::vector<std::string> &peers,
               DatabaseType &db, ContextType &context)
       : id(id), peers(peers), db(db), context(context) {
-    epoch.store(0);
     workerStopFlag.store(false);
-    epochStopFlag.store(false);
     ioStopFlag.store(false);
   }
 
@@ -38,10 +36,8 @@ public:
 
     for (auto i = 0u; i < context.workerNum; i++) {
       workers.push_back(std::make_shared<Executor<WorkloadType, ProtocolType>>(
-          id, i, db, context, epoch, workerStopFlag));
+          id, i, db, context, workerStopFlag));
     }
-
-    std::thread epochThread(&Coordinator::advanceEpoch, this);
 
     // start dispatcher threads
     iDispatcher = std::make_unique<IncomingDispatcher>(id, inSockets, workers,
@@ -100,9 +96,6 @@ public:
 
     workerStopFlag.store(true);
     LOG(INFO) << "Coordinator awakes.";
-
-    epochStopFlag.store(true);
-    epochThread.join();
 
     ioStopFlag.store(true);
     iDispatcherThread.join();
@@ -183,30 +176,10 @@ public:
   }
 
 private:
-  void advanceEpoch() {
-
-    LOG(INFO) << "Coordinator epoch thread starts.";
-
-    auto sleepTime = std::chrono::milliseconds(40);
-
-    // epoch thread only exits when worker threads have exited, making epoch is
-    // larger than the epoch workers read
-
-    while (!epochStopFlag.load()) {
-      std::this_thread::sleep_for(sleepTime);
-      epoch.fetch_add(1);
-    }
-
-    LOG(INFO) << "Coordinator epoch thread exits, last epoch = " << epoch.load()
-              << ".";
-  }
-
-private:
   std::size_t id;
   std::vector<std::string> peers;
   std::vector<Socket> inSockets, outSockets;
-  std::atomic<uint64_t> epoch;
-  std::atomic<bool> workerStopFlag, epochStopFlag, ioStopFlag;
+  std::atomic<bool> workerStopFlag, ioStopFlag;
   DatabaseType &db;
   ContextType &context;
   std::vector<std::shared_ptr<Worker>> workers;

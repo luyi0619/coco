@@ -29,10 +29,10 @@ public:
       std::memcpy(dest, src, size);
     } while (tid_ != tid.load());
 
-    return SiloHelper::removeLockBit(tid_);
+    return SiloHelper::remove_lock_bit(tid_);
   }
 
-  static bool isLocked(uint64_t value) {
+  static bool is_locked(uint64_t value) {
     return (value >> LOCK_BIT_OFFSET) & LOCK_BIT_MASK;
   }
 
@@ -41,17 +41,17 @@ public:
     do {
       do {
         oldValue = a.load();
-      } while (isLocked(oldValue));
+      } while (is_locked(oldValue));
       newValue = (LOCK_BIT_MASK << LOCK_BIT_OFFSET) | oldValue;
     } while (!a.compare_exchange_weak(oldValue, newValue));
-    DCHECK(isLocked(oldValue) == false);
+    DCHECK(is_locked(oldValue) == false);
     return oldValue;
   }
 
   static uint64_t lock(std::atomic<uint64_t> &a, bool &success) {
     uint64_t oldValue = a.load();
 
-    if (isLocked(oldValue)) {
+    if (is_locked(oldValue)) {
       success = false;
     } else {
       uint64_t newValue = (LOCK_BIT_MASK << LOCK_BIT_OFFSET) | oldValue;
@@ -62,32 +62,25 @@ public:
 
   static void unlock(std::atomic<uint64_t> &a) {
     uint64_t oldValue = a.load();
-    DCHECK(isLocked(oldValue));
-    uint64_t newValue = removeLockBit(oldValue);
+    DCHECK(is_locked(oldValue));
+    uint64_t newValue = remove_lock_bit(oldValue);
     bool ok = a.compare_exchange_strong(oldValue, newValue);
     DCHECK(ok);
   }
 
   static void unlock(std::atomic<uint64_t> &a, uint64_t newValue) {
     uint64_t oldValue = a.load();
-    DCHECK(isLocked(oldValue));
-    DCHECK(isLocked(newValue) == false);
+    DCHECK(is_locked(oldValue));
+    DCHECK(is_locked(newValue) == false);
     bool ok = a.compare_exchange_strong(oldValue, newValue);
     DCHECK(ok);
   }
 
-  static uint64_t removeLockBit(uint64_t value) {
+  static uint64_t remove_lock_bit(uint64_t value) {
     return (~(LOCK_BIT_MASK << LOCK_BIT_OFFSET)) & value;
   }
 
-  static uint64_t getEpoch(uint64_t value) {
-    return (value & (SILO_EPOCH_MASK << SILO_EPOCH_OFFSET)) >>
-           SILO_EPOCH_OFFSET;
-  }
-
 public:
-  static constexpr int SILO_EPOCH_OFFSET = 30;
-  static constexpr uint64_t SILO_EPOCH_MASK = 0x1ffffffffull;
   static constexpr int LOCK_BIT_OFFSET = 63;
   static constexpr uint64_t LOCK_BIT_MASK = 0x1ull;
 };

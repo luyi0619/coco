@@ -22,8 +22,7 @@ TEST(TestTPCCTransaction, TestBasic) {
 
   scar::tpcc::Storage storage;
 
-  std::atomic<uint64_t> epoch;
-  scar::Silo<decltype(db)> silo(db, epoch, partitioner);
+  scar::Silo<decltype(db)> silo(db, partitioner);
   scar::tpcc::NewOrder<RWKeyType, DatabaseType> t1(0, 0, db, context, random,
                                                    partitioner, storage);
   scar::tpcc::Payment<RWKeyType, DatabaseType> t2(0, 0, db, context, random,

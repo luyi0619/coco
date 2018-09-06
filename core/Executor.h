@@ -34,12 +34,11 @@ public:
   using StorageType = typename WorkloadType::StorageType;
 
   Executor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
-           ContextType &context, std::atomic<uint64_t> &epoch,
-           std::atomic<bool> &stopFlag)
+           ContextType &context, std::atomic<bool> &stopFlag)
       : Worker(coordinator_id, id), db(db), context(context),
         partitioner(std::make_unique<HashReplicatedPartitioner<2>>(
             coordinator_id, context.coordinatorNum)),
-        epoch(epoch), stopFlag(stopFlag), protocol(db, epoch, *partitioner),
+        stopFlag(stopFlag), protocol(db, *partitioner),
         workload(coordinator_id, id, db, context, random, *partitioner) {
 
     for (auto i = 0u; i < context.coordinatorNum; i++) {
@@ -51,24 +50,31 @@ public:
   }
 
   void start() override {
-    std::queue<std::unique_ptr<TransactionType>> q;
-    StorageType storage;
 
+    StorageType storage;
     uint64_t last_seed = 0;
+    bool retry_transaction = false;
 
     while (!stopFlag.load()) {
       process_request();
-      commit_transactions(q);
 
       last_seed = random.get_seed();
-      transaction = workload.nextTransaction(storage);
-      setupHandlers(transaction.get());
+
+      if (retry_transaction) {
+        transaction->reset();
+      } else {
+        transaction = workload.nextTransaction(storage);
+        setupHandlers(transaction.get());
+      }
 
       auto result = transaction->execute();
-
       if (result == TransactionResult::READY_TO_COMMIT) {
         if (protocol.commit(*transaction, messages)) {
           n_commit.fetch_add(1);
+          auto latency = std::chrono::duration_cast<std::chrono::milliseconds>(
+              std::chrono::steady_clock::now() - transaction->startTime);
+          percentile.add(latency.count());
+          retry_transaction = false;
         } else {
           if (transaction->abort_lock) {
             n_abort_lock.fetch_add(1);
@@ -77,14 +83,14 @@ public:
             n_abort_read_validation.fetch_add(1);
           }
           random.set_seed(last_seed);
+          retry_transaction = true;
+          // std::this_thread::sleep_for(std::chrono::microseconds(100));
         }
-        q.push(std::move(transaction));
       } else {
         n_abort_no_retry.fetch_add(1);
       }
     }
 
-    commit_transactions(q, true);
     LOG(INFO) << "Worker " << id << " exits.";
   }
 
@@ -163,25 +169,6 @@ private:
     }
   }
 
-  void commit_transactions(std::queue<std::unique_ptr<TransactionType>> &q,
-                           bool retry = false) {
-    using namespace std::chrono;
-    do {
-      auto currentEpoch = epoch.load();
-      auto now = steady_clock::now();
-      while (!q.empty()) {
-        const auto &ptr = q.front();
-        if (ptr->commitEpoch < currentEpoch) {
-          auto latency = duration_cast<milliseconds>(now - ptr->startTime);
-          percentile.add(latency.count());
-          q.pop();
-        } else {
-          break;
-        }
-      }
-    } while (!q.empty() && retry);
-  }
-
   void init_message(Message *message, std::size_t dest_node_id) {
     message->set_source_node_id(coordinator_id);
     message->set_dest_node_id(dest_node_id);
@@ -192,7 +179,6 @@ private:
   DatabaseType &db;
   ContextType &context;
   std::unique_ptr<Partitioner> partitioner;
-  std::atomic<uint64_t> &epoch;
   std::atomic<bool> &stopFlag;
   RandomType random;
   ProtocolType protocol;

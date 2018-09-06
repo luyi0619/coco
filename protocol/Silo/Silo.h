@@ -34,8 +34,8 @@ public:
       std::is_same<typename DatabaseType::TableType, TableType>::value,
       "The database table type is different from the one in protocol.");
 
-  Silo(DatabaseType &db, std::atomic<uint64_t> &epoch, Partitioner &partitioner)
-      : db(db), epoch(epoch), partitioner(partitioner) {}
+  Silo(DatabaseType &db, Partitioner &partitioner)
+      : db(db), partitioner(partitioner) {}
 
   uint64_t search(std::size_t table_id, std::size_t partition_id,
                   const void *key, void *value) const {
@@ -95,9 +95,6 @@ public:
       abort(txn, messages);
       return false;
     }
-
-    // read epoch E
-    txn.commitEpoch = epoch.load();
 
     // commit phase 2, read validation
     if (!validateReadSet(txn, messages)) {
@@ -203,11 +200,11 @@ private:
       if (partitioner.has_master_partition(partitionId)) {
         auto key = readKey.get_key();
         uint64_t tid = table->search_metadata(key).load();
-        if (SiloHelper::removeLockBit(tid) != readKey.get_tid()) {
+        if (SiloHelper::remove_lock_bit(tid) != readKey.get_tid()) {
           txn.abort_read_validation = true;
           break;
         }
-        if (SiloHelper::isLocked(tid)) { // must be locked by others
+        if (SiloHelper::is_locked(tid)) { // must be locked by others
           txn.abort_read_validation = true;
           break;
         }
@@ -232,15 +229,11 @@ private:
     auto &readSet = txn.readSet;
     auto &writeSet = txn.writeSet;
 
-    auto epoch = txn.commitEpoch;
-
-    // in the current global epoch
-    uint64_t next_tid = epoch << SiloHelper::SILO_EPOCH_OFFSET;
+    uint64_t next_tid = 0;
 
     /*
-     *  A timestamp is a 64-bit word, 33 bits for epoch are sufficient for ~ 10
-     * years. [   seq    |   epoch    |  lock bit ] [ 0 ... 29 |  30 ... 62 | 63
-     * ]
+     *  A timestamp is a 64-bit word and the most significant bit is the lock
+     * bit [  lock bit (1)  |  id (63) ]
      */
 
     // larger than the TID of any record read or written by the transaction
@@ -255,7 +248,7 @@ private:
 
     // larger than the worker's most recent chosen TID
 
-    next_tid = std::max(next_tid, maxTID);
+    next_tid = std::max(next_tid, max_tid);
 
     // increment
 
@@ -263,13 +256,9 @@ private:
 
     // update worker's most recent chosen TID
 
-    maxTID = next_tid;
+    max_tid = next_tid;
 
-    // generated tid must be in the same epoch
-
-    DCHECK(SiloHelper::getEpoch(next_tid) == epoch);
-
-    return maxTID;
+    return next_tid;
   }
 
   template <class Transaction>
@@ -378,9 +367,8 @@ private:
 
 private:
   DatabaseType &db;
-  std::atomic<uint64_t> &epoch;
   Partitioner &partitioner;
-  uint64_t maxTID = 0;
+  uint64_t max_tid = 0;
 };
 
 } // namespace scar

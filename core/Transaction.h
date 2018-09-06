@@ -28,11 +28,20 @@ public:
               DatabaseType &db, ContextType &context, RandomType &random,
               Partitioner &partitioner)
       : coordinator_id(coordinator_id), worker_id(worker_id),
-        startTime(std::chrono::steady_clock::now()), commitEpoch(0),
-        pendingResponses(0), abort_lock(false), abort_read_validation(false),
-        db(db), context(context), random(random), partitioner(partitioner) {}
+        startTime(std::chrono::steady_clock::now()), db(db), context(context),
+        random(random), partitioner(partitioner) {
+    reset();
+  }
 
   virtual ~Transaction() = default;
+
+  void reset() {
+    pendingResponses = 0;
+    abort_lock = false;
+    abort_read_validation = false;
+    readSet.clear();
+    writeSet.clear();
+  }
 
   virtual TransactionResult execute() = 0;
 
@@ -127,7 +136,6 @@ public:
 public:
   std::size_t coordinator_id, worker_id;
   std::chrono::steady_clock::time_point startTime;
-  uint64_t commitEpoch;
   std::size_t pendingResponses;
 
   bool abort_lock, abort_read_validation;
