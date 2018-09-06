@@ -6,8 +6,5 @@
 
 namespace scar {
 
-  enum class ControlMessage {
-    EXIT_MESSAGE,
-    NFIELDS
-  };
+enum class ControlMessage { EXIT_MESSAGE, NFIELDS };
 }

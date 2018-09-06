@@ -1,5 +1,5 @@
 //
-// Created by Yi Lu on 8/31/18.
+// Created by Yi Lu on 9/6/18.
 //
 
 #pragma once
@@ -12,7 +12,7 @@
 
 namespace scar {
 
-class SiloRWKey {
+class RStoreRWKey {
 public:
   // lock bit
   void set_lock_bit() {
@@ -24,54 +24,6 @@ public:
 
   bool get_lock_bit() const {
     return (bitvec >> LOCK_BIT_OFFSET) & LOCK_BIT_MASK;
-  }
-
-  // local index read bit
-
-  void set_local_index_read_bit() {
-    clear_local_index_read_bit();
-    bitvec |= LOCAL_INDEX_READ_BIT_MASK << LOCAL_INDEX_READ_BIT_OFFSET;
-  }
-
-  void clear_local_index_read_bit() {
-    bitvec &= ~(LOCAL_INDEX_READ_BIT_MASK << LOCAL_INDEX_READ_BIT_OFFSET);
-  }
-
-  uint32_t get_local_index_read_bit() const {
-    return (bitvec >> LOCAL_INDEX_READ_BIT_OFFSET) & LOCAL_INDEX_READ_BIT_MASK;
-  }
-
-  // read request bit
-
-  void set_read_request_bit() {
-    clear_read_request_bit();
-    bitvec |= READ_REQUEST_BIT_MASK << READ_REQUEST_BIT_OFFSET;
-  }
-
-  void clear_read_request_bit() {
-    bitvec &= ~(READ_REQUEST_BIT_MASK << READ_REQUEST_BIT_OFFSET);
-  }
-
-  uint32_t get_read_request_bit() const {
-    return (bitvec >> READ_REQUEST_BIT_OFFSET) & READ_REQUEST_BIT_MASK;
-  }
-
-  // read validation success bit
-
-  void set_read_validation_success_bit() {
-    clear_read_validation_success_bit();
-    bitvec |= READ_VALIDATION_SUCCESS_BIT_MASK
-              << READ_VALIDATION_SUCCESS_BIT_OFFSET;
-  }
-
-  void clear_read_validation_success_bit() {
-    bitvec &= ~(READ_VALIDATION_SUCCESS_BIT_MASK
-                << READ_VALIDATION_SUCCESS_BIT_OFFSET);
-  }
-
-  uint32_t get_read_validation_success_bit() const {
-    return (bitvec >> READ_VALIDATION_SUCCESS_BIT_OFFSET) &
-           READ_VALIDATION_SUCCESS_BIT_MASK;
   }
 
   // table id
@@ -128,13 +80,8 @@ private:
   /*
    * A bitvec is a 32-bit word.
    *
-   * [ table id (5) ] | partition id (8) | unused bit (15) |
-   *  read validation success bit (1)  | read request bit (1) | local index read
-   * (1) | lock bit(1) ]
+   * [ table id (5) ] | partition id (8) | unused bit (18) | lock bit(1) ]
    *
-   * read request bit is set when the read response is received.
-   * lock bit is set when a lock is acquired.
-   * read validation success bit is set when the read is successfully validated.
    */
 
   uint64_t bitvec = 0;
@@ -148,12 +95,6 @@ public:
   static constexpr uint32_t TABLE_ID_OFFSET = 27;
   static constexpr uint32_t PARTITION_ID_MASK = 0xff;
   static constexpr uint32_t PARTITION_ID_OFFSET = 19;
-  static constexpr uint32_t READ_VALIDATION_SUCCESS_BIT_MASK = 0x1;
-  static constexpr uint32_t READ_VALIDATION_SUCCESS_BIT_OFFSET = 4;
-  static constexpr uint32_t READ_REQUEST_BIT_MASK = 0x1;
-  static constexpr uint32_t READ_REQUEST_BIT_OFFSET = 3;
-  static constexpr uint32_t LOCAL_INDEX_READ_BIT_MASK = 0x1;
-  static constexpr uint32_t LOCAL_INDEX_READ_BIT_OFFSET = 2;
   static constexpr uint32_t LOCK_BIT_MASK = 0x1;
   static constexpr uint32_t LOCK_BIT_OFFSET = 0;
 };

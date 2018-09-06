@@ -91,21 +91,21 @@ public:
                   "RWKeyType do not match.");
 
     // lock write set
-    if (lockWriteSet(txn, messages)) {
+    if (lock_write_set(txn, messages)) {
       abort(txn, messages);
       return false;
     }
 
     // commit phase 2, read validation
-    if (!validateReadSet(txn, messages)) {
+    if (!validate_read_set(txn, messages)) {
       abort(txn, messages);
       return false;
     }
 
     // generate tid
-    uint64_t commit_tid = generateTid(txn);
+    uint64_t commit_tid = generate_tid(txn);
 
-    // write
+    // write and replicate
     write_and_replicate(txn, commit_tid, messages);
 
     // release locks
@@ -116,8 +116,8 @@ public:
 
 private:
   template <class Transaction>
-  bool lockWriteSet(Transaction &txn,
-                    std::vector<std::unique_ptr<Message>> &messages) {
+  bool lock_write_set(Transaction &txn,
+                      std::vector<std::unique_ptr<Message>> &messages) {
 
     auto &readSet = txn.readSet;
     auto &writeSet = txn.writeSet;
@@ -166,8 +166,8 @@ private:
   }
 
   template <class Transaction>
-  bool validateReadSet(Transaction &txn,
-                       std::vector<std::unique_ptr<Message>> &messages) {
+  bool validate_read_set(Transaction &txn,
+                         std::vector<std::unique_ptr<Message>> &messages) {
 
     auto &readSet = txn.readSet;
     auto &writeSet = txn.writeSet;
@@ -224,7 +224,7 @@ private:
 
   template <class Transaction>
 
-  uint64_t generateTid(Transaction &txn) {
+  uint64_t generate_tid(Transaction &txn) {
 
     auto &readSet = txn.readSet;
     auto &writeSet = txn.writeSet;
