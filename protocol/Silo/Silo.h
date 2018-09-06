@@ -232,8 +232,10 @@ private:
     uint64_t next_tid = 0;
 
     /*
-     *  A timestamp is a 64-bit word and the most significant bit is the lock
-     * bit [  lock bit (1)  |  id (63) ]
+     *  A timestamp is a 64-bit word.
+     *  The most significant bit is the lock bit.
+     *  The lower 63 bits are for transaction sequence id.
+     *  [  lock bit (1)  |  id (63) ]
      */
 
     // larger than the TID of any record read or written by the transaction

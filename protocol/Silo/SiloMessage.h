@@ -7,6 +7,7 @@
 #include "common/Encoder.h"
 #include "common/Message.h"
 #include "common/MessagePiece.h"
+#include "core/ControlMessage.h"
 #include "core/Table.h"
 
 #include "protocol/Silo/SiloHelper.h"
@@ -15,7 +16,7 @@
 namespace scar {
 
 enum class SiloMessage {
-  SEARCH_REQUEST,
+  SEARCH_REQUEST = static_cast<int>(ControlMessage::NFIELDS),
   SEARCH_RESPONSE,
   LOCK_REQUEST,
   LOCK_RESPONSE,
@@ -672,6 +673,7 @@ public:
     std::vector<
         std::function<void(MessagePiece, Message &, Table &, Transaction &)>>
         v;
+    v.resize(static_cast<int>(ControlMessage::NFIELDS));
     v.push_back(SiloMessageHandler::search_request_handler);
     v.push_back(SiloMessageHandler::search_response_handler);
     v.push_back(SiloMessageHandler::lock_request_handler);
