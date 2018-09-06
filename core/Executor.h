@@ -43,10 +43,8 @@ public:
         workload(coordinator_id, id, db, context, random, *partitioner) {
 
     for (auto i = 0u; i < context.coordinatorNum; i++) {
-      syncMessages.emplace_back(std::make_unique<Message>());
-      init_message(syncMessages[i].get(), i);
-      asyncMessages.emplace_back(std::make_unique<Message>());
-      init_message(asyncMessages[i].get(), i);
+      messages.emplace_back(std::make_unique<Message>());
+      init_message(messages[i].get(), i);
     }
 
     messageHandlers = MessageHandlerType::get_message_handlers();
@@ -60,7 +58,7 @@ public:
 
     while (!stopFlag.load()) {
       process_request();
-      commitTransactions(q);
+      commit_transactions(q);
 
       last_seed = random.get_seed();
       transaction = workload.nextTransaction(storage);
@@ -69,7 +67,7 @@ public:
       auto result = transaction->execute();
 
       if (result == TransactionResult::READY_TO_COMMIT) {
-        if (protocol.commit(*transaction, syncMessages, asyncMessages)) {
+        if (protocol.commit(*transaction, messages)) {
           n_commit.fetch_add(1);
         } else {
           if (transaction->abort_lock) {
@@ -84,11 +82,9 @@ public:
       } else {
         n_abort_no_retry.fetch_add(1);
       }
-
-      flushAsyncMessages();
     }
 
-    commitTransactions(q, true);
+    commit_transactions(q, true);
     LOG(INFO) << "Worker " << id << " exits.";
   }
 
@@ -117,12 +113,12 @@ public:
         TableType *table = db.find_table(messagePiece.get_table_id(),
                                          messagePiece.get_partition_id());
         messageHandlers[type](messagePiece,
-                              *syncMessages[message->get_source_node_id()],
-                              *table, *transaction);
+                              *messages[message->get_source_node_id()], *table,
+                              *transaction);
       }
 
       size += message->get_message_count();
-      flushMessages(syncMessages);
+      flush_messages();
     }
     return size;
   }
@@ -138,21 +134,17 @@ private:
       } else {
         TableType *table = db.find_table(table_id, partition_id);
         auto coordinatorID = partitioner->master_coordinator(partition_id);
-        MessageFactoryType::new_search_message(*syncMessages[coordinatorID],
-                                               *table, key, key_offset);
+        MessageFactoryType::new_search_message(*messages[coordinatorID], *table,
+                                               key, key_offset);
         return 0;
       }
     };
 
     txn->remoteRequestHandler = [this]() { return process_request(); };
-    txn->messageFlusher = [this]() { flushSyncMessages(); };
+    txn->messageFlusher = [this]() { flush_messages(); };
   };
 
-  void flushSyncMessages() { flushMessages(syncMessages); }
-
-  void flushAsyncMessages() { flushMessages(asyncMessages); }
-
-  void flushMessages(std::vector<std::unique_ptr<Message>> &messages) {
+  void flush_messages() {
 
     for (auto i = 0u; i < messages.size(); i++) {
       if (i == coordinator_id) {
@@ -171,8 +163,8 @@ private:
     }
   }
 
-  void commitTransactions(std::queue<std::unique_ptr<TransactionType>> &q,
-                          bool retry = false) {
+  void commit_transactions(std::queue<std::unique_ptr<TransactionType>> &q,
+                           bool retry = false) {
     using namespace std::chrono;
     do {
       auto currentEpoch = epoch.load();
@@ -207,7 +199,7 @@ private:
   WorkloadType workload;
   Percentile<int64_t> percentile;
   std::unique_ptr<TransactionType> transaction;
-  std::vector<std::unique_ptr<Message>> syncMessages, asyncMessages;
+  std::vector<std::unique_ptr<Message>> messages;
   std::vector<std::function<void(MessagePiece, Message &, TableType &,
                                  TransactionType &)>>
       messageHandlers;

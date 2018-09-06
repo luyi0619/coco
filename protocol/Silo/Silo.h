@@ -81,8 +81,7 @@ public:
 
   template <class Transaction>
   bool commit(Transaction &txn,
-              std::vector<std::unique_ptr<Message>> &syncMessages,
-              std::vector<std::unique_ptr<Message>> &asyncMessages) {
+              std::vector<std::unique_ptr<Message>> &messages) {
 
     static_assert(std::is_same<RWKeyType, typename decltype(
                                               txn.readSet)::value_type>::value,
@@ -92,8 +91,8 @@ public:
                   "RWKeyType do not match.");
 
     // lock write set
-    if (lockWriteSet(txn, syncMessages)) {
-      abort(txn, syncMessages);
+    if (lockWriteSet(txn, messages)) {
+      abort(txn, messages);
       return false;
     }
 
@@ -101,8 +100,8 @@ public:
     txn.commitEpoch = epoch.load();
 
     // commit phase 2, read validation
-    if (!validateReadSet(txn, syncMessages)) {
-      abort(txn, syncMessages);
+    if (!validateReadSet(txn, messages)) {
+      abort(txn, messages);
       return false;
     }
 
@@ -110,10 +109,10 @@ public:
     uint64_t commit_tid = generateTid(txn);
 
     // write
-    write(txn, commit_tid, syncMessages);
+    write_and_replicate(txn, commit_tid, messages);
 
-    // replicate
-    replicate(txn, commit_tid, asyncMessages);
+    // release locks
+    release_lock(txn, commit_tid, messages);
 
     return true;
   }
@@ -164,10 +163,7 @@ private:
       }
     }
 
-    txn.messageFlusher();
-    while (txn.pendingResponses > 0) {
-      txn.remoteRequestHandler();
-    }
+    sync_messages(txn);
 
     return txn.abort_lock;
   }
@@ -224,10 +220,7 @@ private:
       }
     }
 
-    txn.messageFlusher();
-    while (txn.pendingResponses > 0) {
-      txn.remoteRequestHandler();
-    }
+    sync_messages(txn);
 
     return !txn.abort_read_validation;
   }
@@ -280,8 +273,8 @@ private:
   }
 
   template <class Transaction>
-  void write(Transaction &txn, uint64_t commit_tid,
-             std::vector<std::unique_ptr<Message>> &messages) {
+  void write_and_replicate(Transaction &txn, uint64_t commit_tid,
+                           std::vector<std::unique_ptr<Message>> &messages) {
 
     auto &readSet = txn.readSet;
     auto &writeSet = txn.writeSet;
@@ -291,36 +284,21 @@ private:
       auto tableId = writeKey.get_table_id();
       auto partitionId = writeKey.get_partition_id();
       auto table = db.find_table(tableId, partitionId);
+
+      // write
       if (partitioner.has_master_partition(partitionId)) {
         auto key = writeKey.get_key();
         auto value = writeKey.get_value();
-
-        std::atomic<uint64_t> &tid = table->search_metadata(key);
         table->update(key, value);
-        SiloHelper::unlock(tid, commit_tid);
       } else {
+        txn.pendingResponses++;
         auto coordinatorID = partitioner.master_coordinator(partitionId);
         MessageFactoryType<TableType>::new_write_message(
             *messages[coordinatorID], *table, writeKey.get_key(),
-            writeKey.get_value(), commit_tid);
+            writeKey.get_value());
       }
-    }
-    txn.messageFlusher();
-  }
 
-  template <class Transaction>
-
-  void replicate(Transaction &txn, uint64_t commit_tid,
-                 std::vector<std::unique_ptr<Message>> &messages) {
-
-    auto &readSet = txn.readSet;
-    auto &writeSet = txn.writeSet;
-
-    for (auto i = 0u; i < writeSet.size(); i++) {
-      auto &writeKey = writeSet[i];
-      auto tableId = writeKey.get_table_id();
-      auto partitionId = writeKey.get_partition_id();
-      auto table = db.find_table(tableId, partitionId);
+      // replicate
 
       for (auto k = 0u; k < partitioner.total_coordinators(); k++) {
 
@@ -341,20 +319,59 @@ private:
           std::atomic<uint64_t> &tid = table->search_metadata(key);
 
           uint64_t last_tid = SiloHelper::lock(tid);
-
-          if (commit_tid > last_tid) {
-            table->update(key, value);
-            SiloHelper::unlock(tid, commit_tid);
-          } else {
-            SiloHelper::unlock(tid);
-          }
+          DCHECK(last_tid < commit_tid);
+          table->update(key, value);
+          SiloHelper::unlock(tid, commit_tid);
 
         } else {
+          txn.pendingResponses++;
           auto coordinatorID = k;
           MessageFactoryType<TableType>::new_replication_message(
               *messages[coordinatorID], *table, writeKey.get_key(),
               writeKey.get_value(), commit_tid);
         }
+      }
+    }
+
+    sync_messages(txn);
+  }
+
+  template <class Transaction>
+  void release_lock(Transaction &txn, uint64_t commit_tid,
+                    std::vector<std::unique_ptr<Message>> &messages) {
+
+    auto &readSet = txn.readSet;
+    auto &writeSet = txn.writeSet;
+
+    for (auto i = 0u; i < writeSet.size(); i++) {
+      auto &writeKey = writeSet[i];
+      auto tableId = writeKey.get_table_id();
+      auto partitionId = writeKey.get_partition_id();
+      auto table = db.find_table(tableId, partitionId);
+
+      // write
+      if (partitioner.has_master_partition(partitionId)) {
+        auto key = writeKey.get_key();
+        auto value = writeKey.get_value();
+        std::atomic<uint64_t> &tid = table->search_metadata(key);
+        table->update(key, value);
+        SiloHelper::unlock(tid, commit_tid);
+      } else {
+        auto coordinatorID = partitioner.master_coordinator(partitionId);
+        MessageFactoryType<TableType>::new_release_lock_message(
+            *messages[coordinatorID], *table, writeKey.get_key(), commit_tid);
+      }
+    }
+
+    sync_messages(txn, false);
+  }
+
+  template <class Transaction>
+  void sync_messages(Transaction &txn, bool wait_response = true) {
+    txn.messageFlusher();
+    if (wait_response) {
+      while (txn.pendingResponses > 0) {
+        txn.remoteRequestHandler();
       }
     }
   }
