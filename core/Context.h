@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cstddef>
+#include <string>
 
 namespace scar {
 class Context {
@@ -12,6 +13,7 @@ public:
   std::size_t partitionNum = 0;
   std::size_t workerNum = 0;
   std::size_t coordinatorNum = 0;
+  std::string protocol;
 
   bool retryAbortedTransaction_ = false;
   bool exponentialBackOff_ = false;

@@ -19,6 +19,7 @@ TEST(TestRStore, TestRStoreSwitcher) {
   context.coordinatorNum = 2;
   context.partitionNum = 4;
   context.workerNum = 4;
+  context.protocol = "RStore";
   scar::tpcc::Random random;
 
   scar::tpcc::Database<MetaDataType> db;
@@ -27,9 +28,8 @@ TEST(TestRStore, TestRStoreSwitcher) {
   std::atomic<uint32_t> worker_status;
   std::atomic<uint32_t> n_complete_workers;
 
-  scar::RStoreSwitcher<WorkloadType> switcher(
-      0, 0, context, stopFlag, worker_status, n_complete_workers);
+  scar::RStoreSwitcher<WorkloadType> switcher(0, 0, context, stopFlag);
 
-  scar::RStoreExecutor<WorkloadType> e(0, 0, db, context, worker_status,
-                                       n_complete_workers);
+  scar::RStoreExecutor<WorkloadType> e(
+      0, 0, db, context, switcher.worker_status, switcher.n_completed_workers);
 }

@@ -5,7 +5,9 @@
 #pragma once
 
 #include "core/Worker.h"
-#include "protocol/RStore/RStore.h"
+
+#include "protocol/RStore/RStoreHelper.h"
+#include "protocol/RStore/RStoreMessage.h"
 
 namespace scar {
 
@@ -16,7 +18,6 @@ public:
   using StorageType = typename WorkloadType::StorageType;
   using TransactionType = typename WorkloadType::TransactionType;
 
-  using ProtocolType = RStore<DatabaseType>;
   using TableType = typename DatabaseType::TableType;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
@@ -27,11 +28,8 @@ public:
   using MessageHandlerType = RStoreMessageHandler<TableType>;
 
   RStoreSwitcher(std::size_t coordinator_id, std::size_t id,
-                 ContextType &context, std::atomic<bool> &stopFlag,
-                 std::atomic<uint32_t> &worker_status,
-                 std::atomic<uint32_t> &n_complete_workers)
-      : Worker(coordinator_id, id), context(context), stopFlag(stopFlag),
-        worker_status(worker_status), n_completed_workers(n_complete_workers) {
+                 ContextType &context, std::atomic<bool> &stopFlag)
+      : Worker(coordinator_id, id), context(context), stopFlag(stopFlag) {
 
     for (auto i = 0u; i < context.coordinatorNum; i++) {
       messages.emplace_back(std::make_unique<Message>());
@@ -337,10 +335,12 @@ private:
 private:
   ContextType &context;
   std::atomic<bool> &stopFlag;
-  std::atomic<uint32_t> &worker_status;
-  std::atomic<uint32_t> &n_completed_workers;
   RandomType random;
   LockfreeQueue<Message *> ack_in_queue, signal_in_queue, out_queue;
   std::vector<std::unique_ptr<Message>> messages;
+
+public:
+  std::atomic<uint32_t> worker_status;
+  std::atomic<uint32_t> n_completed_workers;
 };
 } // namespace scar

@@ -11,8 +11,10 @@
 #include "core/Partitioner.h"
 #include "core/RWKey.h"
 #include "core/Table.h"
+#include "core/Worker.h"
 #include "protocol/RStore/RStoreHelper.h"
 #include "protocol/RStore/RStoreMessage.h"
+#include "protocol/RStore/RStoreSwitcher.h"
 #include <glog/logging.h>
 
 namespace scar {
@@ -21,6 +23,7 @@ template <class Database> class RStore {
 public:
   using DatabaseType = Database;
   using MetaDataType = std::atomic<uint64_t>;
+  using ContextType = typename DatabaseType::ContextType;
   using TableType = ITable<MetaDataType>;
   using MessageType = RStoreMessage;
 

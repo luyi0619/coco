@@ -20,6 +20,7 @@ template <class Database> class Silo {
 public:
   using DatabaseType = Database;
   using MetaDataType = std::atomic<uint64_t>;
+  using ContextType = typename DatabaseType::ContextType;
   using TableType = ITable<MetaDataType>;
   using MessageType = SiloMessage;
 

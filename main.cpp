@@ -30,6 +30,7 @@ int main(int argc, char *argv[]) {
 
   int n = FLAGS_threads;
   scar::tpcc::Context context;
+  context.protocol = "Silo";
   context.coordinatorNum = peers.size();
   context.partitionNum = n * context.coordinatorNum;
   context.workerNum = n;

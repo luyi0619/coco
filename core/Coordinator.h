@@ -8,6 +8,7 @@
 #include "core/Dispatcher.h"
 #include "core/Executor.h"
 #include "core/Worker.h"
+#include "core/WorkerFactory.h"
 #include <boost/algorithm/string.hpp>
 #include <glog/logging.h>
 #include <thread>
@@ -33,11 +34,16 @@ public:
   void start() {
 
     LOG(INFO) << "Coordinator initializes " << context.workerNum << " workers.";
+    /*
+        for (auto i = 0u; i < context.workerNum; i++) {
+          workers.push_back(std::make_shared<Executor<WorkloadType,
+       ProtocolType>>( id, i, db, context, workerStopFlag));
+        }
 
-    for (auto i = 0u; i < context.workerNum; i++) {
-      workers.push_back(std::make_shared<Executor<WorkloadType, ProtocolType>>(
-          id, i, db, context, workerStopFlag));
-    }
+        */
+
+    workers = WorkerFactory::create_workers<WorkloadType>(id, db, context,
+                                                          workerStopFlag);
 
     // start dispatcher threads
     iDispatcher = std::make_unique<IncomingDispatcher>(id, inSockets, workers,
