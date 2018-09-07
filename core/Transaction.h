@@ -105,10 +105,11 @@ public:
       readSet[i].set_tid(tid);
     }
 
-    messageFlusher();
-
-    while (pendingResponses > 0) {
-      remoteRequestHandler();
+    if (pendingResponses > 0) {
+      message_flusher();
+      while (pendingResponses > 0) {
+        remote_request_handler();
+      }
     }
   }
 
@@ -145,9 +146,9 @@ public:
                          void *, bool)>
       readRequestHandler;
   // processed a request?
-  std::function<std::size_t(void)> remoteRequestHandler;
+  std::function<std::size_t(void)> remote_request_handler;
 
-  std::function<void()> messageFlusher;
+  std::function<void()> message_flusher;
 
   DatabaseType &db;
   ContextType &context;

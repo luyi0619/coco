@@ -58,8 +58,7 @@ public:
     // TODO
   }
 
-  static void new_worker_status_message(Message &message,
-                                        RStoreWorkerStatus status) {
+  static void new_signal_message(Message &message, RStoreWorkerStatus status) {
 
     /*
      * The structure of a signal message: (signal value, e.g., S_PHASE)
@@ -76,14 +75,39 @@ public:
     encoder << static_cast<uint32_t>(status);
     message.flush();
   }
+
+  static void new_s_phase_ack_message(Message &message) {
+    /*
+     * The structure of an s phase ack message: ()
+     */
+
+    auto message_size = MessagePiece::get_header_size();
+    auto message_piece_header = MessagePiece::construct_message_piece_header(
+        static_cast<uint32_t>(RStoreMessage::S_PHASE_ACK), message_size, 0, 0);
+    Encoder encoder(message.data);
+    encoder << message_piece_header;
+    message.flush();
+  }
+
+  static void new_c_phase_ack_message(Message &message) {
+    /*
+     * The structure of a c phase ack message: ()
+     */
+
+    auto message_size = MessagePiece::get_header_size();
+    auto message_piece_header = MessagePiece::construct_message_piece_header(
+        static_cast<uint32_t>(RStoreMessage::C_PHASE_ACK), message_size, 0, 0);
+    Encoder encoder(message.data);
+    encoder << message_piece_header;
+    message.flush();
+  }
 };
 
-template <class Table, class Transaction> class RStoreMessageHandler {
+template <class Table> class RStoreMessageHandler {
 public:
   static void replication_value_request_handler(MessagePiece inputPiece,
                                                 Message &responseMessage,
-                                                Table &table,
-                                                Transaction &txn) {
+                                                Table &table) {
 
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(RStoreMessage::REPLICATION_VALUE_REQUEST));
@@ -131,8 +155,7 @@ public:
 
   static void replication_operation_request_handler(MessagePiece inputPiece,
                                                     Message &responseMessage,
-                                                    Table &table,
-                                                    Transaction &txn) {
+                                                    Table &table) {
 
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(RStoreMessage::REPLICATION_VALUE_REQUEST));
@@ -145,12 +168,9 @@ public:
     // TODO
   }
 
-  static std::vector<
-      std::function<void(MessagePiece, Message &, Table &, Transaction &)>>
+  static std::vector<std::function<void(MessagePiece, Message &, Table &)>>
   get_message_handlers() {
-    std::vector<
-        std::function<void(MessagePiece, Message &, Table &, Transaction &)>>
-        v;
+    std::vector<std::function<void(MessagePiece, Message &, Table &)>> v;
     v.resize(static_cast<int>(ControlMessage::NFIELDS));
     v.push_back(RStoreMessageHandler::replication_value_request_handler);
     v.push_back(RStoreMessageHandler::replication_operation_request_handler);

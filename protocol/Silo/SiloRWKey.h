@@ -149,11 +149,11 @@ public:
   static constexpr uint32_t PARTITION_ID_MASK = 0xff;
   static constexpr uint32_t PARTITION_ID_OFFSET = 19;
   static constexpr uint32_t READ_VALIDATION_SUCCESS_BIT_MASK = 0x1;
-  static constexpr uint32_t READ_VALIDATION_SUCCESS_BIT_OFFSET = 4;
+  static constexpr uint32_t READ_VALIDATION_SUCCESS_BIT_OFFSET = 3;
   static constexpr uint32_t READ_REQUEST_BIT_MASK = 0x1;
-  static constexpr uint32_t READ_REQUEST_BIT_OFFSET = 3;
+  static constexpr uint32_t READ_REQUEST_BIT_OFFSET = 2;
   static constexpr uint32_t LOCAL_INDEX_READ_BIT_MASK = 0x1;
-  static constexpr uint32_t LOCAL_INDEX_READ_BIT_OFFSET = 2;
+  static constexpr uint32_t LOCAL_INDEX_READ_BIT_OFFSET = 1;
   static constexpr uint32_t LOCK_BIT_MASK = 0x1;
   static constexpr uint32_t LOCK_BIT_OFFSET = 0;
 };

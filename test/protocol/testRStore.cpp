@@ -5,6 +5,7 @@
 #include "benchmark/tpcc/Workload.h"
 #include "core/Transaction.h"
 #include "protocol/RStore/RStore.h"
+#include "protocol/RStore/RStoreExecutor.h"
 #include "protocol/RStore/RStoreSwitcher.h"
 #include <gtest/gtest.h>
 
@@ -58,4 +59,7 @@ TEST(TestRStore, TestRStoreSwitcher) {
 
   scar::RStoreSwitcher<WorkloadType> switcher(
       0, 0, context, stopFlag, worker_status, n_complete_workers);
+
+  scar::RStoreExecutor<WorkloadType> e(0, 0, db, context, worker_status,
+                                       n_complete_workers);
 }

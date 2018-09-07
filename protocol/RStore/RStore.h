@@ -25,10 +25,8 @@ public:
   using RWKeyType = RStoreRWKey;
   using MessageType = RStoreMessage;
 
-  template <class Table> using MessageFactoryType = RStoreMessageFactory<Table>;
-
-  template <class Table, class Transaction>
-  using MessageHandlerType = RStoreMessageHandler<Table, Transaction>;
+  using MessageFactoryType = RStoreMessageFactory<TableType>;
+  using MessageHandlerType = RStoreMessageHandler<TableType>;
 
   static_assert(
       std::is_same<typename DatabaseType::TableType, TableType>::value,
@@ -245,7 +243,7 @@ private:
           continue;
         }
 
-        MessageFactoryType<TableType>::new_replication_value_message(
+        MessageFactoryType::new_replication_value_message(
             *messages[k], *table, writeKey.get_key(), writeKey.get_value(),
             commit_tid);
       }

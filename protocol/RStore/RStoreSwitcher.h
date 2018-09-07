@@ -13,21 +13,19 @@ template <class Workload> class RStoreSwitcher : public Worker {
 public:
   using WorkloadType = Workload;
   using DatabaseType = typename WorkloadType::DatabaseType;
-  using ProtocolType = RStore<DatabaseType>;
-
-  using RWKeyType = typename WorkloadType::RWKeyType;
-  using TableType = typename DatabaseType::TableType;
+  using StorageType = typename WorkloadType::StorageType;
   using TransactionType = typename WorkloadType::TransactionType;
+
+  using ProtocolType = RStore<DatabaseType>;
+  using RWKeyType = RStoreRWKey;
+  using TableType = typename DatabaseType::TableType;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
-  using MessageType = typename ProtocolType::MessageType;
-  using MessageFactoryType =
-      typename ProtocolType::template MessageFactoryType<TableType>;
-  using MessageHandlerType =
-      typename ProtocolType::template MessageHandlerType<TableType,
-                                                         TransactionType>;
 
-  using StorageType = typename WorkloadType::StorageType;
+  using MessageType = RStoreMessage;
+
+  using MessageFactoryType = RStoreMessageFactory<TableType>;
+  using MessageHandlerType = RStoreMessageHandler<TableType>;
 
   RStoreSwitcher(std::size_t coordinator_id, std::size_t id,
                  ContextType &context, std::atomic<bool> &stopFlag,
@@ -66,7 +64,7 @@ public:
       broadcast_stop();
       wait4_ack(RStoreWorkerStatus::C_PHASE);
 
-      // start c-phase
+      // start s-phase
 
       n_completed_workers.store(0);
 
@@ -74,6 +72,12 @@ public:
 
       // only for debug
       std::this_thread::sleep_for(std::chrono::seconds(1));
+
+      // wait for all workers to finish
+      while (n_completed_workers.load() < n_workers) {
+        // change to nop_pause()?
+        std::this_thread::yield();
+      }
 
       broadcast_stop();
       wait4_stop(n_coordinators - 1);
@@ -127,20 +131,23 @@ public:
   }
 
   void set_worker_status(RStoreWorkerStatus status) {
-    worker_status.store(static_cast<int>(status));
+    worker_status.store(static_cast<uint32_t>(status));
   }
 
   void signal_worker(RStoreWorkerStatus status) {
 
     // only the coordinator node calls this function
     DCHECK(coordinator_id == 0);
+    DCHECK(status == RStoreWorkerStatus::C_PHASE ||
+           status == RStoreWorkerStatus::S_PHASE);
     set_worker_status(status);
 
     // signal to everyone
     for (auto i = 0u; i < context.coordinatorNum; i++) {
-      if (i == coordinator_id)
+      if (i == coordinator_id) {
         continue;
-      MessageFactoryType::new_worker_status_message(*messages[i], status);
+      }
+      MessageFactoryType::new_signal_message(*messages[i], status);
     }
     flush_messages();
   }
@@ -149,9 +156,7 @@ public:
     // only non-coordinator calls this function
     DCHECK(coordinator_id != 0);
 
-    while (signal_in_queue.empty()) {
-      std::this_thread::yield();
-    }
+    signal_in_queue.wait_till_non_empty();
 
     std::unique_ptr<Message> message(signal_in_queue.front());
     bool ok = signal_in_queue.pop();
@@ -160,8 +165,8 @@ public:
     CHECK(message->get_message_count() == 1);
 
     MessagePiece messagePiece = *(message->begin());
-    auto type = messagePiece.get_message_type();
-    CHECK(type == static_cast<int>(RStoreMessage::SIGNAL));
+    auto type = static_cast<RStoreMessage>(messagePiece.get_message_type());
+    CHECK(type == RStoreMessage::SIGNAL);
 
     uint32_t status;
     StringPiece stringPiece = messagePiece.toStringPiece();
@@ -171,13 +176,86 @@ public:
     return static_cast<RStoreWorkerStatus>(status);
   }
 
-  void wait4_stop(std::size_t n) {}
+  void wait4_stop(std::size_t n) {
 
-  void send_ack(RStoreWorkerStatus status) {}
+    // wait for n stop messages
 
-  void wait4_ack(RStoreWorkerStatus status) {}
+    for (auto i = 0u; i < n; i++) {
 
-  void broadcast_stop() {}
+      signal_in_queue.wait_till_non_empty();
+
+      std::unique_ptr<Message> message(signal_in_queue.front());
+      bool ok = signal_in_queue.pop();
+      CHECK(ok);
+
+      CHECK(message->get_message_count() == 1);
+
+      MessagePiece messagePiece = *(message->begin());
+      auto type = static_cast<RStoreMessage>(messagePiece.get_message_type());
+      CHECK(type == RStoreMessage::SIGNAL);
+
+      uint32_t status;
+      StringPiece stringPiece = messagePiece.toStringPiece();
+      Decoder dec(stringPiece);
+      dec >> status;
+
+      CHECK(status == static_cast<uint32_t>(RStoreWorkerStatus::STOP));
+    }
+  }
+
+  void wait4_ack(RStoreWorkerStatus status) {
+
+    // only coordinator waits for ack
+    DCHECK(coordinator_id == 0);
+
+    std::size_t n_coordinators = context.workerNum;
+
+    for (auto i = 0u; i < n_coordinators; i++) {
+      if (i == coordinator_id) {
+        continue;
+      }
+
+      ack_in_queue.wait_till_non_empty();
+
+      std::unique_ptr<Message> message(ack_in_queue.front());
+      bool ok = ack_in_queue.pop();
+      CHECK(ok);
+
+      CHECK(message->get_message_count() == 1);
+
+      MessagePiece messagePiece = *(message->begin());
+      auto type = static_cast<RStoreMessage>(messagePiece.get_message_type());
+
+      if (status == RStoreWorkerStatus::C_PHASE) {
+        CHECK(type == RStoreMessage::C_PHASE_ACK);
+      } else {
+        CHECK(type == RStoreMessage::S_PHASE_ACK);
+      }
+    }
+  }
+
+  void broadcast_stop() {
+
+    std::size_t n_coordinators = context.workerNum;
+
+    for (auto i = 0u; i < n_coordinators; i++) {
+      if (i == coordinator_id)
+        continue;
+      MessageFactoryType::new_signal_message(*messages[i],
+                                             RStoreWorkerStatus::STOP);
+    }
+
+    flush_messages();
+  }
+
+  void send_ack(RStoreWorkerStatus status) {
+
+    // only non-coordinator calls this function
+    DCHECK(coordinator_id != 0);
+
+    MessageFactoryType::new_signal_message(*messages[0], status);
+    flush_messages();
+  }
 
   void start() override {
 
@@ -196,8 +274,12 @@ public:
 
     // message will only be of type signal, C_PHASE_ACK or S_PHASE_ACK
 
+    CHECK(message->get_message_count() == 1);
+
+    MessagePiece messagePiece = *(message->begin());
+
     auto message_type =
-        static_cast<RStoreMessage>(message->get_message_count());
+        static_cast<RStoreMessage>(messagePiece.get_message_type());
 
     switch (message_type) {
     case RStoreMessage::SIGNAL:
@@ -226,32 +308,6 @@ public:
 
     return message;
   }
-
-  /*
-  std::size_t process_request() {
-
-    std::size_t size = 0;
-
-    while (!inQueue.empty()) {
-      std::unique_ptr<Message> message(inQueue.front());
-      bool ok = inQueue.pop();
-      CHECK(ok);
-      for (auto it = message->begin(); it != message->end(); it++) {
-
-        MessagePiece messagePiece = *it;
-        auto type = static_cast<RStoreMessage>(messagePiece.get_message_type());
-
-        DCHECK(type == RStoreMessage::SIGNAL);
-        signal_handler(messagePiece);
-      }
-
-      size += message->get_message_count();
-    }
-    return size;
-  }
-   */
-
-  void signal_handler(MessagePiece messagePiece) {}
 
 private:
   void flush_messages() {

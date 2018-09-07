@@ -35,6 +35,12 @@ public:
     CHECK(ok);
   }
 
+  void wait_till_non_empty() {
+    while (base_type::empty()) {
+      nop_pause();
+    }
+  }
+
   auto capacity() { return N; }
 
 private:

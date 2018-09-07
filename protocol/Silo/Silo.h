@@ -25,10 +25,10 @@ public:
   using RWKeyType = SiloRWKey;
   using MessageType = SiloMessage;
 
-  template <class Table> using MessageFactoryType = SiloMessageFactory<Table>;
+  using MessageFactoryType = SiloMessageFactory<TableType>;
 
-  template <class Table, class Transaction>
-  using MessageHandlerType = SiloMessageHandler<Table, Transaction>;
+  template <class Transaction>
+  using MessageHandlerType = SiloMessageHandler<TableType, Transaction>;
 
   static_assert(
       std::is_same<typename DatabaseType::TableType, TableType>::value,
@@ -71,12 +71,12 @@ public:
       } else {
         txn.pendingResponses++;
         auto coordinatorID = partitioner.master_coordinator(partitionId);
-        MessageFactoryType<TableType>::new_abort_message(
-            *messages[coordinatorID], *table, writeKey.get_key());
+        MessageFactoryType::new_abort_message(*messages[coordinatorID], *table,
+                                              writeKey.get_key());
       }
     }
 
-    txn.messageFlusher();
+    txn.message_flusher();
   }
 
   template <class Transaction>
@@ -155,8 +155,8 @@ private:
       } else {
         txn.pendingResponses++;
         auto coordinatorID = partitioner.master_coordinator(partitionId);
-        MessageFactoryType<TableType>::new_lock_message(
-            *messages[coordinatorID], *table, writeKey.get_key(), i);
+        MessageFactoryType::new_lock_message(*messages[coordinatorID], *table,
+                                             writeKey.get_key(), i);
       }
     }
 
@@ -211,7 +211,7 @@ private:
       } else {
         txn.pendingResponses++;
         auto coordinatorID = partitioner.master_coordinator(partitionId);
-        MessageFactoryType<TableType>::new_read_validation_message(
+        MessageFactoryType::new_read_validation_message(
             *messages[coordinatorID], *table, readKey.get_key(), i,
             readKey.get_tid());
       }
@@ -284,9 +284,9 @@ private:
       } else {
         txn.pendingResponses++;
         auto coordinatorID = partitioner.master_coordinator(partitionId);
-        MessageFactoryType<TableType>::new_write_message(
-            *messages[coordinatorID], *table, writeKey.get_key(),
-            writeKey.get_value());
+        MessageFactoryType::new_write_message(*messages[coordinatorID], *table,
+                                              writeKey.get_key(),
+                                              writeKey.get_value());
       }
 
       // replicate
@@ -317,7 +317,7 @@ private:
         } else {
           txn.pendingResponses++;
           auto coordinatorID = k;
-          MessageFactoryType<TableType>::new_replication_message(
+          MessageFactoryType::new_replication_message(
               *messages[coordinatorID], *table, writeKey.get_key(),
               writeKey.get_value(), commit_tid);
         }
@@ -349,7 +349,7 @@ private:
         SiloHelper::unlock(tid, commit_tid);
       } else {
         auto coordinatorID = partitioner.master_coordinator(partitionId);
-        MessageFactoryType<TableType>::new_release_lock_message(
+        MessageFactoryType::new_release_lock_message(
             *messages[coordinatorID], *table, writeKey.get_key(), commit_tid);
       }
     }
@@ -359,10 +359,10 @@ private:
 
   template <class Transaction>
   void sync_messages(Transaction &txn, bool wait_response = true) {
-    txn.messageFlusher();
+    txn.message_flusher();
     if (wait_response) {
       while (txn.pendingResponses > 0) {
-        txn.remoteRequestHandler();
+        txn.remote_request_handler();
       }
     }
   }
