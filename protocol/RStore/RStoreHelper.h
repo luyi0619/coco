@@ -8,5 +8,8 @@
 
 // RStoreHelper is as the same as SiloHelper (at least for now)
 namespace scar {
-using RStoreHelper = SiloHelper;
-}
+
+enum class RStoreWorkerStatus { S_PHASE, C_PHASE, STOP, EXIT };
+
+class RStoreHelper : public SiloHelper {};
+} // namespace scar

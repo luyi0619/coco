@@ -27,10 +27,13 @@ public:
 
   virtual void onExit() {}
 
+  virtual void push_message(Message *message) = 0;
+
+  virtual Message *pop_message() = 0;
+
 public:
   std::size_t coordinator_id;
   std::size_t id;
-  LockfreeQueue<Message *> inQueue, outQueue;
   std::atomic<uint64_t> n_commit, n_abort_no_retry, n_abort_lock,
       n_abort_read_validation;
 };

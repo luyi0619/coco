@@ -48,7 +48,7 @@ public:
 
         auto workerId = message->get_worker_id();
         // release the unique ptr
-        workers[workerId]->inQueue.push(message.release());
+        workers[workerId]->push_message(message.release());
         DCHECK(message == nullptr);
       }
     }
@@ -91,14 +91,12 @@ public:
 
   void dispatchMessage(const std::shared_ptr<Worker> &worker) {
 
-    LockfreeQueue<Message *> &queue = worker->outQueue;
-    if (queue.empty())
+    Message *raw_message = worker->pop_message();
+    if (raw_message == nullptr) {
       return;
-
+    }
     // wrap the message with a unique pointer.
-    std::unique_ptr<Message> message(queue.front());
-    bool ok = queue.pop();
-    CHECK(ok);
+    std::unique_ptr<Message> message(raw_message);
     // send the message
     auto dest_node_id = message->get_dest_node_id();
     DCHECK(dest_node_id >= 0 && dest_node_id < sockets.size() &&

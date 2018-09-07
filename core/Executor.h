@@ -102,13 +102,26 @@ public:
               << " bytes.";
   }
 
+  void push_message(Message *message) override { in_queue.push(message); }
+
+  Message *pop_message() override {
+    if (out_queue.empty())
+      return nullptr;
+
+    Message *message = out_queue.front();
+    bool ok = out_queue.pop();
+    CHECK(ok);
+
+    return message;
+  }
+
   std::size_t process_request() {
 
     std::size_t size = 0;
 
-    while (!inQueue.empty()) {
-      std::unique_ptr<Message> message(inQueue.front());
-      bool ok = inQueue.pop();
+    while (!in_queue.empty()) {
+      std::unique_ptr<Message> message(in_queue.front());
+      bool ok = in_queue.pop();
       CHECK(ok);
 
       for (auto it = message->begin(); it != message->end(); it++) {
@@ -163,7 +176,7 @@ private:
 
       auto message = messages[i].release();
 
-      outQueue.push(message);
+      out_queue.push(message);
       messages[i] = std::make_unique<Message>();
       init_message(messages[i].get(), i);
     }
@@ -189,5 +202,6 @@ private:
   std::vector<std::function<void(MessagePiece, Message &, TableType &,
                                  TransactionType &)>>
       messageHandlers;
+  LockfreeQueue<Message *> in_queue, out_queue;
 };
 } // namespace scar

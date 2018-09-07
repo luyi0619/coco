@@ -52,13 +52,30 @@ public:
     message.flush();
   }
 
-  static void new_replication_operation_message(Message &message) {}
+  static void new_replication_operation_message(Message &message, Table &table,
+                                                const void *key,
+                                                const void *value) {
+    // TODO
+  }
 
-  static void new_signal_message(Message &message) {}
+  static void new_worker_status_message(Message &message,
+                                        RStoreWorkerStatus status) {
 
-  static void new_c_phase_ack_message(Message &message) {}
+    /*
+     * The structure of a signal message: (signal value, e.g., S_PHASE)
+     */
 
-  static void new_s_phase_ack_message(Message &message) {}
+    // the message is not associated with a table or a partition, use 0.
+    auto message_size = MessagePiece::get_header_size() + sizeof(uint32_t);
+    auto message_piece_header = MessagePiece::construct_message_piece_header(
+        static_cast<uint32_t>(RStoreMessage::REPLICATION_VALUE_REQUEST),
+        message_size, 0, 0);
+
+    Encoder encoder(message.data);
+    encoder << message_piece_header;
+    encoder << static_cast<uint32_t>(status);
+    message.flush();
+  }
 };
 
 template <class Table, class Transaction> class RStoreMessageHandler {
@@ -110,6 +127,34 @@ public:
     } else {
       RStoreHelper::unlock(tid);
     }
+  }
+
+  static void replication_operation_request_handler(MessagePiece inputPiece,
+                                                    Message &responseMessage,
+                                                    Table &table,
+                                                    Transaction &txn) {
+
+    DCHECK(inputPiece.get_message_type() ==
+           static_cast<uint32_t>(RStoreMessage::REPLICATION_VALUE_REQUEST));
+    auto table_id = inputPiece.get_table_id();
+    auto partition_id = inputPiece.get_partition_id();
+    DCHECK(table_id == table.tableID());
+    DCHECK(partition_id == table.partitionID());
+    auto key_size = table.key_size();
+
+    // TODO
+  }
+
+  static std::vector<
+      std::function<void(MessagePiece, Message &, Table &, Transaction &)>>
+  get_message_handlers() {
+    std::vector<
+        std::function<void(MessagePiece, Message &, Table &, Transaction &)>>
+        v;
+    v.resize(static_cast<int>(ControlMessage::NFIELDS));
+    v.push_back(RStoreMessageHandler::replication_value_request_handler);
+    v.push_back(RStoreMessageHandler::replication_operation_request_handler);
+    return v;
   }
 };
 } // namespace scar
