@@ -14,8 +14,7 @@ TEST(TestExecutor, TestTPCC) {
 
   using MetaDataType = std::atomic<uint64_t>;
   using ProtocolType = scar::Silo<scar::tpcc::Database<MetaDataType>>;
-  using TransactionType =
-      scar::Transaction<scar::SiloRWKey, scar::tpcc::Database<MetaDataType>>;
+  using TransactionType = scar::Transaction<scar::tpcc::Database<MetaDataType>>;
   using WorkloadType = scar::tpcc::Workload<TransactionType>;
 
   scar::tpcc::Context context;
@@ -36,8 +35,7 @@ TEST(TestWorker, TestYCSB) {
 
   using MetaDataType = std::atomic<uint64_t>;
   using ProtocolType = scar::Silo<scar::ycsb::Database<MetaDataType>>;
-  using TransactionType =
-      scar::Transaction<scar::SiloRWKey, scar::ycsb::Database<MetaDataType>>;
+  using TransactionType = scar::Transaction<scar::ycsb::Database<MetaDataType>>;
   using WorkloadType = scar::ycsb::Workload<TransactionType>;
 
   scar::ycsb::Context context;

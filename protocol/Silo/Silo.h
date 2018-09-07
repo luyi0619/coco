@@ -12,7 +12,6 @@
 #include "core/Table.h"
 #include "protocol/Silo/SiloHelper.h"
 #include "protocol/Silo/SiloMessage.h"
-#include "protocol/Silo/SiloRWKey.h"
 #include <glog/logging.h>
 
 namespace scar {
@@ -22,7 +21,6 @@ public:
   using DatabaseType = Database;
   using MetaDataType = std::atomic<uint64_t>;
   using TableType = ITable<MetaDataType>;
-  using RWKeyType = SiloRWKey;
   using MessageType = SiloMessage;
 
   using MessageFactoryType = SiloMessageFactory<TableType>;
@@ -57,7 +55,7 @@ public:
     for (auto i = 0u; i < writeSet.size(); i++) {
       auto &writeKey = writeSet[i];
       // only unlock locked records
-      if (!writeKey.get_lock_bit())
+      if (!writeKey.get_write_lock_bit())
         continue;
       auto tableId = writeKey.get_table_id();
       auto partitionId = writeKey.get_partition_id();
@@ -65,7 +63,7 @@ public:
       if (partitioner.has_master_partition(partitionId)) {
         auto key = writeKey.get_key();
         std::atomic<uint64_t> &tid = table->search_metadata(key);
-        if (writeKey.get_lock_bit()) {
+        if (writeKey.get_write_lock_bit()) {
           SiloHelper::unlock(tid);
         }
       } else {
@@ -82,13 +80,6 @@ public:
   template <class Transaction>
   bool commit(Transaction &txn,
               std::vector<std::unique_ptr<Message>> &messages) {
-
-    static_assert(std::is_same<RWKeyType, typename decltype(
-                                              txn.readSet)::value_type>::value,
-                  "RWKeyType do not match.");
-    static_assert(std::is_same<RWKeyType, typename decltype(
-                                              txn.writeSet)::value_type>::value,
-                  "RWKeyType do not match.");
 
     // lock write set
     if (lock_write_set(txn, messages)) {
@@ -140,7 +131,7 @@ private:
           break;
         }
 
-        writeKey.set_lock_bit();
+        writeKey.set_write_lock_bit();
 
         auto readKeyPtr = txn.get_read_key(key);
         // assume no blind write

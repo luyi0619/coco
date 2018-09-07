@@ -6,6 +6,7 @@
 
 #include "common/Message.h"
 #include "core/Partitioner.h"
+#include "core/RWKey.h"
 #include "core/Table.h"
 #include <chrono>
 #include <glog/logging.h>
@@ -15,9 +16,8 @@ namespace scar {
 
 enum class TransactionResult { COMMIT, READY_TO_COMMIT, ABORT, ABORT_NORETRY };
 
-template <class RWKey, class Database> class Transaction {
+template <class Database> class Transaction {
 public:
-  using RWKeyType = RWKey;
   using DatabaseType = Database;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
@@ -54,7 +54,7 @@ public:
       pendingResponses++;
     }
 
-    RWKeyType readKey;
+    RWKey readKey;
 
     readKey.set_table_id(table_id);
     readKey.set_partition_id(partition_id);
@@ -72,7 +72,7 @@ public:
   template <class KeyType, class ValueType>
   void update(std::size_t table_id, std::size_t partition_id,
               const KeyType &key, const ValueType &value) {
-    RWKeyType writeKey;
+    RWKey writeKey;
     writeKey.set_table_id(table_id);
     writeKey.set_partition_id(partition_id);
 
@@ -96,7 +96,7 @@ public:
         break;
       }
 
-      const RWKeyType &readKey = readSet[i];
+      const RWKey &readKey = readSet[i];
       auto tid =
           readRequestHandler(readKey.get_table_id(), readKey.get_partition_id(),
                              i, readKey.get_key(), readKey.get_value(),
@@ -113,7 +113,7 @@ public:
     }
   }
 
-  RWKeyType *get_read_key(const void *key) {
+  RWKey *get_read_key(const void *key) {
 
     for (auto i = 0u; i < readSet.size(); i++) {
       if (readSet[i].get_key() == key) {
@@ -124,12 +124,12 @@ public:
     return nullptr;
   }
 
-  std::size_t add_to_read_set(const RWKeyType &key) {
+  std::size_t add_to_read_set(const RWKey &key) {
     readSet.push_back(key);
     return readSet.size() - 1;
   }
 
-  std::size_t add_to_write_set(const RWKeyType &key) {
+  std::size_t add_to_write_set(const RWKey &key) {
     writeSet.push_back(key);
     return writeSet.size() - 1;
   }
@@ -154,7 +154,7 @@ public:
   ContextType &context;
   RandomType &random;
   Partitioner &partitioner;
-  std::vector<RWKeyType> readSet, writeSet;
+  std::vector<RWKey> readSet, writeSet;
 };
 
 } // namespace scar

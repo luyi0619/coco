@@ -28,7 +28,6 @@ public:
   using RandomType = typename DatabaseType::RandomType;
 
   using ProtocolType = RStore<DatabaseType>;
-  using RWKeyType = RStoreRWKey;
 
   using MessageType = RStoreMessage;
   using MessageFactoryType = RStoreMessageFactory<TableType>;

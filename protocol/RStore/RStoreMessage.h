@@ -11,7 +11,6 @@
 #include "core/Table.h"
 
 #include "protocol/RStore/RStoreHelper.h"
-#include "protocol/RStore/RStoreRWKey.h"
 
 namespace scar {
 

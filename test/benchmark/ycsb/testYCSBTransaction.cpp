@@ -12,7 +12,6 @@ TEST(TestYCSBTransaction, TestBasic) {
 
   using MetaDataType = std::atomic<uint64_t>;
   using DatabaseType = scar::ycsb::Database<MetaDataType>;
-  using RWKeyType = scar::SiloRWKey;
 
   DatabaseType db;
   scar::ycsb::Context context;
@@ -24,7 +23,7 @@ TEST(TestYCSBTransaction, TestBasic) {
 
   scar::ycsb::Storage storage;
 
-  scar::ycsb::ReadModifyWrite<RWKeyType, DatabaseType> t(
-      0, 0, db, context, random, partitioner, storage);
+  scar::ycsb::ReadModifyWrite<DatabaseType> t(0, 0, db, context, random,
+                                              partitioner, storage);
   EXPECT_EQ(true, true);
 }

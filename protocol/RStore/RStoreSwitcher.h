@@ -17,7 +17,6 @@ public:
   using TransactionType = typename WorkloadType::TransactionType;
 
   using ProtocolType = RStore<DatabaseType>;
-  using RWKeyType = RStoreRWKey;
   using TableType = typename DatabaseType::TableType;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;

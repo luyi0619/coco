@@ -8,10 +8,10 @@
 #include "common/Message.h"
 #include "common/MessagePiece.h"
 #include "core/ControlMessage.h"
+#include "core/RWKey.h"
 #include "core/Table.h"
 
 #include "protocol/Silo/SiloHelper.h"
-#include "protocol/Silo/SiloRWKey.h"
 
 namespace scar {
 
@@ -275,7 +275,7 @@ public:
     Decoder dec(stringPiece);
     dec >> tid >> key_offset;
 
-    SiloRWKey &readKey = txn.readSet[key_offset];
+    RWKey &readKey = txn.readSet[key_offset];
     dec = Decoder(inputPiece.toStringPiece());
     dec.read_n_bytes(readKey.get_value(), value_size);
     readKey.set_tid(tid);
@@ -359,13 +359,13 @@ public:
 
     DCHECK(dec.size() == 0);
 
-    SiloRWKey &writeKey = txn.writeSet[key_offset];
+    RWKey &writeKey = txn.writeSet[key_offset];
 
     bool tid_changed = false;
 
     if (success) {
 
-      SiloRWKey *readKey = txn.get_read_key(writeKey.get_key());
+      RWKey *readKey = txn.get_read_key(writeKey.get_key());
 
       DCHECK(readKey != nullptr);
 
@@ -376,7 +376,7 @@ public:
       }
 
       writeKey.set_tid(latest_tid);
-      writeKey.set_lock_bit();
+      writeKey.set_write_lock_bit();
     }
 
     txn.pendingResponses--;
@@ -463,7 +463,7 @@ public:
 
     dec >> success >> key_offset;
 
-    SiloRWKey &readKey = txn.readSet[key_offset];
+    RWKey &readKey = txn.readSet[key_offset];
 
     if (success) {
       readKey.set_read_validation_success_bit();

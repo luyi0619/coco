@@ -16,10 +16,8 @@ TEST(TestCoordinator, TestTPCC) {
 
   using MetaDataType = std::atomic<uint64_t>;
   using DatabaseType = scar::tpcc::Database<MetaDataType>;
-  using RWKeyType = scar::SiloRWKey;
   using ProtocolType = scar::Silo<DatabaseType>;
-  using WorkloadType =
-      scar::tpcc::Workload<scar::Transaction<RWKeyType, DatabaseType>>;
+  using WorkloadType = scar::tpcc::Workload<scar::Transaction<DatabaseType>>;
 
   int n = FLAGS_threads;
 
@@ -42,10 +40,8 @@ TEST(TestCoordinator, TestConnect) {
 
   using MetaDataType = std::atomic<uint64_t>;
   using DatabaseType = scar::tpcc::Database<MetaDataType>;
-  using RWKeyType = scar::SiloRWKey;
   using ProtocolType = scar::Silo<DatabaseType>;
-  using WorkloadType =
-      scar::tpcc::Workload<scar::Transaction<RWKeyType, DatabaseType>>;
+  using WorkloadType = scar::tpcc::Workload<scar::Transaction<DatabaseType>>;
 
   int n = FLAGS_threads;
 

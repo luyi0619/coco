@@ -18,15 +18,13 @@ namespace tpcc {
 template <class Transaction> class Workload {
 public:
   using TransactionType = Transaction;
-  using RWKeyType = typename TransactionType::RWKeyType;
   using DatabaseType = typename TransactionType::DatabaseType;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
-  using StorageType = typename NewOrder<RWKeyType, DatabaseType>::StorageType;
+  using StorageType = typename NewOrder<DatabaseType>::StorageType;
   static_assert(
-      std::is_same<
-          typename NewOrder<RWKeyType, DatabaseType>::StorageType,
-          typename Payment<RWKeyType, DatabaseType>::StorageType>::value,
+      std::is_same<typename NewOrder<DatabaseType>::StorageType,
+                   typename Payment<DatabaseType>::StorageType>::value,
       "storage types do not match");
 
   Workload(std::size_t coordinator_id, std::size_t worker_id, DatabaseType &db,
@@ -41,10 +39,10 @@ public:
     std::unique_ptr<TransactionType> p;
 
     if (x <= 50) {
-      p = std::make_unique<NewOrder<RWKeyType, DatabaseType>>(
+      p = std::make_unique<NewOrder<DatabaseType>>(
           coordinator_id, worker_id, db, context, random, partitioner, storage);
     } else {
-      p = std::make_unique<Payment<RWKeyType, DatabaseType>>(
+      p = std::make_unique<Payment<DatabaseType>>(
           coordinator_id, worker_id, db, context, random, partitioner, storage);
     }
 

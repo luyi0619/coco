@@ -18,7 +18,6 @@ template <class Workload, class Protocol> class Executor : public Worker {
 public:
   using WorkloadType = Workload;
   using ProtocolType = Protocol;
-  using RWKeyType = typename WorkloadType::RWKeyType;
   using DatabaseType = typename WorkloadType::DatabaseType;
   using TableType = typename DatabaseType::TableType;
   using TransactionType = typename WorkloadType::TransactionType;

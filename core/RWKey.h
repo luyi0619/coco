@@ -1,5 +1,5 @@
 //
-// Created by Yi Lu on 8/31/18.
+// Created by Yi Lu on 9/7/18.
 //
 
 #pragma once
@@ -12,20 +12,8 @@
 
 namespace scar {
 
-class SiloRWKey {
+class RWKey {
 public:
-  // lock bit
-  void set_lock_bit() {
-    clear_lock_bit();
-    bitvec |= LOCK_BIT_MASK << LOCK_BIT_OFFSET;
-  }
-
-  void clear_lock_bit() { bitvec &= ~(LOCK_BIT_MASK << LOCK_BIT_OFFSET); }
-
-  bool get_lock_bit() const {
-    return (bitvec >> LOCK_BIT_OFFSET) & LOCK_BIT_MASK;
-  }
-
   // local index read bit
 
   void set_local_index_read_bit() {
@@ -72,6 +60,20 @@ public:
   uint32_t get_read_validation_success_bit() const {
     return (bitvec >> READ_VALIDATION_SUCCESS_BIT_OFFSET) &
            READ_VALIDATION_SUCCESS_BIT_MASK;
+  }
+
+  // write lock bit
+  void set_write_lock_bit() {
+    clear_write_lock_bit();
+    bitvec |= WRITE_LOCK_BIT_MASK << WRITE_LOCK_BIT_OFFSET;
+  }
+
+  void clear_write_lock_bit() {
+    bitvec &= ~(WRITE_LOCK_BIT_MASK << WRITE_LOCK_BIT_OFFSET);
+  }
+
+  bool get_write_lock_bit() const {
+    return (bitvec >> WRITE_LOCK_BIT_OFFSET) & WRITE_LOCK_BIT_MASK;
   }
 
   // table id
@@ -128,13 +130,15 @@ private:
   /*
    * A bitvec is a 32-bit word.
    *
-   * [ table id (5) ] | partition id (8) | unused bit (15) |
-   *  read validation success bit (1)  | read request bit (1) | local index read
-   * (1) | lock bit(1) ]
+   * [ table id (5) ] | partition id (8) | unused bit (15) - read lock  |
+   *   write lock bit(1) | read validation success bit (1)  |
+   *   read request bit (1) | local index read (1)  ]
    *
-   * read request bit is set when the read response is received.
-   * lock bit is set when a lock is acquired.
+   * write lock bit is set when a write lock is acquired.
    * read validation success bit is set when the read is successfully validated.
+   * read request bit is set when the read response is received.
+   * local index read  is set when the read is from a local read only index.
+   *
    */
 
   uint64_t bitvec = 0;
@@ -146,15 +150,20 @@ private:
 public:
   static constexpr uint32_t TABLE_ID_MASK = 0x1f;
   static constexpr uint32_t TABLE_ID_OFFSET = 27;
+
   static constexpr uint32_t PARTITION_ID_MASK = 0xff;
   static constexpr uint32_t PARTITION_ID_OFFSET = 19;
+
+  static constexpr uint32_t WRITE_LOCK_BIT_MASK = 0x1;
+  static constexpr uint32_t WRITE_LOCK_BIT_OFFSET = 3;
+
   static constexpr uint32_t READ_VALIDATION_SUCCESS_BIT_MASK = 0x1;
-  static constexpr uint32_t READ_VALIDATION_SUCCESS_BIT_OFFSET = 3;
+  static constexpr uint32_t READ_VALIDATION_SUCCESS_BIT_OFFSET = 2;
+
   static constexpr uint32_t READ_REQUEST_BIT_MASK = 0x1;
-  static constexpr uint32_t READ_REQUEST_BIT_OFFSET = 2;
+  static constexpr uint32_t READ_REQUEST_BIT_OFFSET = 1;
+
   static constexpr uint32_t LOCAL_INDEX_READ_BIT_MASK = 0x1;
-  static constexpr uint32_t LOCAL_INDEX_READ_BIT_OFFSET = 1;
-  static constexpr uint32_t LOCK_BIT_MASK = 0x1;
-  static constexpr uint32_t LOCK_BIT_OFFSET = 0;
+  static constexpr uint32_t LOCAL_INDEX_READ_BIT_OFFSET = 0;
 };
 } // namespace scar

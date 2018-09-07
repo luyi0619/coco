@@ -18,11 +18,9 @@ struct Storage {
   ycsb::value ycsb_values[YCSB_FIELD_SIZE];
 };
 
-template <class RWKey, class Database>
-class ReadModifyWrite : public Transaction<RWKey, Database> {
+template <class Database> class ReadModifyWrite : public Transaction<Database> {
 
 public:
-  using RWKeyType = RWKey;
   using DatabaseType = Database;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
@@ -33,8 +31,8 @@ public:
   ReadModifyWrite(std::size_t coordinator_id, std::size_t worker_id,
                   DatabaseType &db, ContextType &context, RandomType &random,
                   Partitioner &partitioner, Storage &storage)
-      : Transaction<RWKey, Database>(coordinator_id, worker_id, db, context,
-                                     random, partitioner),
+      : Transaction<Database>(coordinator_id, worker_id, db, context, random,
+                              partitioner),
         storage(storage) {}
 
   virtual ~ReadModifyWrite() override = default;

@@ -9,10 +9,10 @@
 #include <thread>
 
 #include "core/Partitioner.h"
+#include "core/RWKey.h"
 #include "core/Table.h"
 #include "protocol/RStore/RStoreHelper.h"
 #include "protocol/RStore/RStoreMessage.h"
-#include "protocol/RStore/RStoreRWKey.h"
 #include <glog/logging.h>
 
 namespace scar {
@@ -22,7 +22,6 @@ public:
   using DatabaseType = Database;
   using MetaDataType = std::atomic<uint64_t>;
   using TableType = ITable<MetaDataType>;
-  using RWKeyType = RStoreRWKey;
   using MessageType = RStoreMessage;
 
   using MessageFactoryType = RStoreMessageFactory<TableType>;
@@ -62,14 +61,6 @@ public:
   template <class Transaction>
   bool commit(Transaction &txn,
               std::vector<std::unique_ptr<Message>> &messages) {
-
-    static_assert(std::is_same<RWKeyType, typename decltype(
-                                              txn.readSet)::value_type>::value,
-                  "RWKeyType do not match.");
-    static_assert(std::is_same<RWKeyType, typename decltype(
-                                              txn.writeSet)::value_type>::value,
-                  "RWKeyType do not match.");
-
     // lock write set
     lock_write_set(txn);
 
@@ -94,7 +85,7 @@ private:
     auto &readSet = txn.readSet;
     auto &writeSet = txn.writeSet;
 
-    auto getReadKey = [&readSet](const void *key) -> RStoreRWKey * {
+    auto getReadKey = [&readSet](const void *key) -> RWKey * {
       for (auto &readKey : readSet) {
         if (readKey.get_key() == key) {
           return &readKey;
@@ -106,7 +97,7 @@ private:
     bool tidChanged = false;
 
     std::sort(writeSet.begin(), writeSet.end(),
-              [](const RStoreRWKey &k1, const RStoreRWKey &k2) {
+              [](const RWKey &k1, const RWKey &k2) {
                 return k1.get_sort_key() < k2.get_sort_key();
               });
 
@@ -128,7 +119,7 @@ private:
       }
 
       writeKey.set_tid(latestTid);
-      writeKey.set_lock_bit();
+      writeKey.set_write_lock_bit();
     }
 
     return tidChanged;

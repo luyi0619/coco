@@ -21,8 +21,7 @@ int main(int argc, char *argv[]) {
   google::ParseCommandLineFlags(&argc, &argv, true);
 
   using MetaDataType = std::atomic<uint64_t>;
-  using TransactionType =
-      scar::Transaction<scar::SiloRWKey, scar::tpcc::Database<MetaDataType>>;
+  using TransactionType = scar::Transaction<scar::tpcc::Database<MetaDataType>>;
   using ProtocolType = scar::Silo<scar::tpcc::Database<MetaDataType>>;
   using WorkloadType = scar::tpcc::Workload<TransactionType>;
 

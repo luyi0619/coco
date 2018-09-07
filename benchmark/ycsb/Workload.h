@@ -19,12 +19,10 @@ namespace ycsb {
 template <class Transaction> class Workload {
 public:
   using TransactionType = Transaction;
-  using RWKeyType = typename TransactionType::RWKeyType;
   using DatabaseType = typename TransactionType::DatabaseType;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
-  using StorageType =
-      typename ReadModifyWrite<RWKeyType, DatabaseType>::StorageType;
+  using StorageType = typename ReadModifyWrite<DatabaseType>::StorageType;
 
   Workload(std::size_t coordinator_id, std::size_t worker_id, DatabaseType &db,
            ContextType &context, RandomType &random, Partitioner &partitioner)
@@ -34,7 +32,7 @@ public:
   std::unique_ptr<TransactionType> nextTransaction(StorageType &storage) {
 
     std::unique_ptr<TransactionType> p =
-        std::make_unique<ReadModifyWrite<RWKeyType, DatabaseType>>(
+        std::make_unique<ReadModifyWrite<DatabaseType>>(
             coordinator_id, worker_id, db, context, random, partitioner,
             storage);
 
