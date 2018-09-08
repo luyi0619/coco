@@ -66,8 +66,7 @@ public:
     // the message is not associated with a table or a partition, use 0.
     auto message_size = MessagePiece::get_header_size() + sizeof(uint32_t);
     auto message_piece_header = MessagePiece::construct_message_piece_header(
-        static_cast<uint32_t>(RStoreMessage::REPLICATION_VALUE_REQUEST),
-        message_size, 0, 0);
+        static_cast<uint32_t>(RStoreMessage::SIGNAL), message_size, 0, 0);
 
     Encoder encoder(message.data);
     encoder << message_piece_header;

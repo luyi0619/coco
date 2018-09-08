@@ -39,8 +39,8 @@ public:
 
   void coordinator_start() {
 
-    std::size_t n_workers = context.coordinatorNum;
-    std::size_t n_coordinators = context.workerNum;
+    std::size_t n_workers = context.workerNum;
+    std::size_t n_coordinators = context.coordinatorNum;
 
     while (!stopFlag.load()) {
 
@@ -83,8 +83,9 @@ public:
   }
 
   void non_coordinator_start() {
-    std::size_t n_workers = context.coordinatorNum;
-    std::size_t n_coordinators = context.workerNum;
+
+    std::size_t n_workers = context.workerNum;
+    std::size_t n_coordinators = context.coordinatorNum;
 
     for (;;) {
 
@@ -205,7 +206,7 @@ public:
     // only coordinator waits for ack
     DCHECK(coordinator_id == 0);
 
-    std::size_t n_coordinators = context.workerNum;
+    std::size_t n_coordinators = context.coordinatorNum;
 
     for (auto i = 0u; i < n_coordinators; i++) {
       if (i == coordinator_id) {
@@ -233,7 +234,7 @@ public:
 
   void broadcast_stop() {
 
-    std::size_t n_coordinators = context.workerNum;
+    std::size_t n_coordinators = context.coordinatorNum;
 
     for (auto i = 0u; i < n_coordinators; i++) {
       if (i == coordinator_id)
@@ -250,7 +251,13 @@ public:
     // only non-coordinator calls this function
     DCHECK(coordinator_id != 0);
 
-    MessageFactoryType::new_signal_message(*messages[0], status);
+    if (status == RStoreWorkerStatus::C_PHASE) {
+      MessageFactoryType::new_c_phase_ack_message(*messages[0]);
+    } else if (status == RStoreWorkerStatus::S_PHASE) {
+      MessageFactoryType::new_s_phase_ack_message(*messages[0]);
+    } else {
+      CHECK(false);
+    }
     flush_messages();
   }
 
@@ -288,9 +295,8 @@ public:
     case RStoreMessage::S_PHASE_ACK:
       ack_in_queue.push(message);
       break;
-
     default:
-      CHECK(false);
+      CHECK(false) << "Message type: " << static_cast<uint32_t>(message_type);
       break;
     }
   }

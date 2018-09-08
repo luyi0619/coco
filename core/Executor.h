@@ -48,6 +48,8 @@ public:
 
   void start() override {
 
+    LOG(INFO) << "Executor " << id << " starts.";
+
     StorageType storage;
     uint64_t last_seed = 0;
     bool retry_transaction = false;

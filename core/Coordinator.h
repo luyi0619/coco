@@ -16,10 +16,9 @@
 
 namespace scar {
 
-template <class Workload, class Protocol> class Coordinator {
+template <class Workload> class Coordinator {
 public:
   using WorkloadType = Workload;
-  using ProtocolType = Protocol;
   using DatabaseType = typename WorkloadType::DatabaseType;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
@@ -34,13 +33,6 @@ public:
   void start() {
 
     LOG(INFO) << "Coordinator initializes " << context.workerNum << " workers.";
-    /*
-        for (auto i = 0u; i < context.workerNum; i++) {
-          workers.push_back(std::make_shared<Executor<WorkloadType,
-       ProtocolType>>( id, i, db, context, workerStopFlag));
-        }
-
-        */
 
     workers = WorkerFactory::create_workers<WorkloadType>(id, db, context,
                                                           workerStopFlag);
@@ -58,10 +50,9 @@ public:
 
     std::vector<std::thread> threads;
 
-    LOG(INFO) << "Coordinator starts to run " << context.workerNum
-              << " workers.";
+    LOG(INFO) << "Coordinator starts to run " << workers.size() << " workers.";
 
-    for (auto i = 0u; i < context.workerNum; i++) {
+    for (auto i = 0u; i < workers.size(); i++) {
       threads.emplace_back(&Worker::start, workers[i].get());
     }
 

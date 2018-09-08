@@ -5,7 +5,6 @@
 #include "benchmark/tpcc/Database.h"
 #include "benchmark/tpcc/Workload.h"
 #include "core/Coordinator.h"
-#include "protocol/Silo/Silo.h"
 #include <gtest/gtest.h>
 
 DEFINE_int32(threads, 1, "the number of threads.");
@@ -16,7 +15,6 @@ TEST(TestCoordinator, TestTPCC) {
 
   using MetaDataType = std::atomic<uint64_t>;
   using DatabaseType = scar::tpcc::Database<MetaDataType>;
-  using ProtocolType = scar::Silo<DatabaseType>;
   using WorkloadType = scar::tpcc::Workload<scar::Transaction<DatabaseType>>;
 
   int n = FLAGS_threads;
@@ -30,8 +28,7 @@ TEST(TestCoordinator, TestTPCC) {
   std::atomic<uint64_t> epoch;
   std::atomic<bool> stopFlag;
 
-  scar::Coordinator<WorkloadType, ProtocolType> c(0, {"127.0.0.1"}, db,
-                                                  context);
+  scar::Coordinator<WorkloadType> c(0, {"127.0.0.1"}, db, context);
 
   EXPECT_EQ(true, true);
 }
@@ -40,7 +37,6 @@ TEST(TestCoordinator, TestConnect) {
 
   using MetaDataType = std::atomic<uint64_t>;
   using DatabaseType = scar::tpcc::Database<MetaDataType>;
-  using ProtocolType = scar::Silo<DatabaseType>;
   using WorkloadType = scar::tpcc::Workload<scar::Transaction<DatabaseType>>;
 
   int n = FLAGS_threads;
@@ -54,7 +50,7 @@ TEST(TestCoordinator, TestConnect) {
     context.workerNum = n;
 
     DatabaseType db;
-    scar::Coordinator<WorkloadType, ProtocolType> c(id, peers, db, context);
+    scar::Coordinator<WorkloadType> c(id, peers, db, context);
     c.connectToPeers();
   };
 

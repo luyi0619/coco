@@ -28,7 +28,6 @@ public:
       }
     } else if (context.protocol == "RStore") {
 
-      std::vector<std::shared_ptr<Worker>> workers;
       std::shared_ptr<RStoreSwitcher<Workload>> switcher =
           std::make_shared<RStoreSwitcher<Workload>>(
               coordinator_id, context.workerNum, context, stop_flag);

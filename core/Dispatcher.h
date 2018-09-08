@@ -45,7 +45,6 @@ public:
         if (message == nullptr) {
           continue;
         }
-
         auto workerId = message->get_worker_id();
         // release the unique ptr
         workers[workerId]->push_message(message.release());

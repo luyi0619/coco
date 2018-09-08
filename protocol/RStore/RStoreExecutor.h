@@ -53,6 +53,8 @@ public:
 
   void start() override {
 
+    LOG(INFO) << "Executor " << id << " starts.";
+
     StorageType storage;
     uint64_t last_seed = 0;
 
@@ -73,10 +75,13 @@ public:
 
       if (status == RStoreWorkerStatus::C_PHASE) {
 
+        n_complete_workers.fetch_add(1);
+
       } else if (status == RStoreWorkerStatus::S_PHASE) {
 
         // run transactions, for now, let's run 10
 
+        /*
         for (int i = 0; i < 10; i++) {
 
           bool retry_transaction = false;
@@ -110,7 +115,7 @@ public:
             n_abort_no_retry.fetch_add(1);
           }
         }
-
+*/
         n_complete_workers.fetch_add(1);
 
       } else {

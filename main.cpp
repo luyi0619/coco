@@ -1,7 +1,6 @@
 #include "benchmark/tpcc/Database.h"
 #include "benchmark/tpcc/Workload.h"
 #include "core/Coordinator.h"
-#include "protocol/Silo/Silo.h"
 #include <boost/algorithm/string.hpp>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
@@ -22,7 +21,6 @@ int main(int argc, char *argv[]) {
 
   using MetaDataType = std::atomic<uint64_t>;
   using TransactionType = scar::Transaction<scar::tpcc::Database<MetaDataType>>;
-  using ProtocolType = scar::Silo<scar::tpcc::Database<MetaDataType>>;
   using WorkloadType = scar::tpcc::Workload<TransactionType>;
 
   std::vector<std::string> peers;
@@ -30,7 +28,7 @@ int main(int argc, char *argv[]) {
 
   int n = FLAGS_threads;
   scar::tpcc::Context context;
-  context.protocol = "Silo";
+  context.protocol = "RStore";
   context.coordinatorNum = peers.size();
   context.partitionNum = n * context.coordinatorNum;
   context.workerNum = n;
@@ -38,7 +36,7 @@ int main(int argc, char *argv[]) {
   scar::tpcc::Database<MetaDataType> db;
   db.initialize(context, context.partitionNum, n);
 
-  scar::Coordinator<WorkloadType, ProtocolType> c(FLAGS_id, peers, db, context);
+  scar::Coordinator<WorkloadType> c(FLAGS_id, peers, db, context);
   c.connectToPeers();
   c.start();
   return 0;
