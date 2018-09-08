@@ -29,20 +29,22 @@ public:
   using StorageType = Storage;
 
   ReadModifyWrite(std::size_t coordinator_id, std::size_t worker_id,
-                  DatabaseType &db, ContextType &context, RandomType &random,
+                  std::size_t partition_id, DatabaseType &db,
+                  const ContextType &context, RandomType &random,
                   Partitioner &partitioner, Storage &storage)
-      : Transaction<Database>(coordinator_id, worker_id, db, context, random,
-                              partitioner),
+      : Transaction<Database>(coordinator_id, worker_id, partition_id, db,
+                              context, random, partitioner),
         storage(storage) {}
 
   virtual ~ReadModifyWrite() override = default;
 
   TransactionResult execute() override {
-    ContextType &context = this->context;
+
+    const ContextType &context = this->context;
     RandomType &random = this->random;
-    auto partitionID = random.uniform_dist(0, context.partitionNum - 1);
+
     YCSBQuery<YCSB_FIELD_SIZE> query =
-        makeYCSBQuery<YCSB_FIELD_SIZE>()(context, partitionID, random);
+        makeYCSBQuery<YCSB_FIELD_SIZE>()(context, this->partition_id, random);
 
     DCHECK(context.keysPerTransaction == YCSB_FIELD_SIZE);
 

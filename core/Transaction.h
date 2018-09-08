@@ -25,11 +25,12 @@ public:
   using TableType = ITable<MetaDataType>;
 
   Transaction(std::size_t coordinator_id, std::size_t worker_id,
-              DatabaseType &db, ContextType &context, RandomType &random,
+              std::size_t partition_id, DatabaseType &db,
+              const ContextType &context, RandomType &random,
               Partitioner &partitioner)
       : coordinator_id(coordinator_id), worker_id(worker_id),
-        startTime(std::chrono::steady_clock::now()), db(db), context(context),
-        random(random), partitioner(partitioner) {
+        partition_id(partition_id), startTime(std::chrono::steady_clock::now()),
+        db(db), context(context), random(random), partitioner(partitioner) {
     reset();
   }
 
@@ -135,7 +136,7 @@ public:
   }
 
 public:
-  std::size_t coordinator_id, worker_id;
+  std::size_t coordinator_id, worker_id, partition_id;
   std::chrono::steady_clock::time_point startTime;
   std::size_t pendingResponses;
 
@@ -151,7 +152,7 @@ public:
   std::function<void()> message_flusher;
 
   DatabaseType &db;
-  ContextType &context;
+  const ContextType &context;
   RandomType &random;
   Partitioner &partitioner;
   std::vector<RWKey> readSet, writeSet;

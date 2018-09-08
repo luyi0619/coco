@@ -41,7 +41,7 @@ public:
             coordinator_id, context.coordinatorNum)),
         worker_status(worker_status), n_complete_workers(n_complete_workers),
         protocol(db, *partitioner),
-        workload(coordinator_id, id, db, context, random, *partitioner) {
+        workload(coordinator_id, id, db, random, *partitioner) {
 
     for (auto i = 0u; i < context.coordinatorNum; i++) {
       messages.emplace_back(std::make_unique<Message>());
@@ -55,10 +55,8 @@ public:
 
     LOG(INFO) << "Executor " << id << " starts.";
 
-    StorageType storage;
-    uint64_t last_seed = 0;
-
-    std::unique_ptr<TransactionType> transaction;
+    ContextType c_context = context.get_cross_partition_context();
+    ContextType s_context = context.get_single_partition_context();
 
     for (;;) {
       RStoreWorkerStatus status =
@@ -75,47 +73,45 @@ public:
 
       if (status == RStoreWorkerStatus::C_PHASE) {
 
-        n_complete_workers.fetch_add(1);
+        if (coordinator_id == 0) {
+
+          run_transaction(c_context, status);
+          n_complete_workers.fetch_add(1);
+
+          while (static_cast<RStoreWorkerStatus>(worker_status.load()) !=
+                 RStoreWorkerStatus::STOP) {
+            std::this_thread::yield();
+          }
+
+        } else {
+
+          while (static_cast<RStoreWorkerStatus>(worker_status.load()) !=
+                 RStoreWorkerStatus::STOP) {
+            process_request();
+          }
+
+          // process replication request after all workers stop.
+          process_request();
+          n_complete_workers.fetch_add(1);
+        }
 
       } else if (status == RStoreWorkerStatus::S_PHASE) {
 
         // run transactions, for now, let's run 10
+        run_transaction(s_context, status);
 
-        /*
-        for (int i = 0; i < 10; i++) {
+        n_complete_workers.fetch_add(1);
 
-          bool retry_transaction = false;
+        // once all workers are stop, we need to process the replication
+        // requests
 
-          process_request();
-          last_seed = random.get_seed();
-
-          if (retry_transaction) {
-            transaction->reset();
-          } else {
-            transaction = workload.nextTransaction(storage);
-            setupHandlers(*transaction);
-          }
-
-          auto result = transaction->execute();
-          if (result == TransactionResult::READY_TO_COMMIT) {
-            if (protocol.commit(*transaction, messages)) {
-              n_commit.fetch_add(1);
-              retry_transaction = false;
-            } else {
-              if (transaction->abort_lock) {
-                n_abort_lock.fetch_add(1);
-              } else {
-                DCHECK(transaction->abort_read_validation);
-                n_abort_read_validation.fetch_add(1);
-              }
-              random.set_seed(last_seed);
-              retry_transaction = true;
-            }
-          } else {
-            n_abort_no_retry.fetch_add(1);
-          }
+        while (static_cast<RStoreWorkerStatus>(worker_status.load()) !=
+               RStoreWorkerStatus::STOP) {
+          std::this_thread::yield();
         }
-*/
+
+        // n_complete_workers has been cleared
+        process_request();
         n_complete_workers.fetch_add(1);
 
       } else {
@@ -124,6 +120,50 @@ public:
     }
 
     LOG(INFO) << "Executor " << id << " exits.";
+  }
+
+  void run_transaction(const ContextType &context, RStoreWorkerStatus status) {
+
+    StorageType storage;
+    uint64_t last_seed = 0;
+
+    std::size_t partition_id = 0;
+
+    std::unique_ptr<TransactionType> transaction;
+
+    for (int i = 0; i < 10; i++) {
+
+      bool retry_transaction = false;
+
+      process_request();
+      last_seed = random.get_seed();
+
+      if (retry_transaction) {
+        transaction->reset();
+      } else {
+        transaction = workload.next_transaction(context, partition_id, storage);
+        setupHandlers(*transaction);
+      }
+
+      auto result = transaction->execute();
+      if (result == TransactionResult::READY_TO_COMMIT) {
+        if (protocol.commit(*transaction, messages)) {
+          n_commit.fetch_add(1);
+          retry_transaction = false;
+        } else {
+          if (transaction->abort_lock) {
+            n_abort_lock.fetch_add(1);
+          } else {
+            DCHECK(transaction->abort_read_validation);
+            n_abort_read_validation.fetch_add(1);
+          }
+          random.set_seed(last_seed);
+          retry_transaction = true;
+        }
+      } else {
+        n_abort_no_retry.fetch_add(1);
+      }
+    }
   }
 
   void onExit() override {

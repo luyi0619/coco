@@ -23,7 +23,7 @@ TEST(TestYCSBTransaction, TestBasic) {
 
   scar::ycsb::Storage storage;
 
-  scar::ycsb::ReadModifyWrite<DatabaseType> t(0, 0, db, context, random,
+  scar::ycsb::ReadModifyWrite<DatabaseType> t(0, 0, 0, db, context, random,
                                               partitioner, storage);
   EXPECT_EQ(true, true);
 }

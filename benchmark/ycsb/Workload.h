@@ -25,16 +25,18 @@ public:
   using StorageType = typename ReadModifyWrite<DatabaseType>::StorageType;
 
   Workload(std::size_t coordinator_id, std::size_t worker_id, DatabaseType &db,
-           ContextType &context, RandomType &random, Partitioner &partitioner)
+           RandomType &random, Partitioner &partitioner)
       : coordinator_id(coordinator_id), worker_id(worker_id), db(db),
-        context(context), random(random), partitioner(partitioner) {}
+        random(random), partitioner(partitioner) {}
 
-  std::unique_ptr<TransactionType> nextTransaction(StorageType &storage) {
+  std::unique_ptr<TransactionType> next_transaction(const ContextType &context,
+                                                    std::size_t partition_id,
+                                                    StorageType &storage) {
 
     std::unique_ptr<TransactionType> p =
         std::make_unique<ReadModifyWrite<DatabaseType>>(
-            coordinator_id, worker_id, db, context, random, partitioner,
-            storage);
+            coordinator_id, worker_id, partition_id, db, context, random,
+            partitioner, storage);
 
     return p;
   }
@@ -43,7 +45,6 @@ private:
   std::size_t coordinator_id;
   std::size_t worker_id;
   DatabaseType &db;
-  ContextType &context;
   RandomType &random;
   Partitioner &partitioner;
 };

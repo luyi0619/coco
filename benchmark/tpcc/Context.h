@@ -15,6 +15,20 @@ class Context : public scar::Context {
 public:
   TPCCWorkloadType workloadType = TPCCWorkloadType::MIXED;
 
+  Context get_single_partition_context() {
+    Context c = *this;
+    c.newOrderCrossPartitionProbability = 0;
+    c.paymentCrossPartitionProbability = 0;
+    return c;
+  }
+
+  Context get_cross_partition_context() {
+    Context c = *this;
+    c.newOrderCrossPartitionProbability = 100;
+    c.paymentCrossPartitionProbability = 100;
+    return c;
+  }
+
   int newOrderCrossPartitionProbability = 10; // out of 100
   int paymentCrossPartitionProbability = 15;  // out of 100
 };

@@ -48,36 +48,26 @@ public:
 
       n_completed_workers.store(0);
       signal_worker(RStoreWorkerStatus::C_PHASE);
-
       // only for debug
       std::this_thread::sleep_for(std::chrono::seconds(1));
-
-      // wait for all workers to finish
-      while (n_completed_workers.load() < n_workers) {
-        // change to nop_pause()?
-        std::this_thread::yield();
-      }
-
+      wait_all_workers_finish();
+      set_worker_status(RStoreWorkerStatus::STOP);
       broadcast_stop();
       wait4_ack(RStoreWorkerStatus::C_PHASE);
 
       // start s-phase
 
       n_completed_workers.store(0);
-
       signal_worker(RStoreWorkerStatus::S_PHASE);
-
       // only for debug
       std::this_thread::sleep_for(std::chrono::seconds(1));
-
-      // wait for all workers to finish
-      while (n_completed_workers.load() < n_workers) {
-        // change to nop_pause()?
-        std::this_thread::yield();
-      }
-
+      wait_all_workers_finish();
       broadcast_stop();
       wait4_stop(n_coordinators - 1);
+      // process replication
+      n_completed_workers.store(0);
+      set_worker_status(RStoreWorkerStatus::STOP);
+      wait_all_workers_finish();
       wait4_ack(RStoreWorkerStatus::S_PHASE);
     }
   }
@@ -104,10 +94,7 @@ public:
       set_worker_status(RStoreWorkerStatus::C_PHASE);
       wait4_stop(1);
       set_worker_status(RStoreWorkerStatus::STOP);
-      // wait for all workers to finish
-      while (n_completed_workers.load() < n_workers) {
-        std::this_thread::yield();
-      }
+      wait_all_workers_finish();
       send_ack(RStoreWorkerStatus::C_PHASE);
 
       LOG(INFO) << "start S-Phase";
@@ -118,13 +105,23 @@ public:
       DCHECK(status == RStoreWorkerStatus::S_PHASE);
       n_completed_workers.store(0);
       set_worker_status(RStoreWorkerStatus::S_PHASE);
-      // wait for all workers to finish
-      while (n_completed_workers.load() < n_workers) {
-        std::this_thread::yield();
-      }
+      wait_all_workers_finish();
       broadcast_stop();
       wait4_stop(n_coordinators - 1);
+      // process replication
+      n_completed_workers.store(0);
+      set_worker_status(RStoreWorkerStatus::STOP);
+      wait_all_workers_finish();
       send_ack(RStoreWorkerStatus::S_PHASE);
+    }
+  }
+
+  void wait_all_workers_finish() {
+    std::size_t n_workers = context.workerNum;
+    // wait for all workers to finish
+    while (n_completed_workers.load() < n_workers) {
+      // change to nop_pause()?
+      std::this_thread::yield();
     }
   }
 

@@ -55,26 +55,22 @@ public:
   using TableType = ITable<MetaDataType>;
   using StorageType = Storage;
 
-  NewOrder(std::size_t coordinator_id, std::size_t worker_id, DatabaseType &db,
-           ContextType &context, RandomType &random, Partitioner &partitioner,
-           Storage &storage)
-      : Transaction<Database>(coordinator_id, worker_id, db, context, random,
-                              partitioner),
+  NewOrder(std::size_t coordinator_id, std::size_t worker_id,
+           std::size_t partition_id, DatabaseType &db,
+           const ContextType &context, RandomType &random,
+           Partitioner &partitioner, Storage &storage)
+      : Transaction<Database>(coordinator_id, worker_id, partition_id, db,
+                              context, random, partitioner),
         storage(storage) {}
 
   virtual ~NewOrder() override = default;
 
   TransactionResult execute() override {
 
-    ContextType &context = this->context;
+    const ContextType &context = this->context;
     RandomType &random = this->random;
 
-    int partition_num_per_node = context.partitionNum / context.coordinatorNum;
-    int partition_id = random.uniform_dist(0, partition_num_per_node - 1) *
-                           context.coordinatorNum +
-                       this->coordinator_id;
-
-    int32_t W_ID = partition_id + 1;
+    int32_t W_ID = this->partition_id + 1;
     NewOrderQuery query = makeNewOrderQuery()(context, W_ID, random);
 
     // The input data (see Clause 2.4.3.2) are communicated to the SUT.
@@ -287,26 +283,22 @@ public:
   using TableType = ITable<MetaDataType>;
   using StorageType = Storage;
 
-  Payment(std::size_t coordinator_id, std::size_t worker_id, DatabaseType &db,
-          ContextType &context, RandomType &random, Partitioner &partitioner,
-          Storage &storage)
-      : Transaction<Database>(coordinator_id, worker_id, db, context, random,
-                              partitioner),
+  Payment(std::size_t coordinator_id, std::size_t worker_id,
+          std::size_t partition_id, DatabaseType &db,
+          const ContextType &context, RandomType &random,
+          Partitioner &partitioner, Storage &storage)
+      : Transaction<Database>(coordinator_id, worker_id, partition_id, db,
+                              context, random, partitioner),
         storage(storage) {}
 
   virtual ~Payment() override = default;
 
   TransactionResult execute() override {
 
-    ContextType &context = this->context;
+    const ContextType &context = this->context;
     RandomType &random = this->random;
 
-    int partition_num_per_node = context.partitionNum / context.coordinatorNum;
-    int partition_id = random.uniform_dist(0, partition_num_per_node - 1) *
-                           context.coordinatorNum +
-                       this->coordinator_id;
-
-    int32_t W_ID = partition_id + 1;
+    int32_t W_ID = this->partition_id + 1;
     PaymentQuery query = makePaymentQuery()(context, W_ID, random);
 
     // The input data (see Clause 2.5.3.2) are communicated to the SUT.

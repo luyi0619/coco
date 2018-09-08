@@ -31,12 +31,12 @@ public:
   using StorageType = typename WorkloadType::StorageType;
 
   Executor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
-           ContextType &context, std::atomic<bool> &stopFlag)
+           const ContextType &context, std::atomic<bool> &stopFlag)
       : Worker(coordinator_id, id), db(db), context(context),
         partitioner(std::make_unique<HashReplicatedPartitioner<2>>(
             coordinator_id, context.coordinatorNum)),
         stopFlag(stopFlag), protocol(db, *partitioner),
-        workload(coordinator_id, id, db, context, random, *partitioner) {
+        workload(coordinator_id, id, db, random, *partitioner) {
 
     for (auto i = 0u; i < context.coordinatorNum; i++) {
       messages.emplace_back(std::make_unique<Message>());
@@ -62,7 +62,14 @@ public:
       if (retry_transaction) {
         transaction->reset();
       } else {
-        transaction = workload.nextTransaction(storage);
+
+        auto partition_num_per_node =
+            context.partitionNum / context.coordinatorNum;
+        auto partition_id = random.uniform_dist(0, partition_num_per_node - 1) *
+                                context.coordinatorNum +
+                            coordinator_id;
+
+        transaction = workload.next_transaction(context, partition_id, storage);
         setupHandlers(*transaction);
       }
 
@@ -189,7 +196,7 @@ private:
 
 private:
   DatabaseType &db;
-  ContextType &context;
+  const ContextType &context;
   std::unique_ptr<Partitioner> partitioner;
   std::atomic<bool> &stopFlag;
   RandomType random;

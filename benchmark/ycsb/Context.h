@@ -36,6 +36,18 @@ public:
     }
   }
 
+  Context get_single_partition_context() {
+    Context c = *this;
+    c.crossPartitionProbability = 0;
+    return c;
+  }
+
+  Context get_cross_partition_context() {
+    Context c = *this;
+    c.crossPartitionProbability = 100;
+    return c;
+  }
+
 public:
   int readWriteRatio = 0;            // out of 100
   int readOnlyTransaction = 0;       //  out of 100
