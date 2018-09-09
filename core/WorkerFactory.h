@@ -38,7 +38,7 @@ public:
       for (auto i = 0u; i < context.worker_num; i++) {
         workers.push_back(std::make_shared<RStoreExecutor<Workload>>(
             coordinator_id, i, db, context, switcher->worker_status,
-            switcher->n_completed_workers));
+            switcher->n_completed_workers, switcher->n_started_workers));
       }
       workers.push_back(switcher);
     }

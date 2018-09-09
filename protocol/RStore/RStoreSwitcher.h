@@ -35,6 +35,8 @@ public:
       messages.emplace_back(std::make_unique<Message>());
       init_message(messages[i].get(), i);
     }
+
+    worker_status.store(static_cast<uint32_t >(RStoreWorkerStatus::STOP));
   }
 
   void coordinator_start() {
@@ -87,7 +89,9 @@ public:
 
       DCHECK(status == RStoreWorkerStatus::C_PHASE);
       n_completed_workers.store(0);
+      n_started_workers.store(0);
       set_worker_status(RStoreWorkerStatus::C_PHASE);
+      wait_all_workers_start();
       wait4_stop(1);
       set_worker_status(RStoreWorkerStatus::STOP);
       wait_all_workers_finish();
@@ -100,7 +104,9 @@ public:
       status = wait4_signal();
       DCHECK(status == RStoreWorkerStatus::S_PHASE);
       n_completed_workers.store(0);
+      n_started_workers.store(0);
       set_worker_status(RStoreWorkerStatus::S_PHASE);
+      wait_all_workers_start();
       wait_all_workers_finish();
       broadcast_stop();
       wait4_stop(n_coordinators - 1);
@@ -116,6 +122,15 @@ public:
     std::size_t n_workers = context.worker_num;
     // wait for all workers to finish
     while (n_completed_workers.load() < n_workers) {
+      // change to nop_pause()?
+      std::this_thread::yield();
+    }
+  }
+
+  void wait_all_workers_start() {
+    std::size_t n_workers = context.worker_num;
+    // wait for all workers to finish
+    while (n_started_workers.load() < n_workers) {
       // change to nop_pause()?
       std::this_thread::yield();
     }
@@ -341,5 +356,6 @@ private:
 public:
   std::atomic<uint32_t> worker_status;
   std::atomic<uint32_t> n_completed_workers;
+  std::atomic<uint32_t> n_started_workers;
 };
 } // namespace scar

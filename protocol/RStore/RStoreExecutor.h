@@ -35,13 +35,15 @@ public:
 
   RStoreExecutor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
                  ContextType &context, std::atomic<uint32_t> &worker_status,
-                 std::atomic<uint32_t> &n_complete_workers)
+                 std::atomic<uint32_t> &n_complete_workers,
+                 std::atomic<uint32_t> &n_started_workers)
       : Worker(coordinator_id, id), db(db), context(context),
         s_partitioner(std::make_unique<RStoreSPartitioner>(
             coordinator_id, context.coordinator_num)),
         c_partitioner(std::make_unique<RStoreCPartitioner>(
             coordinator_id, context.coordinator_num)),
-        worker_status(worker_status), n_complete_workers(n_complete_workers) {
+        worker_status(worker_status), n_complete_workers(n_complete_workers),
+        n_started_workers(n_started_workers) {
 
     for (auto i = 0u; i < context.coordinator_num; i++) {
       messages.emplace_back(std::make_unique<Message>());
@@ -55,6 +57,15 @@ public:
 
     LOG(INFO) << "Executor " << id << " starts.";
 
+    // init phase
+
+    while (static_cast<RStoreWorkerStatus>(worker_status.load()) !=
+           RStoreWorkerStatus::STOP) {
+      std::this_thread::yield();
+    }
+
+    // C-Phase to S-Phase, to C-phase ...
+
     for (;;) {
       RStoreWorkerStatus status =
           static_cast<RStoreWorkerStatus>(worker_status.load());
@@ -63,56 +74,53 @@ public:
         break;
       }
 
-      if (status == RStoreWorkerStatus::STOP) {
-        std::this_thread::yield();
-        continue;
-      }
+      // c_phase
 
-      if (status == RStoreWorkerStatus::C_PHASE) {
+      n_started_workers.fetch_add(1);
 
-        if (coordinator_id == 0) {
-
-          run_transaction(status);
-          n_complete_workers.fetch_add(1);
-
-          while (static_cast<RStoreWorkerStatus>(worker_status.load()) !=
-                 RStoreWorkerStatus::STOP) {
-            std::this_thread::yield();
-          }
-
-        } else {
-
-          while (static_cast<RStoreWorkerStatus>(worker_status.load()) !=
-                 RStoreWorkerStatus::STOP) {
-            process_request();
-          }
-
-          // process replication request after all workers stop.
-          process_request();
-          n_complete_workers.fetch_add(1);
-        }
-
-      } else if (status == RStoreWorkerStatus::S_PHASE) {
+      if (coordinator_id == 0) {
 
         run_transaction(status);
-
         n_complete_workers.fetch_add(1);
-
-        // once all workers are stop, we need to process the replication
-        // requests
 
         while (static_cast<RStoreWorkerStatus>(worker_status.load()) !=
                RStoreWorkerStatus::STOP) {
           std::this_thread::yield();
         }
 
-        // n_complete_workers has been cleared
+      } else {
+
+        while (static_cast<RStoreWorkerStatus>(worker_status.load()) !=
+               RStoreWorkerStatus::STOP) {
+          process_request();
+        }
+
+        // process replication request after all workers stop.
         process_request();
         n_complete_workers.fetch_add(1);
-
-      } else {
-        CHECK(false);
       }
+
+      // s_phase
+
+
+      n_started_workers.fetch_add(1);
+
+      run_transaction(status);
+
+      n_complete_workers.fetch_add(1);
+
+      // once all workers are stop, we need to process the replication
+      // requests
+
+      while (static_cast<RStoreWorkerStatus>(worker_status.load()) !=
+             RStoreWorkerStatus::STOP) {
+        std::this_thread::yield();
+      }
+
+      // n_complete_workers has been cleared
+      process_request();
+      n_complete_workers.fetch_add(1);
+
     }
 
     LOG(INFO) << "Executor " << id << " exits.";
@@ -272,7 +280,7 @@ private:
   ContextType &context;
   std::unique_ptr<Partitioner> s_partitioner, c_partitioner;
   std::atomic<uint32_t> &worker_status;
-  std::atomic<uint32_t> &n_complete_workers;
+  std::atomic<uint32_t> &n_complete_workers, &n_started_workers;
   RandomType random;
   Percentile<int64_t> percentile;
   std::vector<std::unique_ptr<Message>> messages;

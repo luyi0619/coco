@@ -31,5 +31,6 @@ TEST(TestRStore, TestRStoreSwitcher) {
   scar::RStoreSwitcher<WorkloadType> switcher(0, 0, context, stopFlag);
 
   scar::RStoreExecutor<WorkloadType> e(
-      0, 0, db, context, switcher.worker_status, switcher.n_completed_workers);
+      0, 0, db, context, switcher.worker_status, switcher.n_completed_workers,
+      switcher.n_started_workers);
 }
