@@ -48,6 +48,18 @@ public:
     return c;
   }
 
+  std::size_t get_s_phase_query_num() const override {
+    auto total_query = batch_query * partition_num;
+    auto s_phase_query =
+        batch_query * (100 - crossPartitionProbability) / 100.0;
+    return s_phase_query / partition_num;
+  }
+  std::size_t get_c_phase_query_num() const override {
+    auto total_query = batch_query * partition_num;
+    auto c_phase_query = total_query * crossPartitionProbability / 100.0;
+    return c_phase_query / worker_num;
+  }
+
 public:
   int readWriteRatio = 0;            // out of 100
   int readOnlyTransaction = 0;       //  out of 100

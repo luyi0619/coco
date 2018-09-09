@@ -32,7 +32,8 @@ public:
 
   void start() {
 
-    LOG(INFO) << "Coordinator initializes " << context.worker_num << " workers.";
+    LOG(INFO) << "Coordinator initializes " << context.worker_num
+              << " workers.";
 
     workers = WorkerFactory::create_workers<WorkloadType>(id, db, context,
                                                           workerStopFlag);

@@ -91,9 +91,9 @@ using HashPartitioner = HashReplicatedPartitioner<1>;
  *
  */
 
-class RackDBPartitioner : public Partitioner {
+class RStoreSPartitioner : public Partitioner {
 public:
-  RackDBPartitioner(std::size_t coordinator_id, std::size_t coordinator_nums)
+  RStoreSPartitioner(std::size_t coordinator_id, std::size_t coordinator_nums)
       : Partitioner(coordinator_id, coordinator_nums) {
     CHECK(coordinator_nums >= 2);
   }
@@ -118,6 +118,34 @@ public:
       secondary_id = partition_id % (coordinator_nums - 1) + 1; // case 2
     }
     return coordinator_id == master_id || coordinator_id == secondary_id;
+  }
+};
+
+class RStoreCPartitioner : public Partitioner {
+public:
+  RStoreCPartitioner(std::size_t coordinator_id, std::size_t coordinator_nums)
+      : Partitioner(coordinator_id, coordinator_nums) {
+    CHECK(coordinator_nums >= 2);
+  }
+
+  bool is_replicated() const override { return true; }
+
+  bool has_master_partition(std::size_t partition_id) const override {
+    return coordinator_id == 0;
+  }
+
+  std::size_t master_coordinator(std::size_t partition_id) const override {
+    return 0;
+  }
+
+  bool is_partition_replicated_on(std::size_t partition_id,
+                                  std::size_t coordinator_id) const override {
+    DCHECK(coordinator_id < coordinator_nums);
+
+    if (coordinator_id == 0)
+      return true;
+
+    return coordinator_id == (partition_id % (coordinator_nums - 1)) + 1;
   }
 };
 

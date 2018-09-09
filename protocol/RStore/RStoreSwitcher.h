@@ -48,8 +48,6 @@ public:
 
       n_completed_workers.store(0);
       signal_worker(RStoreWorkerStatus::C_PHASE);
-      // only for debug
-      std::this_thread::sleep_for(std::chrono::seconds(1));
       wait_all_workers_finish();
       set_worker_status(RStoreWorkerStatus::STOP);
       broadcast_stop();
@@ -59,8 +57,6 @@ public:
 
       n_completed_workers.store(0);
       signal_worker(RStoreWorkerStatus::S_PHASE);
-      // only for debug
-      std::this_thread::sleep_for(std::chrono::seconds(1));
       wait_all_workers_finish();
       broadcast_stop();
       wait4_stop(n_coordinators - 1);
@@ -85,7 +81,7 @@ public:
         break;
       }
 
-      LOG(INFO) << "start C-Phase";
+      // LOG(INFO) << "start C-Phase";
 
       // start c-phase
 
@@ -97,7 +93,7 @@ public:
       wait_all_workers_finish();
       send_ack(RStoreWorkerStatus::C_PHASE);
 
-      LOG(INFO) << "start S-Phase";
+      // LOG(INFO) << "start S-Phase";
 
       // start s-phase
 

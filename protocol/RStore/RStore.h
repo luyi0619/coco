@@ -65,10 +65,14 @@ public:
   bool commit(Transaction &txn,
               std::vector<std::unique_ptr<Message>> &messages) {
     // lock write set
-    lock_write_set(txn);
-
+    if (lock_write_set(txn)) {
+      txn.abort_lock = true;
+      abort(txn);
+      return false;
+    }
     // commit phase 2, read validation
     if (!validate_read_set(txn)) {
+      txn.abort_read_validation = true;
       abort(txn);
       return false;
     }
@@ -221,8 +225,9 @@ private:
       auto key = writeKey.get_key();
       auto value = writeKey.get_value();
 
-      // write
+      std::atomic<uint64_t> &tid = table->search_metadata(key);
       table->update(key, value);
+      SiloHelper::unlock(tid, commit_tid);
 
       // replicate
       for (auto k = 0u; k < partitioner.total_coordinators(); k++) {

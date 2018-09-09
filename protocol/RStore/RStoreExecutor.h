@@ -37,11 +37,11 @@ public:
                  ContextType &context, std::atomic<uint32_t> &worker_status,
                  std::atomic<uint32_t> &n_complete_workers)
       : Worker(coordinator_id, id), db(db), context(context),
-        partitioner(std::make_unique<RackDBPartitioner>(
+        s_partitioner(std::make_unique<RStoreSPartitioner>(
             coordinator_id, context.coordinator_num)),
-        worker_status(worker_status), n_complete_workers(n_complete_workers),
-        protocol(db, *partitioner),
-        workload(coordinator_id, id, db, random, *partitioner) {
+        c_partitioner(std::make_unique<RStoreCPartitioner>(
+            coordinator_id, context.coordinator_num)),
+        worker_status(worker_status), n_complete_workers(n_complete_workers) {
 
     for (auto i = 0u; i < context.coordinator_num; i++) {
       messages.emplace_back(std::make_unique<Message>());
@@ -97,7 +97,6 @@ public:
 
       } else if (status == RStoreWorkerStatus::S_PHASE) {
 
-        // run transactions, for now, let's run 10
         run_transaction(s_context, status);
 
         n_complete_workers.fetch_add(1);
@@ -124,23 +123,34 @@ public:
 
   void run_transaction(const ContextType &context, RStoreWorkerStatus status) {
 
-    std::size_t partition_id = 0;
+    std::size_t partition_id = 0, query_num = 0;
+
+    Partitioner *partitioner = nullptr;
 
     if (status == RStoreWorkerStatus::C_PHASE) {
       CHECK(coordinator_id == 0);
       partition_id = random.uniform_dist(0, context.partition_num - 1);
+      partitioner = c_partitioner.get();
+      query_num = context.get_c_phase_query_num();
     } else if (status == RStoreWorkerStatus::S_PHASE) {
-      partition_id = id * context.coordinator_num  + coordinator_id;
-      CHECK(partitioner->has_master_partition(partition_id));
+      partition_id = id * context.coordinator_num + coordinator_id;
+      partitioner = s_partitioner.get();
+      query_num = context.get_s_phase_query_num();
+    } else {
+      CHECK(false);
     }
+
+    CHECK(partitioner->has_master_partition(partition_id));
+
+    ProtocolType protocol(db, *partitioner);
+    WorkloadType workload(coordinator_id, id, db, random, *partitioner);
 
     StorageType storage;
     uint64_t last_seed = 0;
 
-
     std::unique_ptr<TransactionType> transaction;
 
-    for (int i = 0; i < 10; i++) {
+    for (auto i = 0u; i < query_num; i++) {
 
       bool retry_transaction = false;
 
@@ -151,7 +161,7 @@ public:
         transaction->reset();
       } else {
         transaction = workload.next_transaction(context, partition_id, storage);
-        setupHandlers(*transaction);
+        setupHandlers(*transaction, protocol);
       }
 
       auto result = transaction->execute();
@@ -172,6 +182,8 @@ public:
       } else {
         n_abort_no_retry.fetch_add(1);
       }
+
+      flush_messages();
     }
   }
 
@@ -222,11 +234,11 @@ private:
     return size;
   }
 
-  void setupHandlers(TransactionType &txn) {
+  void setupHandlers(TransactionType &txn, ProtocolType &protocol) {
     txn.readRequestHandler =
-        [this](std::size_t table_id, std::size_t partition_id,
-               uint32_t key_offset, const void *key, void *value,
-               bool local_index_read) -> uint64_t {
+        [&protocol](std::size_t table_id, std::size_t partition_id,
+                    uint32_t key_offset, const void *key, void *value,
+                    bool local_index_read) -> uint64_t {
       return protocol.search(table_id, partition_id, key, value);
     };
   }
@@ -259,12 +271,10 @@ private:
 private:
   DatabaseType &db;
   ContextType &context;
-  std::unique_ptr<Partitioner> partitioner;
+  std::unique_ptr<Partitioner> s_partitioner, c_partitioner;
   std::atomic<uint32_t> &worker_status;
   std::atomic<uint32_t> &n_complete_workers;
   RandomType random;
-  ProtocolType protocol;
-  WorkloadType workload;
   Percentile<int64_t> percentile;
   std::vector<std::unique_ptr<Message>> messages;
   std::vector<std::function<void(MessagePiece, Message &, TableType &)>>

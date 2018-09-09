@@ -53,7 +53,7 @@ TEST(TestPartitioner, TestBasic) {
   }
 }
 
-TEST(TestPartitioner, TestRackDB) {
+TEST(TestPartitioner, TestRStoreS) {
 
   std::vector<std::vector<bool>> masterPartitions = {
       {true, false, false, false}, {false, true, false, false},
@@ -71,7 +71,7 @@ TEST(TestPartitioner, TestRackDB) {
 
   std::size_t total_coordinator = 4, total_partitions = 10;
   for (auto i = 0u; i < total_coordinator; i++) {
-    scar::RackDBPartitioner partitioner(i, total_coordinator);
+    scar::RStoreSPartitioner partitioner(i, total_coordinator);
     for (auto k = 0u; k < total_partitions; k++) {
       EXPECT_TRUE(k < masterPartitions.size());
       EXPECT_TRUE(partitioner.master_coordinator(k) <

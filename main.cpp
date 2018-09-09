@@ -11,7 +11,6 @@ DEFINE_string(servers, "127.0.0.1:10010",
               "semicolon-separated list of servers");
 DEFINE_string(protocol, "RStore", "transaction protocol");
 
-
 // ./main --logtostderr=1 --id=1 --servers="127.0.0.1:10010;127.0.0.1:10011"
 // cmake -DCMAKE_BUILD_TYPE=Release
 
