@@ -34,11 +34,11 @@ public:
            const ContextType &context, std::atomic<bool> &stopFlag)
       : Worker(coordinator_id, id), db(db), context(context),
         partitioner(std::make_unique<HashReplicatedPartitioner<2>>(
-            coordinator_id, context.coordinatorNum)),
+            coordinator_id, context.coordinator_num)),
         stopFlag(stopFlag), protocol(db, *partitioner),
         workload(coordinator_id, id, db, random, *partitioner) {
 
-    for (auto i = 0u; i < context.coordinatorNum; i++) {
+    for (auto i = 0u; i < context.coordinator_num; i++) {
       messages.emplace_back(std::make_unique<Message>());
       init_message(messages[i].get(), i);
     }
@@ -64,9 +64,9 @@ public:
       } else {
 
         auto partition_num_per_node =
-            context.partitionNum / context.coordinatorNum;
+            context.partition_num / context.coordinator_num;
         auto partition_id = random.uniform_dist(0, partition_num_per_node - 1) *
-                                context.coordinatorNum +
+                                context.coordinator_num +
                             coordinator_id;
 
         transaction = workload.next_transaction(context, partition_id, storage);

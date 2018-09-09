@@ -16,8 +16,8 @@ TEST(TestYCSBQuery, TestBasic) {
   context.readOnlyTransaction = 80;
   context.isUniform = true;
 
-  context.partitionNum = 10;
-  context.workerNum = 10;
+  context.partition_num = 10;
+  context.worker_num = 10;
 
   scar::ycsb::Random random(reinterpret_cast<uint64_t>(&context));
 

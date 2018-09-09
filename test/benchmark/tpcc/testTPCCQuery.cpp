@@ -9,8 +9,8 @@ TEST(TestTPCCQuery, TestNewOrder) {
 
   scar::tpcc::Context context;
 
-  context.partitionNum = 10;
-  context.workerNum = 10;
+  context.partition_num = 10;
+  context.worker_num = 10;
 
   scar::tpcc::Random random(reinterpret_cast<uint64_t>(&context));
 
@@ -27,8 +27,8 @@ TEST(TestTPCCQuery, TestPayment) {
 
   scar::tpcc::Context context;
 
-  context.partitionNum = 10;
-  context.workerNum = 10;
+  context.partition_num = 10;
+  context.worker_num = 10;
 
   scar::tpcc::Random random(reinterpret_cast<uint64_t>(&context));
 

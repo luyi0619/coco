@@ -91,10 +91,10 @@ public:
       if (i == 0) {
         int x = random.uniform_dist(1, 100);
         if (x <= context.newOrderCrossPartitionProbability &&
-            context.partitionNum > 1) {
+            context.partition_num > 1) {
           int32_t OL_SUPPLY_W_ID = W_ID;
           while (OL_SUPPLY_W_ID == W_ID) {
-            OL_SUPPLY_W_ID = random.uniform_dist(1, context.partitionNum);
+            OL_SUPPLY_W_ID = random.uniform_dist(1, context.partition_num);
           }
           query.INFO[i].OL_SUPPLY_W_ID = OL_SUPPLY_W_ID;
         } else {
@@ -144,7 +144,7 @@ public:
     int x = random.uniform_dist(1, 100);
 
     if (x <= context.paymentCrossPartitionProbability &&
-        context.partitionNum > 1) {
+        context.partition_num > 1) {
       // If x <= 15 a customer is selected from a random district number (C_D_ID
       // is randomly selected within [1 .. 10]), and a random remote warehouse
       // number (C_W_ID is randomly selected within the range of active
@@ -153,7 +153,7 @@ public:
       int32_t C_W_ID = W_ID;
 
       while (C_W_ID == W_ID) {
-        C_W_ID = random.uniform_dist(1, context.partitionNum);
+        C_W_ID = random.uniform_dist(1, context.partition_num);
       }
 
       query.C_W_ID = C_W_ID;

@@ -16,9 +16,9 @@ TEST(TestRStore, TestRStoreSwitcher) {
   using WorkloadType = scar::tpcc::Workload<TransactionType>;
 
   scar::tpcc::Context context;
-  context.coordinatorNum = 2;
-  context.partitionNum = 4;
-  context.workerNum = 4;
+  context.coordinator_num = 2;
+  context.partition_num = 4;
+  context.worker_num = 4;
   context.protocol = "RStore";
   scar::tpcc::Random random;
 

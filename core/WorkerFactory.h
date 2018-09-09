@@ -22,7 +22,7 @@ public:
     std::vector<std::shared_ptr<Worker>> workers;
 
     if (context.protocol == "Silo") {
-      for (auto i = 0u; i < context.workerNum; i++) {
+      for (auto i = 0u; i < context.worker_num; i++) {
         workers.push_back(std::make_shared<Executor<Workload, Silo<Database>>>(
             coordinator_id, i, db, context, stop_flag));
       }
@@ -30,9 +30,9 @@ public:
 
       std::shared_ptr<RStoreSwitcher<Workload>> switcher =
           std::make_shared<RStoreSwitcher<Workload>>(
-              coordinator_id, context.workerNum, context, stop_flag);
+              coordinator_id, context.worker_num, context, stop_flag);
 
-      for (auto i = 0u; i < context.workerNum; i++) {
+      for (auto i = 0u; i < context.worker_num; i++) {
         workers.push_back(std::make_shared<RStoreExecutor<Workload>>(
             coordinator_id, i, db, context, switcher->worker_status,
             switcher->n_completed_workers));

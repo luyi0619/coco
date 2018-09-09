@@ -9,6 +9,8 @@ DEFINE_int32(id, 0, "coordinator id");
 DEFINE_int32(threads, 1, "the number of threads");
 DEFINE_string(servers, "127.0.0.1:10010",
               "semicolon-separated list of servers");
+DEFINE_string(protocol, "RStore", "transaction protocol");
+
 
 // ./main --logtostderr=1 --id=1 --servers="127.0.0.1:10010;127.0.0.1:10011"
 // cmake -DCMAKE_BUILD_TYPE=Release
@@ -28,13 +30,13 @@ int main(int argc, char *argv[]) {
 
   int n = FLAGS_threads;
   scar::tpcc::Context context;
-  context.protocol = "RStore";
-  context.coordinatorNum = peers.size();
-  context.partitionNum = n * context.coordinatorNum;
-  context.workerNum = n;
+  context.protocol = FLAGS_protocol;
+  context.coordinator_num = peers.size();
+  context.partition_num = n * context.coordinator_num;
+  context.worker_num = n;
 
   scar::tpcc::Database<MetaDataType> db;
-  db.initialize(context, context.partitionNum, n);
+  db.initialize(context, context.partition_num, n);
 
   scar::Coordinator<WorkloadType> c(FLAGS_id, peers, db, context);
   c.connectToPeers();

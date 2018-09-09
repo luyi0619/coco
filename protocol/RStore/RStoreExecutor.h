@@ -38,12 +38,12 @@ public:
                  std::atomic<uint32_t> &n_complete_workers)
       : Worker(coordinator_id, id), db(db), context(context),
         partitioner(std::make_unique<RackDBPartitioner>(
-            coordinator_id, context.coordinatorNum)),
+            coordinator_id, context.coordinator_num)),
         worker_status(worker_status), n_complete_workers(n_complete_workers),
         protocol(db, *partitioner),
         workload(coordinator_id, id, db, random, *partitioner) {
 
-    for (auto i = 0u; i < context.coordinatorNum; i++) {
+    for (auto i = 0u; i < context.coordinator_num; i++) {
       messages.emplace_back(std::make_unique<Message>());
       init_message(messages[i].get(), i);
     }
@@ -124,10 +124,19 @@ public:
 
   void run_transaction(const ContextType &context, RStoreWorkerStatus status) {
 
+    std::size_t partition_id = 0;
+
+    if (status == RStoreWorkerStatus::C_PHASE) {
+      CHECK(coordinator_id == 0);
+      partition_id = random.uniform_dist(0, context.partition_num - 1);
+    } else if (status == RStoreWorkerStatus::S_PHASE) {
+      partition_id = id * context.coordinator_num  + coordinator_id;
+      CHECK(partitioner->has_master_partition(partition_id));
+    }
+
     StorageType storage;
     uint64_t last_seed = 0;
 
-    std::size_t partition_id = 0;
 
     std::unique_ptr<TransactionType> transaction;
 

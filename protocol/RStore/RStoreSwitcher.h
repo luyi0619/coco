@@ -31,7 +31,7 @@ public:
                  ContextType &context, std::atomic<bool> &stopFlag)
       : Worker(coordinator_id, id), context(context), stopFlag(stopFlag) {
 
-    for (auto i = 0u; i < context.coordinatorNum; i++) {
+    for (auto i = 0u; i < context.coordinator_num; i++) {
       messages.emplace_back(std::make_unique<Message>());
       init_message(messages[i].get(), i);
     }
@@ -39,8 +39,8 @@ public:
 
   void coordinator_start() {
 
-    std::size_t n_workers = context.workerNum;
-    std::size_t n_coordinators = context.coordinatorNum;
+    std::size_t n_workers = context.worker_num;
+    std::size_t n_coordinators = context.coordinator_num;
 
     while (!stopFlag.load()) {
 
@@ -74,8 +74,8 @@ public:
 
   void non_coordinator_start() {
 
-    std::size_t n_workers = context.workerNum;
-    std::size_t n_coordinators = context.coordinatorNum;
+    std::size_t n_workers = context.worker_num;
+    std::size_t n_coordinators = context.coordinator_num;
 
     for (;;) {
 
@@ -117,7 +117,7 @@ public:
   }
 
   void wait_all_workers_finish() {
-    std::size_t n_workers = context.workerNum;
+    std::size_t n_workers = context.worker_num;
     // wait for all workers to finish
     while (n_completed_workers.load() < n_workers) {
       // change to nop_pause()?
@@ -138,7 +138,7 @@ public:
     set_worker_status(status);
 
     // signal to everyone
-    for (auto i = 0u; i < context.coordinatorNum; i++) {
+    for (auto i = 0u; i < context.coordinator_num; i++) {
       if (i == coordinator_id) {
         continue;
       }
@@ -203,7 +203,7 @@ public:
     // only coordinator waits for ack
     DCHECK(coordinator_id == 0);
 
-    std::size_t n_coordinators = context.coordinatorNum;
+    std::size_t n_coordinators = context.coordinator_num;
 
     for (auto i = 0u; i < n_coordinators; i++) {
       if (i == coordinator_id) {
@@ -231,7 +231,7 @@ public:
 
   void broadcast_stop() {
 
-    std::size_t n_coordinators = context.coordinatorNum;
+    std::size_t n_coordinators = context.coordinator_num;
 
     for (auto i = 0u; i < n_coordinators; i++) {
       if (i == coordinator_id)

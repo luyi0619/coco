@@ -87,7 +87,7 @@ private:
 
     std::size_t keysPerPartition =
         context.keysPerPartition; // 5M keys per partition
-    std::size_t partitionNum = context.partitionNum;
+    std::size_t partitionNum = context.partition_num;
     std::size_t totalKeys = keysPerPartition * partitionNum;
 
     if (context.strategy == PartitionStrategy::RANGE) {

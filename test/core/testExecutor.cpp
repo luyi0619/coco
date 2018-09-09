@@ -18,9 +18,9 @@ TEST(TestExecutor, TestTPCC) {
   using WorkloadType = scar::tpcc::Workload<TransactionType>;
 
   scar::tpcc::Context context;
-  context.coordinatorNum = 2;
-  context.partitionNum = 4;
-  context.workerNum = 4;
+  context.coordinator_num = 2;
+  context.partition_num = 4;
+  context.worker_num = 4;
   scar::tpcc::Random random;
 
   scar::tpcc::Database<MetaDataType> db;
@@ -39,9 +39,9 @@ TEST(TestWorker, TestYCSB) {
   using WorkloadType = scar::ycsb::Workload<TransactionType>;
 
   scar::ycsb::Context context;
-  context.coordinatorNum = 2;
-  context.partitionNum = 4;
-  context.workerNum = 4;
+  context.coordinator_num = 2;
+  context.partition_num = 4;
+  context.worker_num = 4;
   scar::ycsb::Random random;
 
   scar::ycsb::Database<MetaDataType> db;

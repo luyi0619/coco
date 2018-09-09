@@ -43,10 +43,10 @@ public:
         int crossPartition = random.uniform_dist(1, 100);
 
         if (crossPartition <= context.crossPartitionProbability &&
-            context.partitionNum > 1) {
+            context.partition_num > 1) {
           auto newPartitionID = partitionID;
           while (newPartitionID == partitionID) {
-            newPartitionID = random.uniform_dist(0, context.partitionNum - 1);
+            newPartitionID = random.uniform_dist(0, context.partition_num - 1);
           }
           query.Y_KEY[i] = context.getGlobalKeyID(key, newPartitionID);
         } else {

@@ -20,8 +20,8 @@ TEST(TestCoordinator, TestTPCC) {
   int n = FLAGS_threads;
 
   scar::tpcc::Context context;
-  context.partitionNum = n;
-  context.workerNum = n;
+  context.partition_num = n;
+  context.worker_num = n;
 
   DatabaseType db;
 
@@ -46,8 +46,8 @@ TEST(TestCoordinator, TestConnect) {
 
   auto startCoordinator = [n, &peers](int id) {
     scar::tpcc::Context context;
-    context.partitionNum = n;
-    context.workerNum = n;
+    context.partition_num = n;
+    context.worker_num = n;
 
     DatabaseType db;
     scar::Coordinator<WorkloadType> c(id, peers, db, context);
