@@ -55,9 +55,6 @@ public:
 
     LOG(INFO) << "Executor " << id << " starts.";
 
-    ContextType c_context = context.get_cross_partition_context();
-    ContextType s_context = context.get_single_partition_context();
-
     for (;;) {
       RStoreWorkerStatus status =
           static_cast<RStoreWorkerStatus>(worker_status.load());
@@ -75,7 +72,7 @@ public:
 
         if (coordinator_id == 0) {
 
-          run_transaction(c_context, status);
+          run_transaction(status);
           n_complete_workers.fetch_add(1);
 
           while (static_cast<RStoreWorkerStatus>(worker_status.load()) !=
@@ -97,7 +94,7 @@ public:
 
       } else if (status == RStoreWorkerStatus::S_PHASE) {
 
-        run_transaction(s_context, status);
+        run_transaction(status);
 
         n_complete_workers.fetch_add(1);
 
@@ -121,7 +118,7 @@ public:
     LOG(INFO) << "Executor " << id << " exits.";
   }
 
-  void run_transaction(const ContextType &context, RStoreWorkerStatus status) {
+  void run_transaction(RStoreWorkerStatus status) {
 
     std::size_t partition_id = 0, query_num = 0;
 
@@ -132,10 +129,12 @@ public:
       partition_id = random.uniform_dist(0, context.partition_num - 1);
       partitioner = c_partitioner.get();
       query_num = context.get_c_phase_query_num();
+      context = this->context.get_cross_partition_context();
     } else if (status == RStoreWorkerStatus::S_PHASE) {
       partition_id = id * context.coordinator_num + coordinator_id;
       partitioner = s_partitioner.get();
       query_num = context.get_s_phase_query_num();
+      context = this->context.get_single_partition_context();
     } else {
       CHECK(false);
     }

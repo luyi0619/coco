@@ -52,17 +52,17 @@ public:
     if (workloadType == TPCCWorkloadType::NEW_ORDER_ONLY) {
       auto s_phase_new_order =
           total_query * newOrderCrossPartitionProbability / 100.0;
-      return s_phase_new_order / partition_num;
+      return s_phase_new_order / worker_num;
     } else if (workloadType == TPCCWorkloadType::PAYMENT_ONLY) {
       auto s_phase_payment =
           total_query * paymentCrossPartitionProbability / 100.0;
-      return s_phase_payment / partition_num;
+      return s_phase_payment / worker_num;
     } else {
       auto s_phase_new_order =
           total_query / 2 * newOrderCrossPartitionProbability / 100.0;
       auto s_phase_payment =
           total_query / 2 * paymentCrossPartitionProbability / 100.0;
-      return (s_phase_new_order + s_phase_payment) / partition_num;
+      return (s_phase_new_order + s_phase_payment) / worker_num;
     }
   }
 

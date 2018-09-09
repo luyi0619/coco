@@ -19,7 +19,7 @@ template <class Transaction> class Workload {
 public:
   using TransactionType = Transaction;
   using DatabaseType = typename TransactionType::DatabaseType;
-  using ContextType = typename DatabaseType::ContextType;
+  using ContextType = Context;
   using RandomType = typename DatabaseType::RandomType;
   using StorageType = typename NewOrder<DatabaseType>::StorageType;
   static_assert(
@@ -37,10 +37,19 @@ public:
                                                     StorageType &storage) {
 
     int x = random.uniform_dist(1, 100);
-
     std::unique_ptr<TransactionType> p;
 
-    if (x <= 50) {
+    if (context.workloadType == TPCCWorkloadType::MIXED) {
+      if (x <= 50) {
+        p = std::make_unique<NewOrder<DatabaseType>>(
+            coordinator_id, worker_id, partition_id, db, context, random,
+            partitioner, storage);
+      } else {
+        p = std::make_unique<Payment<DatabaseType>>(
+            coordinator_id, worker_id, partition_id, db, context, random,
+            partitioner, storage);
+      }
+    } else if (context.workloadType == TPCCWorkloadType::NEW_ORDER_ONLY) {
       p = std::make_unique<NewOrder<DatabaseType>>(
           coordinator_id, worker_id, partition_id, db, context, random,
           partitioner, storage);
