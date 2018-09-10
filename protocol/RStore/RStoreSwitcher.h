@@ -36,7 +36,7 @@ public:
       init_message(messages[i].get(), i);
     }
 
-    worker_status.store(static_cast<uint32_t >(RStoreWorkerStatus::STOP));
+    worker_status.store(static_cast<uint32_t>(RStoreWorkerStatus::STOP));
   }
 
   void coordinator_start() {
@@ -48,8 +48,12 @@ public:
 
       // start c-phase
 
+      // LOG(INFO) << "start C-Phase";
+
       n_completed_workers.store(0);
+      n_started_workers.store(0);
       signal_worker(RStoreWorkerStatus::C_PHASE);
+      wait_all_workers_start();
       wait_all_workers_finish();
       set_worker_status(RStoreWorkerStatus::STOP);
       broadcast_stop();
@@ -57,8 +61,12 @@ public:
 
       // start s-phase
 
+      // LOG(INFO) << "start S-Phase";
+
       n_completed_workers.store(0);
+      n_started_workers.store(0);
       signal_worker(RStoreWorkerStatus::S_PHASE);
+      wait_all_workers_start();
       wait_all_workers_finish();
       broadcast_stop();
       wait4_stop(n_coordinators - 1);

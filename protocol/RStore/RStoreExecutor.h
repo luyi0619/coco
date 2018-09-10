@@ -57,38 +57,30 @@ public:
 
     LOG(INFO) << "Executor " << id << " starts.";
 
-    // init phase
-
-    while (static_cast<RStoreWorkerStatus>(worker_status.load()) !=
-           RStoreWorkerStatus::STOP) {
-      std::this_thread::yield();
-    }
-
     // C-Phase to S-Phase, to C-phase ...
 
     for (;;) {
-      RStoreWorkerStatus status =
-          static_cast<RStoreWorkerStatus>(worker_status.load());
 
-      if (status == RStoreWorkerStatus::EXIT) {
+      if (static_cast<RStoreWorkerStatus>(worker_status.load()) ==
+          RStoreWorkerStatus::EXIT) {
         break;
+      }
+
+      while (static_cast<RStoreWorkerStatus>(worker_status.load()) !=
+             RStoreWorkerStatus::C_PHASE) {
+        std::this_thread::yield();
       }
 
       // c_phase
 
-      n_started_workers.fetch_add(1);
-
       if (coordinator_id == 0) {
 
-        run_transaction(status);
+        n_started_workers.fetch_add(1);
+        run_transaction(RStoreWorkerStatus::C_PHASE);
         n_complete_workers.fetch_add(1);
 
-        while (static_cast<RStoreWorkerStatus>(worker_status.load()) !=
-               RStoreWorkerStatus::STOP) {
-          std::this_thread::yield();
-        }
-
       } else {
+        n_started_workers.fetch_add(1);
 
         while (static_cast<RStoreWorkerStatus>(worker_status.load()) !=
                RStoreWorkerStatus::STOP) {
@@ -100,12 +92,18 @@ public:
         n_complete_workers.fetch_add(1);
       }
 
-      // s_phase
+      // wait to s_phase
 
+      while (static_cast<RStoreWorkerStatus>(worker_status.load()) !=
+             RStoreWorkerStatus::S_PHASE) {
+        std::this_thread::yield();
+      }
+
+      // s_phase
 
       n_started_workers.fetch_add(1);
 
-      run_transaction(status);
+      run_transaction(RStoreWorkerStatus::S_PHASE);
 
       n_complete_workers.fetch_add(1);
 
@@ -120,7 +118,6 @@ public:
       // n_complete_workers has been cleared
       process_request();
       n_complete_workers.fetch_add(1);
-
     }
 
     LOG(INFO) << "Executor " << id << " exits.";
@@ -132,17 +129,19 @@ public:
 
     Partitioner *partitioner = nullptr;
 
+    ContextType phase_context;
+
     if (status == RStoreWorkerStatus::C_PHASE) {
       CHECK(coordinator_id == 0);
       partition_id = random.uniform_dist(0, context.partition_num - 1);
       partitioner = c_partitioner.get();
       query_num = context.get_c_phase_query_num();
-      context = this->context.get_cross_partition_context();
+      phase_context = this->context.get_cross_partition_context();
     } else if (status == RStoreWorkerStatus::S_PHASE) {
       partition_id = id * context.coordinator_num + coordinator_id;
       partitioner = s_partitioner.get();
       query_num = context.get_s_phase_query_num();
-      context = this->context.get_single_partition_context();
+      phase_context = this->context.get_single_partition_context();
     } else {
       CHECK(false);
     }
@@ -167,7 +166,8 @@ public:
       if (retry_transaction) {
         transaction->reset();
       } else {
-        transaction = workload.next_transaction(context, partition_id, storage);
+        transaction =
+            workload.next_transaction(phase_context, partition_id, storage);
         setupHandlers(*transaction, protocol);
       }
 

@@ -32,9 +32,6 @@ public:
           std::make_shared<RStoreSwitcher<Workload>>(
               coordinator_id, context.worker_num, context, stop_flag);
 
-      switcher->worker_status.store(
-          static_cast<uint32_t>(RStoreWorkerStatus::STOP));
-
       for (auto i = 0u; i < context.worker_num; i++) {
         workers.push_back(std::make_shared<RStoreExecutor<Workload>>(
             coordinator_id, i, db, context, switcher->worker_status,
