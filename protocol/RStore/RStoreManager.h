@@ -266,13 +266,13 @@ public:
   void start() override {
 
     if (coordinator_id == 0) {
-      LOG(INFO) << "Switcher on the coordinator node started.";
+      LOG(INFO) << "Manager on the coordinator node started.";
       coordinator_start();
-      LOG(INFO) << "Switcher on the coordinator node exits.";
+      LOG(INFO) << "Manager on the coordinator node exits.";
     } else {
-      LOG(INFO) << "Switcher on the non-coordinator node started.";
+      LOG(INFO) << "Manager on the non-coordinator node started.";
       non_coordinator_start();
-      LOG(INFO) << "Switcher on the non-coordinator node exits.";
+      LOG(INFO) << "Manager on the non-coordinator node exits.";
     }
   }
 

@@ -48,6 +48,7 @@ public:
       wait_all_workers_start();
       std::this_thread::sleep_for(
           std::chrono::milliseconds(context.group_time));
+      set_worker_status(GCExecutorStatus::STOP);
       wait_all_workers_finish();
       broadcast_stop();
       wait4_stop(n_coordinators - 1);
@@ -80,6 +81,7 @@ public:
       set_worker_status(GCExecutorStatus::START);
       wait_all_workers_start();
       wait4_stop(1);
+      set_worker_status(GCExecutorStatus::STOP);
       wait_all_workers_finish();
       broadcast_stop();
       wait4_stop(n_coordinators - 2);
@@ -232,13 +234,13 @@ public:
   void start() override {
 
     if (coordinator_id == 0) {
-      LOG(INFO) << "Switcher on the coordinator node started.";
+      LOG(INFO) << "Manager on the coordinator node started.";
       coordinator_start();
-      LOG(INFO) << "Switcher on the coordinator node exits.";
+      LOG(INFO) << "Manager on the coordinator node exits.";
     } else {
-      LOG(INFO) << "Switcher on the non-coordinator node started.";
+      LOG(INFO) << "Manager on the non-coordinator node started.";
       non_coordinator_start();
-      LOG(INFO) << "Switcher on the non-coordinator node exits.";
+      LOG(INFO) << "Manager on the non-coordinator node exits.";
     }
   }
 

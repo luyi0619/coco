@@ -115,7 +115,8 @@ public:
 
     workerStopFlag.store(true);
 
-    for (int i = 0; i < threads.size(); i++) {
+    for (auto i = 0u; i < threads.size(); i++) {
+      workers[i]->onExit();
       threads[i].join();
     }
 

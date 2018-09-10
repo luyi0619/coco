@@ -272,9 +272,10 @@ private:
       if (partitioner.has_master_partition(partitionId)) {
         auto key = writeKey.get_key();
         auto value = writeKey.get_value();
+        std::atomic<uint64_t> &tid = table->search_metadata(key);
         table->update(key, value);
+        SiloHelper::unlock(tid, commit_tid);
       } else {
-        txn.pendingResponses++;
         auto coordinatorID = partitioner.master_coordinator(partitionId);
         MessageFactoryType::new_write_message(*syncMessages[coordinatorID],
                                               *table, writeKey.get_key(),
@@ -316,7 +317,7 @@ private:
       }
     }
 
-    sync_messages(txn);
+    sync_messages(txn, false);
   }
 
   template <class Transaction>

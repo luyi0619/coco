@@ -64,6 +64,8 @@ public:
 
     // transaction only commit in a single group
 
+    std::queue<std::unique_ptr<TransactionType>> q;
+
     for (;;) {
 
       GCExecutorStatus status;
@@ -76,8 +78,16 @@ public:
         }
       } while (status != GCExecutorStatus::START);
 
-      std::size_t count = 0;
+      while (!q.empty()) {
+        auto &ptr = q.front();
+        auto latency = std::chrono::duration_cast<std::chrono::milliseconds>(
+                           std::chrono::steady_clock::now() - ptr->startTime)
+                           .count();
+        percentile.add(latency);
+        q.pop();
+      }
 
+      std::size_t count = 0;
       n_started_workers.fetch_add(1);
 
       do {
@@ -111,6 +121,7 @@ public:
           if (protocol.commit(*transaction, sync_messages, async_messages)) {
             n_commit.fetch_add(1);
             retry_transaction = false;
+            q.push(std::move(transaction));
           } else {
             if (transaction->abort_lock) {
               n_abort_lock.fetch_add(1);
@@ -141,7 +152,7 @@ public:
 
       while (static_cast<GCExecutorStatus>(worker_status.load()) !=
              GCExecutorStatus::CLEANUP) {
-        std::this_thread::yield();
+        process_request();
       }
 
       process_request();
