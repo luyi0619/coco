@@ -13,8 +13,8 @@
 #include "core/Table.h"
 #include "core/Worker.h"
 #include "protocol/RStore/RStoreHelper.h"
+#include "protocol/RStore/RStoreManager.h"
 #include "protocol/RStore/RStoreMessage.h"
-#include "protocol/RStore/RStoreSwitcher.h"
 #include <glog/logging.h>
 
 namespace scar {

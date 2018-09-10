@@ -5,11 +5,8 @@
 #pragma once
 
 namespace scar {
-  namespace group_commit {
+namespace group_commit {
 
-    enum class GCExecutorStatus {
-      START, CLEANUP, STOP, EXIT
-    };
-
-  }
+enum class GCExecutorStatus { START, CLEANUP, STOP, EXIT };
 }
+} // namespace scar

@@ -4,14 +4,14 @@
 
 #pragma once
 
+#include "core/ControlMessage.h"
 #include "core/Worker.h"
 
 #include "protocol/RStore/RStoreHelper.h"
-#include "protocol/RStore/RStoreMessage.h"
 
 namespace scar {
 
-template <class Workload> class RStoreSwitcher : public Worker {
+template <class Workload> class RStoreManager : public Worker {
 public:
   using WorkloadType = Workload;
   using DatabaseType = typename WorkloadType::DatabaseType;
@@ -22,13 +22,8 @@ public:
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
 
-  using MessageType = RStoreMessage;
-
-  using MessageFactoryType = RStoreMessageFactory<TableType>;
-  using MessageHandlerType = RStoreMessageHandler<TableType>;
-
-  RStoreSwitcher(std::size_t coordinator_id, std::size_t id,
-                 ContextType &context, std::atomic<bool> &stopFlag)
+  RStoreManager(std::size_t coordinator_id, std::size_t id,
+                ContextType &context, std::atomic<bool> &stopFlag)
       : Worker(coordinator_id, id), context(context), stopFlag(stopFlag) {
 
     for (auto i = 0u; i < context.coordinator_num; i++) {
@@ -57,7 +52,7 @@ public:
       wait_all_workers_finish();
       set_worker_status(RStoreWorkerStatus::STOP);
       broadcast_stop();
-      wait4_ack(RStoreWorkerStatus::C_PHASE);
+      wait4_ack();
 
       // start s-phase
 
@@ -74,7 +69,7 @@ public:
       n_completed_workers.store(0);
       set_worker_status(RStoreWorkerStatus::STOP);
       wait_all_workers_finish();
-      wait4_ack(RStoreWorkerStatus::S_PHASE);
+      wait4_ack();
     }
 
     signal_worker(RStoreWorkerStatus::EXIT);
@@ -105,7 +100,7 @@ public:
       wait4_stop(1);
       set_worker_status(RStoreWorkerStatus::STOP);
       wait_all_workers_finish();
-      send_ack(RStoreWorkerStatus::C_PHASE);
+      send_ack();
 
       // LOG(INFO) << "start S-Phase";
 
@@ -124,7 +119,7 @@ public:
       n_completed_workers.store(0);
       set_worker_status(RStoreWorkerStatus::STOP);
       wait_all_workers_finish();
-      send_ack(RStoreWorkerStatus::S_PHASE);
+      send_ack();
     }
   }
 
@@ -161,7 +156,8 @@ public:
       if (i == coordinator_id) {
         continue;
       }
-      MessageFactoryType::new_signal_message(*messages[i], status);
+      ControlMessageFactory::new_signal_message(*messages[i],
+                                                static_cast<uint32_t>(status));
     }
     flush_messages();
   }
@@ -179,8 +175,8 @@ public:
     CHECK(message->get_message_count() == 1);
 
     MessagePiece messagePiece = *(message->begin());
-    auto type = static_cast<RStoreMessage>(messagePiece.get_message_type());
-    CHECK(type == RStoreMessage::SIGNAL);
+    auto type = static_cast<ControlMessage>(messagePiece.get_message_type());
+    CHECK(type == ControlMessage::SIGNAL);
 
     uint32_t status;
     StringPiece stringPiece = messagePiece.toStringPiece();
@@ -205,8 +201,8 @@ public:
       CHECK(message->get_message_count() == 1);
 
       MessagePiece messagePiece = *(message->begin());
-      auto type = static_cast<RStoreMessage>(messagePiece.get_message_type());
-      CHECK(type == RStoreMessage::SIGNAL);
+      auto type = static_cast<ControlMessage>(messagePiece.get_message_type());
+      CHECK(type == ControlMessage::SIGNAL);
 
       uint32_t status;
       StringPiece stringPiece = messagePiece.toStringPiece();
@@ -217,7 +213,7 @@ public:
     }
   }
 
-  void wait4_ack(RStoreWorkerStatus status) {
+  void wait4_ack() {
 
     // only coordinator waits for ack
     DCHECK(coordinator_id == 0);
@@ -238,13 +234,9 @@ public:
       CHECK(message->get_message_count() == 1);
 
       MessagePiece messagePiece = *(message->begin());
-      auto type = static_cast<RStoreMessage>(messagePiece.get_message_type());
+      auto type = static_cast<ControlMessage>(messagePiece.get_message_type());
 
-      if (status == RStoreWorkerStatus::C_PHASE) {
-        CHECK(type == RStoreMessage::C_PHASE_ACK);
-      } else {
-        CHECK(type == RStoreMessage::S_PHASE_ACK);
-      }
+      CHECK(type == ControlMessage::ACK);
     }
   }
 
@@ -255,25 +247,19 @@ public:
     for (auto i = 0u; i < n_coordinators; i++) {
       if (i == coordinator_id)
         continue;
-      MessageFactoryType::new_signal_message(*messages[i],
-                                             RStoreWorkerStatus::STOP);
+      ControlMessageFactory::new_signal_message(
+          *messages[i], static_cast<uint32_t>(RStoreWorkerStatus::STOP));
     }
 
     flush_messages();
   }
 
-  void send_ack(RStoreWorkerStatus status) {
+  void send_ack() {
 
     // only non-coordinator calls this function
     DCHECK(coordinator_id != 0);
 
-    if (status == RStoreWorkerStatus::C_PHASE) {
-      MessageFactoryType::new_c_phase_ack_message(*messages[0]);
-    } else if (status == RStoreWorkerStatus::S_PHASE) {
-      MessageFactoryType::new_s_phase_ack_message(*messages[0]);
-    } else {
-      CHECK(false);
-    }
+    ControlMessageFactory::new_ack_message(*messages[0]);
     flush_messages();
   }
 
@@ -299,16 +285,13 @@ public:
     MessagePiece messagePiece = *(message->begin());
 
     auto message_type =
-        static_cast<RStoreMessage>(messagePiece.get_message_type());
+        static_cast<ControlMessage>(messagePiece.get_message_type());
 
     switch (message_type) {
-    case RStoreMessage::SIGNAL:
+    case ControlMessage::SIGNAL:
       signal_in_queue.push(message);
       break;
-    case RStoreMessage::C_PHASE_ACK:
-      ack_in_queue.push(message);
-      break;
-    case RStoreMessage::S_PHASE_ACK:
+    case ControlMessage::ACK:
       ack_in_queue.push(message);
       break;
     default:

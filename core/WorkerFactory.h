@@ -13,7 +13,7 @@
 #include "protocol/SiloGC/SiloGC.h"
 
 #include "protocol/RStore/RStoreExecutor.h"
-#include "protocol/RStore/RStoreSwitcher.h"
+#include "protocol/RStore/RStoreManager.h"
 
 #include <unordered_set>
 
@@ -53,7 +53,7 @@ public:
 
     } else if (context.protocol == "RStore") {
 
-      auto switcher = std::make_shared<RStoreSwitcher<Workload>>(
+      auto switcher = std::make_shared<RStoreManager<Workload>>(
           coordinator_id, context.worker_num, context, stop_flag);
 
       for (auto i = 0u; i < context.worker_num; i++) {

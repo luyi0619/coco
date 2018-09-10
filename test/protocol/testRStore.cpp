@@ -6,7 +6,7 @@
 #include "core/Transaction.h"
 #include "protocol/RStore/RStore.h"
 #include "protocol/RStore/RStoreExecutor.h"
-#include "protocol/RStore/RStoreSwitcher.h"
+#include "protocol/RStore/RStoreManager.h"
 #include <gtest/gtest.h>
 
 TEST(TestRStore, TestRStoreSwitcher) {
@@ -28,9 +28,9 @@ TEST(TestRStore, TestRStoreSwitcher) {
   std::atomic<uint32_t> worker_status;
   std::atomic<uint32_t> n_complete_workers;
 
-  scar::RStoreSwitcher<WorkloadType> switcher(0, 0, context, stopFlag);
+  scar::RStoreManager<WorkloadType> manager(0, 0, context, stopFlag);
 
-  scar::RStoreExecutor<WorkloadType> e(
-      0, 0, db, context, switcher.worker_status, switcher.n_completed_workers,
-      switcher.n_started_workers);
+  scar::RStoreExecutor<WorkloadType> e(0, 0, db, context, manager.worker_status,
+                                       manager.n_completed_workers,
+                                       manager.n_started_workers);
 }
