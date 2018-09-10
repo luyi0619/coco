@@ -16,6 +16,7 @@ public:
   std::string protocol;
   std::size_t batch_query = 240;
   std::size_t batch_flush = 10;
+  std::size_t group_time = 40; // ms
 
   virtual std::size_t get_s_phase_query_num() const = 0;
   virtual std::size_t get_c_phase_query_num() const = 0;

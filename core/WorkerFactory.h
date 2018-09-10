@@ -5,9 +5,17 @@
 #pragma once
 
 #include "core/Executor.h"
+#include "protocol/Silo/Silo.h"
+
+#include "core/group_commit/Executor.h"
+#include "core/group_commit/Manager.h"
+
+#include "protocol/SiloGC/SiloGC.h"
+
 #include "protocol/RStore/RStoreExecutor.h"
 #include "protocol/RStore/RStoreSwitcher.h"
-#include "protocol/Silo/Silo.h"
+
+#include <unordered_set>
 
 namespace scar {
 
@@ -19,6 +27,9 @@ public:
   create_workers(std::size_t coordinator_id, Database &db, Context &context,
                  std::atomic<bool> &stop_flag) {
 
+    std::unordered_set<std::string> protocols = {"Silo", "SiloGC", "RStore"};
+    CHECK(protocols.count(context.protocol) == 1);
+
     std::vector<std::shared_ptr<Worker>> workers;
 
     if (context.protocol == "Silo") {
@@ -26,11 +37,24 @@ public:
         workers.push_back(std::make_shared<Executor<Workload, Silo<Database>>>(
             coordinator_id, i, db, context, stop_flag));
       }
+    } else if (context.protocol == "SiloGC") {
+
+      auto manager =
+          std::make_shared<group_commit::Manager<Workload, SiloGC<Database>>>(
+              coordinator_id, context.worker_num, context, stop_flag);
+
+      for (auto i = 0u; i < context.worker_num; i++) {
+        workers.push_back(std::make_shared<
+                          group_commit::Executor<Workload, SiloGC<Database>>>(
+            coordinator_id, i, db, context, manager->worker_status,
+            manager->n_completed_workers, manager->n_started_workers));
+      }
+      workers.push_back(manager);
+
     } else if (context.protocol == "RStore") {
 
-      std::shared_ptr<RStoreSwitcher<Workload>> switcher =
-          std::make_shared<RStoreSwitcher<Workload>>(
-              coordinator_id, context.worker_num, context, stop_flag);
+      auto switcher = std::make_shared<RStoreSwitcher<Workload>>(
+          coordinator_id, context.worker_num, context, stop_flag);
 
       for (auto i = 0u; i < context.worker_num; i++) {
         workers.push_back(std::make_shared<RStoreExecutor<Workload>>(
