@@ -57,11 +57,13 @@ public:
       threads.emplace_back(&Worker::start, workers[i].get());
     }
 
-    // run timeToRun milliseconds
-    auto timeToRun = 1000;
+    // run timeToRun seconds
+    auto timeToRun = 30, warmup = 10, cooldown = 10;
     auto startTime = std::chrono::steady_clock::now();
 
-    LOG(INFO) << "Coordinator starts to sleep " << timeToRun << " seconds.";
+    uint64_t total_commit = 0, total_abort_no_retry = 0, total_abort_lock = 0,
+             total_abort_read_validation = 0;
+    int count = 0;
 
     do {
       std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -88,12 +90,34 @@ public:
                 << n_abort_no_retry + n_abort_lock + n_abort_read_validation
                 << " (" << n_abort_no_retry << "/" << n_abort_lock << "/"
                 << n_abort_read_validation << ")";
+      count++;
+      if (count > warmup && count <= timeToRun - cooldown) {
+        total_commit += n_commit;
+        total_abort_no_retry += n_abort_no_retry;
+        total_abort_lock += n_abort_lock;
+        total_abort_read_validation += n_abort_read_validation;
+      }
+
     } while (std::chrono::duration_cast<std::chrono::seconds>(
                  std::chrono::steady_clock::now() - startTime)
                  .count() < timeToRun);
 
+    count = timeToRun - warmup - cooldown;
+
+    LOG(INFO) << "average commit: " << 1.0 * total_commit / count << " abort: "
+              << 1.0 *
+                     (total_abort_no_retry + total_abort_lock +
+                      total_abort_read_validation) /
+                     count
+              << " (" << 1.0 * total_abort_no_retry / count << "/"
+              << 1.0 * total_abort_lock / count << "/"
+              << 1.0 * total_abort_read_validation / count << ")";
+
     workerStopFlag.store(true);
-    LOG(INFO) << "Coordinator awakes.";
+
+    for (int i = 0; i < threads.size(); i++) {
+      threads[i].join();
+    }
 
     ioStopFlag.store(true);
     iDispatcherThread.join();

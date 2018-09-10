@@ -13,7 +13,7 @@ enum class TPCCWorkloadType { NEW_ORDER_ONLY, PAYMENT_ONLY, MIXED };
 
 class Context : public scar::Context {
 public:
-  TPCCWorkloadType workloadType = TPCCWorkloadType::MIXED;
+  TPCCWorkloadType workloadType = TPCCWorkloadType::NEW_ORDER_ONLY;
 
   Context get_single_partition_context() {
     Context c = *this;

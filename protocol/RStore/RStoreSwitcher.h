@@ -76,6 +76,8 @@ public:
       wait_all_workers_finish();
       wait4_ack(RStoreWorkerStatus::S_PHASE);
     }
+
+    signal_worker(RStoreWorkerStatus::EXIT);
   }
 
   void non_coordinator_start() {
@@ -152,8 +154,6 @@ public:
 
     // only the coordinator node calls this function
     DCHECK(coordinator_id == 0);
-    DCHECK(status == RStoreWorkerStatus::C_PHASE ||
-           status == RStoreWorkerStatus::S_PHASE);
     set_worker_status(status);
 
     // signal to everyone

@@ -61,15 +61,15 @@ public:
 
     for (;;) {
 
-      if (static_cast<RStoreWorkerStatus>(worker_status.load()) ==
-          RStoreWorkerStatus::EXIT) {
-        break;
-      }
+      RStoreWorkerStatus status;
+      do {
+        status = static_cast<RStoreWorkerStatus>(worker_status.load());
 
-      while (static_cast<RStoreWorkerStatus>(worker_status.load()) !=
-             RStoreWorkerStatus::C_PHASE) {
-        std::this_thread::yield();
-      }
+        if (status == RStoreWorkerStatus::EXIT) {
+          LOG(INFO) << "Executor " << id << " exits.";
+          return;
+        }
+      } while (status != RStoreWorkerStatus::C_PHASE);
 
       // c_phase
 
@@ -119,8 +119,6 @@ public:
       process_request();
       n_complete_workers.fetch_add(1);
     }
-
-    LOG(INFO) << "Executor " << id << " exits.";
   }
 
   void run_transaction(RStoreWorkerStatus status) {
@@ -189,9 +187,11 @@ public:
       } else {
         n_abort_no_retry.fetch_add(1);
       }
-
-      flush_messages();
+      if (i % phase_context.batch_flush == 0) {
+        flush_messages();
+      }
     }
+    flush_messages();
   }
 
   void onExit() override {
