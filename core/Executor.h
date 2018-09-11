@@ -7,6 +7,7 @@
 #include "core/Partitioner.h"
 
 #include "common/Percentile.h"
+#include "core/Defs.h"
 #include "core/Worker.h"
 #include "glog/logging.h"
 
@@ -31,11 +32,15 @@ public:
   using StorageType = typename WorkloadType::StorageType;
 
   Executor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
-           const ContextType &context, std::atomic<bool> &stopFlag)
+           const ContextType &context, std::atomic<uint32_t> &worker_status,
+           std::atomic<uint32_t> &n_complete_workers,
+           std::atomic<uint32_t> &n_started_workers)
       : Worker(coordinator_id, id), db(db), context(context),
+        worker_status(worker_status), n_complete_workers(n_complete_workers),
+        n_started_workers(n_started_workers),
         partitioner(std::make_unique<HashReplicatedPartitioner<2>>(
             coordinator_id, context.coordinator_num)),
-        stopFlag(stopFlag), protocol(db, *partitioner),
+        protocol(db, *partitioner),
         workload(coordinator_id, id, db, random, *partitioner) {
 
     for (auto i = 0u; i < context.coordinator_num; i++) {
@@ -52,9 +57,20 @@ public:
 
     StorageType storage;
     uint64_t last_seed = 0;
-    bool retry_transaction = false;
 
-    while (!stopFlag.load()) {
+    ExecutorStatus status;
+
+    while ((status = static_cast<ExecutorStatus>(worker_status.load())) !=
+           ExecutorStatus::START) {
+      std::this_thread::yield();
+    }
+
+    n_started_workers.fetch_add(1);
+
+    do {
+
+      bool retry_transaction = false;
+
       process_request();
 
       last_seed = random.get_seed();
@@ -77,10 +93,12 @@ public:
       if (result == TransactionResult::READY_TO_COMMIT) {
         if (protocol.commit(*transaction, messages)) {
           n_commit.fetch_add(1);
-          auto latency = std::chrono::duration_cast<std::chrono::milliseconds>(
-              std::chrono::steady_clock::now() - transaction->startTime);
-          percentile.add(latency.count());
           retry_transaction = false;
+          auto latency =
+              std::chrono::duration_cast<std::chrono::milliseconds>(
+                  std::chrono::steady_clock::now() - transaction->startTime)
+                  .count();
+          percentile.add(latency);
         } else {
           if (transaction->abort_lock) {
             n_abort_lock.fetch_add(1);
@@ -90,12 +108,26 @@ public:
           }
           random.set_seed(last_seed);
           retry_transaction = true;
-          // std::this_thread::sleep_for(std::chrono::microseconds(100));
         }
       } else {
         n_abort_no_retry.fetch_add(1);
       }
+
+      status = static_cast<ExecutorStatus>(worker_status.load());
+    } while (status != ExecutorStatus::STOP);
+
+    n_complete_workers.fetch_add(1);
+
+    // once all workers are stop, we need to process the replication
+    // requests
+
+    while (static_cast<ExecutorStatus>(worker_status.load()) !=
+           ExecutorStatus::CLEANUP) {
+      process_request();
     }
+
+    process_request();
+    n_complete_workers.fetch_add(1);
 
     LOG(INFO) << "Executor " << id << " exits.";
   }
@@ -197,8 +229,9 @@ private:
 private:
   DatabaseType &db;
   const ContextType &context;
+  std::atomic<uint32_t> &worker_status;
+  std::atomic<uint32_t> &n_complete_workers, &n_started_workers;
   std::unique_ptr<Partitioner> partitioner;
-  std::atomic<bool> &stopFlag;
   RandomType random;
   ProtocolType protocol;
   WorkloadType workload;

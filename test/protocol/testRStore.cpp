@@ -25,11 +25,8 @@ TEST(TestRStore, TestRStoreSwitcher) {
   scar::tpcc::Database<MetaDataType> db;
 
   std::atomic<bool> stopFlag;
-  std::atomic<uint32_t> worker_status;
-  std::atomic<uint32_t> n_complete_workers;
 
   scar::RStoreManager<WorkloadType> manager(0, 0, context, stopFlag);
-
   scar::RStoreExecutor<WorkloadType> e(0, 0, db, context, manager.worker_status,
                                        manager.n_completed_workers,
                                        manager.n_started_workers);

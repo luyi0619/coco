@@ -5,11 +5,10 @@
 #pragma once
 
 #include "common/Percentile.h"
+#include "core/Defs.h"
 #include "core/Partitioner.h"
 #include "core/Worker.h"
 #include "glog/logging.h"
-
-#include "core/group_commit/Helper.h"
 
 #include <chrono>
 
@@ -68,15 +67,15 @@ public:
 
     for (;;) {
 
-      GCExecutorStatus status;
+      ExecutorStatus status;
       do {
-        status = static_cast<GCExecutorStatus>(worker_status.load());
+        status = static_cast<ExecutorStatus>(worker_status.load());
 
-        if (status == GCExecutorStatus::EXIT) {
+        if (status == ExecutorStatus::EXIT) {
           LOG(INFO) << "Executor " << id << " exits.";
           return;
         }
-      } while (status != GCExecutorStatus::START);
+      } while (status != ExecutorStatus::START);
 
       while (!q.empty()) {
         auto &ptr = q.front();
@@ -140,8 +139,8 @@ public:
           flush_async_messages();
         }
 
-        status = static_cast<GCExecutorStatus>(worker_status.load());
-      } while (status != GCExecutorStatus::STOP);
+        status = static_cast<ExecutorStatus>(worker_status.load());
+      } while (status != ExecutorStatus::STOP);
 
       flush_async_messages();
 
@@ -150,8 +149,8 @@ public:
       // once all workers are stop, we need to process the replication
       // requests
 
-      while (static_cast<GCExecutorStatus>(worker_status.load()) !=
-             GCExecutorStatus::CLEANUP) {
+      while (static_cast<ExecutorStatus>(worker_status.load()) !=
+             ExecutorStatus::CLEANUP) {
         process_request();
       }
 

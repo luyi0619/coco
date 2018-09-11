@@ -9,7 +9,6 @@
 #include "core/Worker.h"
 
 namespace scar {
-namespace group_commit {
 
 template <class Workload, class Protocol> class Manager : public Worker {
 public:
@@ -40,26 +39,25 @@ public:
     std::size_t n_workers = context.worker_num;
     std::size_t n_coordinators = context.coordinator_num;
 
-    while (!stopFlag.load()) {
+    n_started_workers.store(0);
+    n_completed_workers.store(0);
+    signal_worker(ExecutorStatus::START);
+    wait_all_workers_start();
 
-      n_started_workers.store(0);
-      n_completed_workers.store(0);
-      signal_worker(ExecutorStatus::START);
-      wait_all_workers_start();
-      std::this_thread::sleep_for(
-          std::chrono::milliseconds(context.group_time));
-      set_worker_status(ExecutorStatus::STOP);
-      wait_all_workers_finish();
-      broadcast_stop();
-      wait4_stop(n_coordinators - 1);
-      // process replication
-      n_completed_workers.store(0);
-      set_worker_status(ExecutorStatus::CLEANUP);
-      wait_all_workers_finish();
-      wait4_ack();
+    // wait till stop flag is set
+    while (!stopFlag.load()) {
+      std::this_thread::yield();
     }
 
-    signal_worker(ExecutorStatus::EXIT);
+    set_worker_status(ExecutorStatus::STOP);
+    wait_all_workers_finish();
+    broadcast_stop();
+    wait4_stop(n_coordinators - 1);
+    // process replication
+    n_completed_workers.store(0);
+    set_worker_status(ExecutorStatus::CLEANUP);
+    wait_all_workers_finish();
+    wait4_ack();
   }
 
   void non_coordinator_start() {
@@ -67,30 +65,22 @@ public:
     std::size_t n_workers = context.worker_num;
     std::size_t n_coordinators = context.coordinator_num;
 
-    for (;;) {
-
-      ExecutorStatus status = wait4_signal();
-      if (status == ExecutorStatus::EXIT) {
-        set_worker_status(ExecutorStatus::EXIT);
-        break;
-      }
-
-      DCHECK(status == ExecutorStatus::START);
-      n_completed_workers.store(0);
-      n_started_workers.store(0);
-      set_worker_status(ExecutorStatus::START);
-      wait_all_workers_start();
-      wait4_stop(1);
-      set_worker_status(ExecutorStatus::STOP);
-      wait_all_workers_finish();
-      broadcast_stop();
-      wait4_stop(n_coordinators - 2);
-      // process replication
-      n_completed_workers.store(0);
-      set_worker_status(ExecutorStatus::CLEANUP);
-      wait_all_workers_finish();
-      send_ack();
-    }
+    ExecutorStatus status = wait4_signal();
+    DCHECK(status == ExecutorStatus::START);
+    n_completed_workers.store(0);
+    n_started_workers.store(0);
+    set_worker_status(ExecutorStatus::START);
+    wait_all_workers_start();
+    wait4_stop(1);
+    set_worker_status(ExecutorStatus::STOP);
+    wait_all_workers_finish();
+    broadcast_stop();
+    wait4_stop(n_coordinators - 2);
+    // process replication
+    n_completed_workers.store(0);
+    set_worker_status(ExecutorStatus::CLEANUP);
+    wait_all_workers_finish();
+    send_ack();
   }
 
   void wait_all_workers_finish() {
@@ -318,5 +308,4 @@ public:
   std::atomic<uint32_t> n_started_workers;
 };
 
-} // namespace group_commit
 } // namespace scar
