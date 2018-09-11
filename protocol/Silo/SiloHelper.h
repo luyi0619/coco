@@ -29,7 +29,7 @@ public:
       std::memcpy(dest, src, size);
     } while (tid_ != tid.load());
 
-    return SiloHelper::remove_lock_bit(tid_);
+    return remove_lock_bit(tid_);
   }
 
   static bool is_locked(uint64_t value) {
