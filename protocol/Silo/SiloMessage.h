@@ -677,18 +677,18 @@ public:
         std::function<void(MessagePiece, Message &, Table &, Transaction &)>>
         v;
     v.resize(static_cast<int>(ControlMessage::NFIELDS));
-    v.push_back(SiloMessageHandler::search_request_handler);
-    v.push_back(SiloMessageHandler::search_response_handler);
-    v.push_back(SiloMessageHandler::lock_request_handler);
-    v.push_back(SiloMessageHandler::lock_response_handler);
-    v.push_back(SiloMessageHandler::read_validation_request_handler);
-    v.push_back(SiloMessageHandler::read_validation_response_handler);
-    v.push_back(SiloMessageHandler::abort_request_handler);
-    v.push_back(SiloMessageHandler::write_request_handler);
-    v.push_back(SiloMessageHandler::write_response_handler);
-    v.push_back(SiloMessageHandler::replication_request_handler);
-    v.push_back(SiloMessageHandler::replication_response_handler);
-    v.push_back(SiloMessageHandler::release_lock_request_handler);
+    v.push_back(search_request_handler);
+    v.push_back(search_response_handler);
+    v.push_back(lock_request_handler);
+    v.push_back(lock_response_handler);
+    v.push_back(read_validation_request_handler);
+    v.push_back(read_validation_response_handler);
+    v.push_back(abort_request_handler);
+    v.push_back(write_request_handler);
+    v.push_back(write_response_handler);
+    v.push_back(replication_request_handler);
+    v.push_back(replication_response_handler);
+    v.push_back(release_lock_request_handler);
     return v;
   }
 };
