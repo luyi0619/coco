@@ -16,14 +16,14 @@ TEST(TestTwoPLHelper, TestBasic) {
   EXPECT_FALSE(TwoPLHelper::is_write_locked(0));
   EXPECT_EQ(TwoPLHelper::read_lock_num(0), 0);
 
-  for(int i = 0; i < 511; i ++){
+  for (int i = 0; i < 511; i++) {
     EXPECT_EQ(TwoPLHelper::read_lock_num(a.load()), i);
     EXPECT_TRUE(TwoPLHelper::read_lock(a));
   }
   EXPECT_FALSE(TwoPLHelper::read_lock(a));
   EXPECT_EQ(TwoPLHelper::read_lock_num(a.load()), 511);
 
-  for(int i = 0; i < 511; i ++){
+  for (int i = 0; i < 511; i++) {
     EXPECT_EQ(TwoPLHelper::read_lock_num(a), 511 - i);
     TwoPLHelper::read_lock_release(a);
   }
@@ -38,7 +38,6 @@ TEST(TestTwoPLHelper, TestBasic) {
   TwoPLHelper::read_lock_release(a);
 }
 
-
 TEST(TestTwoPLHelper, TestValue) {
 
   using scar::TwoPLHelper;
@@ -50,14 +49,14 @@ TEST(TestTwoPLHelper, TestValue) {
   EXPECT_FALSE(TwoPLHelper::is_write_locked(0));
   EXPECT_EQ(TwoPLHelper::read_lock_num(0), 0);
 
-  for(int i = 0; i < 511; i ++){
+  for (int i = 0; i < 511; i++) {
     EXPECT_EQ(TwoPLHelper::read_lock_num(a.load()), i);
     EXPECT_TRUE(TwoPLHelper::read_lock(a));
   }
   EXPECT_FALSE(TwoPLHelper::read_lock(a));
   EXPECT_EQ(TwoPLHelper::read_lock_num(a.load()), 511);
 
-  for(int i = 0; i < 511; i ++){
+  for (int i = 0; i < 511; i++) {
     EXPECT_EQ(TwoPLHelper::read_lock_num(a), 511 - i);
     TwoPLHelper::read_lock_release(a);
   }
