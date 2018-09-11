@@ -12,6 +12,7 @@
 #include "glog/logging.h"
 
 #include <chrono>
+#include <thread>
 
 namespace scar {
 
@@ -26,8 +27,7 @@ public:
   using RandomType = typename DatabaseType::RandomType;
   using MessageType = typename ProtocolType::MessageType;
   using MessageFactoryType = typename ProtocolType::MessageFactoryType;
-  using MessageHandlerType =
-      typename ProtocolType::template MessageHandlerType<TransactionType>;
+  using MessageHandlerType = typename ProtocolType::MessageHandlerType;
 
   using StorageType = typename WorkloadType::StorageType;
 
@@ -50,6 +50,8 @@ public:
 
     messageHandlers = MessageHandlerType::get_message_handlers();
   }
+
+  ~Executor() = default;
 
   void start() override {
 

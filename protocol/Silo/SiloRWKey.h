@@ -1,5 +1,5 @@
 //
-// Created by Yi Lu on 9/7/18.
+// Created by Yi Lu on 9/11/18.
 //
 
 #pragma once
@@ -12,7 +12,7 @@
 
 namespace scar {
 
-class RWKey {
+class SiloRWKey {
 public:
   // local index read bit
 
@@ -42,24 +42,6 @@ public:
 
   uint32_t get_read_request_bit() const {
     return (bitvec >> READ_REQUEST_BIT_OFFSET) & READ_REQUEST_BIT_MASK;
-  }
-
-  // read validation success bit
-
-  void set_read_validation_success_bit() {
-    clear_read_validation_success_bit();
-    bitvec |= READ_VALIDATION_SUCCESS_BIT_MASK
-              << READ_VALIDATION_SUCCESS_BIT_OFFSET;
-  }
-
-  void clear_read_validation_success_bit() {
-    bitvec &= ~(READ_VALIDATION_SUCCESS_BIT_MASK
-                << READ_VALIDATION_SUCCESS_BIT_OFFSET);
-  }
-
-  uint32_t get_read_validation_success_bit() const {
-    return (bitvec >> READ_VALIDATION_SUCCESS_BIT_OFFSET) &
-           READ_VALIDATION_SUCCESS_BIT_MASK;
   }
 
   // write lock bit
@@ -130,12 +112,10 @@ private:
   /*
    * A bitvec is a 32-bit word.
    *
-   * [ table id (5) ] | partition id (8) | unused bit (15) - read lock  |
-   *   write lock bit(1) | read validation success bit (1)  |
-   *   read request bit (1) | local index read (1)  ]
+   * [ table id (5) ] | partition id (8) | unused bit (16) |
+   * write lock bit(1) | read request bit (1) | local index read (1)  ]
    *
    * write lock bit is set when a write lock is acquired.
-   * read validation success bit is set when the read is successfully validated.
    * read request bit is set when the read response is received.
    * local index read  is set when the read is from a local read only index.
    *
@@ -155,10 +135,7 @@ public:
   static constexpr uint32_t PARTITION_ID_OFFSET = 19;
 
   static constexpr uint32_t WRITE_LOCK_BIT_MASK = 0x1;
-  static constexpr uint32_t WRITE_LOCK_BIT_OFFSET = 3;
-
-  static constexpr uint32_t READ_VALIDATION_SUCCESS_BIT_MASK = 0x1;
-  static constexpr uint32_t READ_VALIDATION_SUCCESS_BIT_OFFSET = 2;
+  static constexpr uint32_t WRITE_LOCK_BIT_OFFSET = 2;
 
   static constexpr uint32_t READ_REQUEST_BIT_MASK = 0x1;
   static constexpr uint32_t READ_REQUEST_BIT_OFFSET = 1;

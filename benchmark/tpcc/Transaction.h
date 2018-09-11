@@ -9,8 +9,9 @@
 #include "benchmark/tpcc/Query.h"
 #include "benchmark/tpcc/Schema.h"
 #include "common/Time.h"
+#include "core/Defs.h"
 #include "core/Partitioner.h"
-#include "core/Transaction.h"
+#include "core/Table.h"
 
 namespace scar {
 namespace tpcc {
@@ -46,9 +47,9 @@ struct Storage {
   history::value h_value;
 };
 
-template <class Database> class NewOrder : public Transaction<Database> {
+template <class Transaction> class NewOrder : public Transaction {
 public:
-  using DatabaseType = Database;
+  using DatabaseType = typename Transaction::DatabaseType;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
   using MetaDataType = typename DatabaseType::MetaDataType;
@@ -59,8 +60,8 @@ public:
            std::size_t partition_id, DatabaseType &db,
            const ContextType &context, RandomType &random,
            Partitioner &partitioner, Storage &storage)
-      : Transaction<Database>(coordinator_id, worker_id, partition_id, db,
-                              context, random, partitioner),
+      : Transaction(coordinator_id, worker_id, partition_id, db, context,
+                    random, partitioner),
         storage(storage) {}
 
   virtual ~NewOrder() override = default;
@@ -84,7 +85,7 @@ public:
     auto warehouseTableID = warehouse::tableID;
     storage.warehouse_key = warehouse::key(W_ID);
     this->search_for_read(warehouseTableID, W_ID - 1, storage.warehouse_key,
-                 storage.warehouse_value);
+                          storage.warehouse_value);
 
     // The row in the DISTRICT table with matching D_W_ID and D_ ID is selected,
     // D_TAX, the district tax rate, is retrieved, and D_NEXT_O_ID, the next
@@ -94,7 +95,7 @@ public:
     auto districtTableID = district::tableID;
     storage.district_key = district::key(W_ID, D_ID);
     this->search_for_update(districtTableID, W_ID - 1, storage.district_key,
-                 storage.district_value);
+                            storage.district_value);
 
     // The row in the CUSTOMER table with matching C_W_ID, C_D_ID, and C_ID is
     // selected and C_DISCOUNT, the customer's discount rate, C_LAST, the
@@ -104,7 +105,7 @@ public:
     auto customerTableID = customer::tableID;
     storage.customer_key = customer::key(W_ID, D_ID, C_ID);
     this->search_for_read(customerTableID, W_ID - 1, storage.customer_key,
-                 storage.customer_value);
+                          storage.customer_value);
 
     auto itemTableID = item::tableID;
     auto stockTableID = stock::tableID;
@@ -131,15 +132,16 @@ public:
         return TransactionResult::ABORT_NORETRY;
       }
 
-      this->search_local_index(itemTableID, 0, storage.item_keys[i], storage.item_values[i]);
+      this->search_local_index(itemTableID, 0, storage.item_keys[i],
+                               storage.item_values[i]);
 
       // The row in the STOCK table with matching S_I_ID (equals OL_I_ID) and
       // S_W_ID (equals OL_SUPPLY_W_ID) is selected.
 
       storage.stock_keys[i] = stock::key(OL_SUPPLY_W_ID, OL_I_ID);
 
-      this->search_for_update(stockTableID, OL_SUPPLY_W_ID - 1, storage.stock_keys[i],
-                   storage.stock_values[i]);
+      this->search_for_update(stockTableID, OL_SUPPLY_W_ID - 1,
+                              storage.stock_keys[i], storage.stock_values[i]);
     }
 
     this->process_read_request();
@@ -273,9 +275,9 @@ private:
   Storage &storage;
 };
 
-template <class Database> class Payment : public Transaction<Database> {
+template <class Transaction> class Payment : public Transaction {
 public:
-  using DatabaseType = Database;
+  using DatabaseType = typename Transaction::DatabaseType;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
   using MetaDataType = typename DatabaseType::MetaDataType;
@@ -286,8 +288,8 @@ public:
           std::size_t partition_id, DatabaseType &db,
           const ContextType &context, RandomType &random,
           Partitioner &partitioner, Storage &storage)
-      : Transaction<Database>(coordinator_id, worker_id, partition_id, db,
-                              context, random, partitioner),
+      : Transaction(coordinator_id, worker_id, partition_id, db, context,
+                    random, partitioner),
         storage(storage) {}
 
   virtual ~Payment() override = default;
@@ -315,7 +317,7 @@ public:
     auto warehouseTableID = warehouse::tableID;
     storage.warehouse_key = warehouse::key(W_ID);
     this->search_for_update(warehouseTableID, W_ID - 1, storage.warehouse_key,
-                 storage.warehouse_value);
+                            storage.warehouse_value);
 
     // The row in the DISTRICT table with matching D_W_ID and D_ID is selected.
     // D_NAME, D_STREET_1, D_STREET_2, D_CITY, D_STATE, and D_ZIP are retrieved
@@ -324,7 +326,7 @@ public:
     auto districtTableID = district::tableID;
     storage.district_key = district::key(W_ID, D_ID);
     this->search_for_update(districtTableID, W_ID - 1, storage.district_key,
-                 storage.district_value);
+                            storage.district_value);
 
     // The row in the CUSTOMER table with matching C_W_ID, C_D_ID, and C_ID is
     // selected and C_DISCOUNT, the customer's discount rate, C_LAST, the
@@ -337,8 +339,8 @@ public:
       storage.customer_name_idx_key =
           customer_name_idx::key(C_W_ID, C_D_ID, query.C_LAST);
       this->search_local_index(customerNameIdxTableID, C_W_ID - 1,
-                   storage.customer_name_idx_key,
-                   storage.customer_name_idx_value);
+                               storage.customer_name_idx_key,
+                               storage.customer_name_idx_value);
     }
 
     this->process_read_request();
@@ -356,7 +358,7 @@ public:
     auto customerTableID = customer::tableID;
     storage.customer_key = customer::key(C_W_ID, C_D_ID, C_ID);
     this->search_for_update(customerTableID, C_W_ID - 1, storage.customer_key,
-                 storage.customer_value);
+                            storage.customer_value);
 
     this->process_read_request();
 

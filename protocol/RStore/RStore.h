@@ -9,12 +9,12 @@
 #include <thread>
 
 #include "core/Partitioner.h"
-#include "core/RWKey.h"
 #include "core/Table.h"
 #include "core/Worker.h"
-#include "protocol/RStore/RStoreHelper.h"
 #include "protocol/RStore/RStoreManager.h"
 #include "protocol/RStore/RStoreMessage.h"
+#include "protocol/Silo/SiloHelper.h"
+#include "protocol/Silo/SiloRWKey.h"
 #include <glog/logging.h>
 
 namespace scar {
@@ -43,7 +43,7 @@ public:
     TableType *table = db.find_table(table_id, partition_id);
     auto value_bytes = table->value_size();
     auto row = table->search(key);
-    return RStoreHelper::read(row, value, value_bytes);
+    return SiloHelper::read(row, value, value_bytes);
   }
 
   template <class Transaction> void abort(Transaction &txn) {
@@ -57,7 +57,7 @@ public:
       auto table = db.find_table(tableId, partitionId);
       auto key = writeKey.get_key();
       std::atomic<uint64_t> &tid = table->search_metadata(key);
-      RStoreHelper::unlock(tid);
+      SiloHelper::unlock(tid);
     }
   }
 
@@ -92,7 +92,7 @@ private:
     auto &readSet = txn.readSet;
     auto &writeSet = txn.writeSet;
 
-    auto getReadKey = [&readSet](const void *key) -> RWKey * {
+    auto getReadKey = [&readSet](const void *key) -> SiloRWKey * {
       for (auto &readKey : readSet) {
         if (readKey.get_key() == key) {
           return &readKey;
@@ -104,7 +104,7 @@ private:
     bool tidChanged = false;
 
     std::sort(writeSet.begin(), writeSet.end(),
-              [](const RWKey &k1, const RWKey &k2) {
+              [](const SiloRWKey &k1, const SiloRWKey &k2) {
                 return k1.get_sort_key() < k2.get_sort_key();
               });
 
@@ -115,7 +115,7 @@ private:
 
       auto key = writeKey.get_key();
       std::atomic<uint64_t> &tid = table->search_metadata(key);
-      uint64_t latestTid = RStoreHelper::lock(tid);
+      uint64_t latestTid = SiloHelper::lock(tid);
       auto readKeyPtr = getReadKey(key);
       // assume no blind write
       DCHECK(readKeyPtr != nullptr);
@@ -157,11 +157,11 @@ private:
       auto key = readKey.get_key();
       uint64_t tid = table->search_metadata(key).load();
 
-      if (RStoreHelper::remove_lock_bit(tid) != readKey.get_tid()) {
+      if (SiloHelper::remove_lock_bit(tid) != readKey.get_tid()) {
         return false;
       }
 
-      if (RStoreHelper::is_locked(tid)) { // must be locked by others
+      if (SiloHelper::is_locked(tid)) { // must be locked by others
         return false;
       }
     }

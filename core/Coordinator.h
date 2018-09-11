@@ -8,7 +8,7 @@
 #include "core/Dispatcher.h"
 #include "core/Executor.h"
 #include "core/Worker.h"
-#include "core/WorkerFactory.h"
+#include "core/factory/WorkerFactory.h"
 #include <boost/algorithm/string.hpp>
 #include <glog/logging.h>
 #include <thread>
@@ -16,7 +16,16 @@
 
 namespace scar {
 
-template <class Workload> class Coordinator {
+class ICoordinator {
+public:
+  ~ICoordinator() = default;
+
+  virtual void start() = 0;
+
+  virtual void connectToPeers() = 0;
+};
+
+template <class Workload> class Coordinator : public ICoordinator {
 public:
   using WorkloadType = Workload;
   using DatabaseType = typename WorkloadType::DatabaseType;
@@ -30,7 +39,9 @@ public:
     ioStopFlag.store(false);
   }
 
-  void start() {
+  ~Coordinator() = default;
+
+  void start() override {
 
     LOG(INFO) << "Coordinator initializes " << context.worker_num
               << " workers.";
@@ -127,7 +138,7 @@ public:
     LOG(INFO) << "Coordinator exits.";
   }
 
-  void connectToPeers() {
+  void connectToPeers() override {
 
     inSockets = std::vector<Socket>(peers.size());
     outSockets = std::vector<Socket>(peers.size());

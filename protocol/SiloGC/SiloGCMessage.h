@@ -8,10 +8,10 @@
 #include "common/Message.h"
 #include "common/MessagePiece.h"
 #include "core/ControlMessage.h"
-#include "core/RWKey.h"
 #include "core/Table.h"
-
-#include "protocol/SiloGC/SiloGCHelper.h"
+#include "protocol/Silo/SiloHelper.h"
+#include "protocol/Silo/SiloRWKey.h"
+#include "protocol/Silo/SiloTransaction.h"
 
 namespace scar {
 
@@ -28,7 +28,9 @@ enum class SiloGCMessage {
   NFIELDS
 };
 
-template <class Table> class SiloGCMessageFactory {
+class SiloGCMessageFactory {
+  using Table = ITable<std::atomic<uint64_t>>;
+
 public:
   static void new_search_message(Message &message, Table &table,
                                  const void *key, uint32_t key_offset) {
@@ -169,7 +171,10 @@ public:
   }
 };
 
-template <class Table, class Transaction> class SiloGCMessageHandler {
+template <class Database> class SiloGCMessageHandler {
+  using Table = ITable<std::atomic<uint64_t>>;
+  using Transaction = SiloTransaction<Database>;
+
 public:
   static void search_request_handler(MessagePiece inputPiece,
                                      Message &responseMessage, Table &table,
@@ -253,7 +258,7 @@ public:
     Decoder dec(stringPiece);
     dec >> tid >> key_offset;
 
-    RWKey &readKey = txn.readSet[key_offset];
+    SiloRWKey &readKey = txn.readSet[key_offset];
     dec = Decoder(inputPiece.toStringPiece());
     dec.read_n_bytes(readKey.get_value(), value_size);
     readKey.set_tid(tid);
@@ -337,13 +342,13 @@ public:
 
     DCHECK(dec.size() == 0);
 
-    RWKey &writeKey = txn.writeSet[key_offset];
+    SiloRWKey &writeKey = txn.writeSet[key_offset];
 
     bool tid_changed = false;
 
     if (success) {
 
-      RWKey *readKey = txn.get_read_key(writeKey.get_key());
+      SiloRWKey *readKey = txn.get_read_key(writeKey.get_key());
 
       DCHECK(readKey != nullptr);
 
@@ -441,11 +446,7 @@ public:
 
     dec >> success >> key_offset;
 
-    RWKey &readKey = txn.readSet[key_offset];
-
-    if (success) {
-      readKey.set_read_validation_success_bit();
-    }
+    SiloRWKey &readKey = txn.readSet[key_offset];
 
     txn.pendingResponses--;
 
@@ -519,7 +520,7 @@ public:
     std::atomic<uint64_t> &tid = table.search_metadata(key);
     table.deserialize_value(key, valueStringPiece);
 
-    SiloGCHelper::unlock(tid, commit_tid);
+    SiloHelper::unlock(tid, commit_tid);
   }
 
   static void replication_request_handler(MessagePiece inputPiece,
@@ -559,13 +560,13 @@ public:
 
     std::atomic<uint64_t> &tid = table.search_metadata(key);
 
-    uint64_t last_tid = SiloGCHelper::lock(tid);
+    uint64_t last_tid = SiloHelper::lock(tid);
 
     if (commit_tid > last_tid) {
       table.deserialize_value(key, valueStringPiece);
-      SiloGCHelper::unlock(tid, commit_tid);
+      SiloHelper::unlock(tid, commit_tid);
     } else {
-      SiloGCHelper::unlock(tid);
+      SiloHelper::unlock(tid);
     }
   }
 

@@ -6,6 +6,7 @@
 #include "benchmark/ycsb/Transaction.h"
 #include "core/Partitioner.h"
 #include "protocol/Silo/Silo.h"
+#include "protocol/Silo/SiloTransaction.h"
 #include <gtest/gtest.h>
 
 TEST(TestYCSBTransaction, TestBasic) {
@@ -23,7 +24,7 @@ TEST(TestYCSBTransaction, TestBasic) {
 
   scar::ycsb::Storage storage;
 
-  scar::ycsb::ReadModifyWrite<DatabaseType> t(0, 0, 0, db, context, random,
-                                              partitioner, storage);
+  scar::ycsb::ReadModifyWrite<scar::SiloTransaction<DatabaseType>> t(
+      0, 0, 0, db, context, random, partitioner, storage);
   EXPECT_EQ(true, true);
 }

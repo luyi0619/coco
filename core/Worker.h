@@ -6,7 +6,6 @@
 
 #include "common/LockfreeQueue.h"
 #include "common/Message.h"
-#include "core/Transaction.h"
 #include <atomic>
 #include <glog/logging.h>
 #include <queue>
@@ -22,6 +21,8 @@ public:
     n_abort_lock.store(0);
     n_abort_read_validation.store(0);
   }
+
+  virtual ~Worker() = default;
 
   virtual void start() = 0;
 

@@ -10,7 +10,8 @@
 
 #include "core/Partitioner.h"
 #include "core/Table.h"
-#include "protocol/SiloGC/SiloGCHelper.h"
+#include "protocol/Silo/SiloHelper.h"
+#include "protocol/Silo/SiloTransaction.h"
 #include "protocol/SiloGC/SiloGCMessage.h"
 #include <glog/logging.h>
 
@@ -23,11 +24,10 @@ public:
   using ContextType = typename DatabaseType::ContextType;
   using TableType = ITable<MetaDataType>;
   using MessageType = SiloGCMessage;
+  using TransactionType = SiloTransaction<DatabaseType>;
 
-  using MessageFactoryType = SiloGCMessageFactory<TableType>;
-
-  template <class Transaction>
-  using MessageHandlerType = SiloGCMessageHandler<TableType, Transaction>;
+  using MessageFactoryType = SiloGCMessageFactory;
+  using MessageHandlerType = SiloGCMessageHandler<DatabaseType>;
 
   static_assert(
       std::is_same<typename DatabaseType::TableType, TableType>::value,
@@ -42,11 +42,10 @@ public:
     TableType *table = db.find_table(table_id, partition_id);
     auto value_bytes = table->value_size();
     auto row = table->search(key);
-    return SiloGCHelper::read(row, value, value_bytes);
+    return SiloHelper::read(row, value, value_bytes);
   }
 
-  template <class Transaction>
-  void abort(Transaction &txn,
+  void abort(TransactionType &txn,
              std::vector<std::unique_ptr<Message>> &messages) {
 
     auto &writeSet = txn.writeSet;
@@ -65,7 +64,7 @@ public:
         auto key = writeKey.get_key();
         std::atomic<uint64_t> &tid = table->search_metadata(key);
         if (writeKey.get_write_lock_bit()) {
-          SiloGCHelper::unlock(tid);
+          SiloHelper::unlock(tid);
         }
       } else {
         txn.pendingResponses++;
@@ -78,8 +77,7 @@ public:
     txn.message_flusher();
   }
 
-  template <class Transaction>
-  bool commit(Transaction &txn,
+  bool commit(TransactionType &txn,
               std::vector<std::unique_ptr<Message>> &syncMessages,
               std::vector<std::unique_ptr<Message>> &asyncMessages) {
 
@@ -105,8 +103,7 @@ public:
   }
 
 private:
-  template <class Transaction>
-  bool lock_write_set(Transaction &txn,
+  bool lock_write_set(TransactionType &txn,
                       std::vector<std::unique_ptr<Message>> &messages) {
 
     auto &readSet = txn.readSet;
@@ -123,7 +120,7 @@ private:
         auto key = writeKey.get_key();
         std::atomic<uint64_t> &tid = table->search_metadata(key);
         bool success;
-        uint64_t latestTid = SiloGCHelper::lock(tid, success);
+        uint64_t latestTid = SiloHelper::lock(tid, success);
 
         if (!success) {
           txn.abort_lock = true;
@@ -155,8 +152,7 @@ private:
     return txn.abort_lock;
   }
 
-  template <class Transaction>
-  bool validate_read_set(Transaction &txn,
+  bool validate_read_set(TransactionType &txn,
                          std::vector<std::unique_ptr<Message>> &messages) {
 
     auto &readSet = txn.readSet;
@@ -190,11 +186,11 @@ private:
       if (partitioner.has_master_partition(partitionId)) {
         auto key = readKey.get_key();
         uint64_t tid = table->search_metadata(key).load();
-        if (SiloGCHelper::remove_lock_bit(tid) != readKey.get_tid()) {
+        if (SiloHelper::remove_lock_bit(tid) != readKey.get_tid()) {
           txn.abort_read_validation = true;
           break;
         }
-        if (SiloGCHelper::is_locked(tid)) { // must be locked by others
+        if (SiloHelper::is_locked(tid)) { // must be locked by others
           txn.abort_read_validation = true;
           break;
         }
@@ -212,9 +208,7 @@ private:
     return !txn.abort_read_validation;
   }
 
-  template <class Transaction>
-
-  uint64_t generate_tid(Transaction &txn) {
+  uint64_t generate_tid(TransactionType &txn) {
 
     auto &readSet = txn.readSet;
     auto &writeSet = txn.writeSet;
@@ -253,9 +247,8 @@ private:
     return next_tid;
   }
 
-  template <class Transaction>
   void
-  write_and_replicate(Transaction &txn, uint64_t commit_tid,
+  write_and_replicate(TransactionType &txn, uint64_t commit_tid,
                       std::vector<std::unique_ptr<Message>> &syncMessages,
                       std::vector<std::unique_ptr<Message>> &asyncMessages) {
 
@@ -302,10 +295,10 @@ private:
           auto value = writeKey.get_value();
           std::atomic<uint64_t> &tid = table->search_metadata(key);
 
-          uint64_t last_tid = SiloGCHelper::lock(tid);
+          uint64_t last_tid = SiloHelper::lock(tid);
           DCHECK(last_tid < commit_tid);
           table->update(key, value);
-          SiloGCHelper::unlock(tid, commit_tid);
+          SiloHelper::unlock(tid, commit_tid);
 
         } else {
           txn.pendingResponses++;
@@ -320,8 +313,7 @@ private:
     sync_messages(txn, false);
   }
 
-  template <class Transaction>
-  void sync_messages(Transaction &txn, bool wait_response = true) {
+  void sync_messages(TransactionType &txn, bool wait_response = true) {
     txn.message_flusher();
     if (wait_response) {
       while (txn.pendingResponses > 0) {

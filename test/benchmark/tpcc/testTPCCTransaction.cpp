@@ -6,6 +6,7 @@
 #include "benchmark/tpcc/Transaction.h"
 #include "core/Partitioner.h"
 #include "protocol/Silo/Silo.h"
+#include "protocol/Silo/SiloTransaction.h"
 #include <gtest/gtest.h>
 
 TEST(TestTPCCTransaction, TestBasic) {
@@ -22,9 +23,9 @@ TEST(TestTPCCTransaction, TestBasic) {
   scar::tpcc::Storage storage;
 
   scar::Silo<decltype(db)> silo(db, partitioner);
-  scar::tpcc::NewOrder<DatabaseType> t1(0, 0, 0, db, context, random,
-                                        partitioner, storage);
-  scar::tpcc::Payment<DatabaseType> t2(0, 0, 0, db, context, random,
-                                       partitioner, storage);
+  scar::tpcc::NewOrder<scar::SiloTransaction<DatabaseType>> t1(
+      0, 0, 0, db, context, random, partitioner, storage);
+  scar::tpcc::Payment<scar::SiloTransaction<DatabaseType>> t2(
+      0, 0, 0, db, context, random, partitioner, storage);
   EXPECT_EQ(true, true);
 }

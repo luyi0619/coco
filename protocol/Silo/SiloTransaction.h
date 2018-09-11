@@ -1,22 +1,27 @@
 //
+// Created by Yi Lu on 9/11/18.
+//
+
+#pragma once
+
+//
 // Created by Yi Lu on 7/22/18.
 //
 
 #pragma once
 
 #include "common/Message.h"
+#include "core/Defs.h"
 #include "core/Partitioner.h"
-#include "core/RWKey.h"
 #include "core/Table.h"
+#include "protocol/Silo/SiloRWKey.h"
 #include <chrono>
 #include <glog/logging.h>
 #include <vector>
 
 namespace scar {
 
-enum class TransactionResult { COMMIT, READY_TO_COMMIT, ABORT, ABORT_NORETRY };
-
-template <class Database> class Transaction {
+template <class Database> class SiloTransaction {
 public:
   using DatabaseType = Database;
   using ContextType = typename DatabaseType::ContextType;
@@ -24,17 +29,17 @@ public:
   using MetaDataType = typename DatabaseType::MetaDataType;
   using TableType = ITable<MetaDataType>;
 
-  Transaction(std::size_t coordinator_id, std::size_t worker_id,
-              std::size_t partition_id, DatabaseType &db,
-              const ContextType &context, RandomType &random,
-              Partitioner &partitioner)
+  SiloTransaction(std::size_t coordinator_id, std::size_t worker_id,
+                  std::size_t partition_id, DatabaseType &db,
+                  const ContextType &context, RandomType &random,
+                  Partitioner &partitioner)
       : coordinator_id(coordinator_id), worker_id(worker_id),
         partition_id(partition_id), startTime(std::chrono::steady_clock::now()),
         db(db), context(context), random(random), partitioner(partitioner) {
     reset();
   }
 
-  virtual ~Transaction() = default;
+  virtual ~SiloTransaction() = default;
 
   void reset() {
     pendingResponses = 0;
@@ -49,7 +54,7 @@ public:
   template <class KeyType, class ValueType>
   void search_local_index(std::size_t table_id, std::size_t partition_id,
                           const KeyType &key, ValueType &value) {
-    RWKey readKey;
+    SiloRWKey readKey;
 
     readKey.set_table_id(table_id);
     readKey.set_partition_id(partition_id);
@@ -63,14 +68,14 @@ public:
   }
 
   template <class KeyType, class ValueType>
-  void search_for_update(std::size_t table_id, std::size_t partition_id,
-              const KeyType &key, ValueType &value) {
+  void search_for_read(std::size_t table_id, std::size_t partition_id,
+                       const KeyType &key, ValueType &value) {
 
-    if (partitioner.has_master_partition(partition_id)) {
+    if (!partitioner.has_master_partition(partition_id)) {
       pendingResponses++;
     }
 
-    RWKey readKey;
+    SiloRWKey readKey;
 
     readKey.set_table_id(table_id);
     readKey.set_partition_id(partition_id);
@@ -81,16 +86,15 @@ public:
     add_to_read_set(readKey);
   }
 
-
   template <class KeyType, class ValueType>
-  void search_for_read(std::size_t table_id, std::size_t partition_id,
+  void search_for_update(std::size_t table_id, std::size_t partition_id,
                          const KeyType &key, ValueType &value) {
 
-    if (partitioner.has_master_partition(partition_id)) {
+    if (!partitioner.has_master_partition(partition_id)) {
       pendingResponses++;
     }
 
-    RWKey readKey;
+    SiloRWKey readKey;
 
     readKey.set_table_id(table_id);
     readKey.set_partition_id(partition_id);
@@ -104,7 +108,8 @@ public:
   template <class KeyType, class ValueType>
   void update(std::size_t table_id, std::size_t partition_id,
               const KeyType &key, const ValueType &value) {
-    RWKey writeKey;
+    SiloRWKey writeKey;
+
     writeKey.set_table_id(table_id);
     writeKey.set_partition_id(partition_id);
 
@@ -128,7 +133,7 @@ public:
         break;
       }
 
-      const RWKey &readKey = readSet[i];
+      const SiloRWKey &readKey = readSet[i];
       auto tid =
           readRequestHandler(readKey.get_table_id(), readKey.get_partition_id(),
                              i, readKey.get_key(), readKey.get_value(),
@@ -145,7 +150,7 @@ public:
     }
   }
 
-  RWKey *get_read_key(const void *key) {
+  SiloRWKey *get_read_key(const void *key) {
 
     for (auto i = 0u; i < readSet.size(); i++) {
       if (readSet[i].get_key() == key) {
@@ -156,12 +161,12 @@ public:
     return nullptr;
   }
 
-  std::size_t add_to_read_set(const RWKey &key) {
+  std::size_t add_to_read_set(const SiloRWKey &key) {
     readSet.push_back(key);
     return readSet.size() - 1;
   }
 
-  std::size_t add_to_write_set(const RWKey &key) {
+  std::size_t add_to_write_set(const SiloRWKey &key) {
     writeSet.push_back(key);
     return writeSet.size() - 1;
   }
@@ -186,7 +191,7 @@ public:
   const ContextType &context;
   RandomType &random;
   Partitioner &partitioner;
-  std::vector<RWKey> readSet, writeSet;
+  std::vector<SiloRWKey> readSet, writeSet;
 };
 
 } // namespace scar

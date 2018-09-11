@@ -10,7 +10,7 @@
 #include "core/ControlMessage.h"
 #include "core/Table.h"
 
-#include "protocol/RStore/RStoreHelper.h"
+#include "protocol/Silo/SiloHelper.h"
 
 namespace scar {
 
@@ -95,13 +95,13 @@ public:
 
     std::atomic<uint64_t> &tid = table.search_metadata(key);
 
-    uint64_t last_tid = RStoreHelper::lock(tid);
+    uint64_t last_tid = SiloHelper::lock(tid);
 
     if (commit_tid > last_tid) {
       table.deserialize_value(key, valueStringPiece);
-      RStoreHelper::unlock(tid, commit_tid);
+      SiloHelper::unlock(tid, commit_tid);
     } else {
-      RStoreHelper::unlock(tid);
+      SiloHelper::unlock(tid);
     }
   }
 

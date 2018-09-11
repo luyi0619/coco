@@ -61,15 +61,15 @@ public:
 
     } else if (context.protocol == "RStore") {
 
-      auto switcher = std::make_shared<RStoreManager>(
+      auto manager = std::make_shared<RStoreManager>(
           coordinator_id, context.worker_num, context, stop_flag);
 
       for (auto i = 0u; i < context.worker_num; i++) {
         workers.push_back(std::make_shared<RStoreExecutor<Workload>>(
-            coordinator_id, i, db, context, switcher->worker_status,
-            switcher->n_completed_workers, switcher->n_started_workers));
+            coordinator_id, i, db, context, manager->worker_status,
+            manager->n_completed_workers, manager->n_started_workers));
       }
-      workers.push_back(switcher);
+      workers.push_back(manager);
     }
 
     return workers;

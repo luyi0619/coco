@@ -20,10 +20,6 @@ int main(int argc, char *argv[]) {
   google::InstallFailureSignalHandler();
   google::ParseCommandLineFlags(&argc, &argv, true);
 
-  using MetaDataType = std::atomic<uint64_t>;
-  using TransactionType = scar::Transaction<scar::tpcc::Database<MetaDataType>>;
-  using WorkloadType = scar::tpcc::Workload<TransactionType>;
-
   std::vector<std::string> peers;
   boost::algorithm::split(peers, FLAGS_servers, boost::is_any_of(";"));
 
@@ -34,11 +30,25 @@ int main(int argc, char *argv[]) {
   context.partition_num = n * context.coordinator_num;
   context.worker_num = n;
 
+  // only create coordinator for tpc-c
+  std::unordered_set<std::string> protocols = {"Silo", "SiloGC", "RStore"};
+  CHECK(protocols.count(context.protocol) == 1);
+
+  // only create cooridnator for silo-like protocols
+
+  using MetaDataType = std::atomic<uint64_t>;
+  using TransactionType =
+      scar::SiloTransaction<scar::tpcc::Database<MetaDataType>>;
+  using WorkloadType = scar::tpcc::Workload<TransactionType>;
+
   scar::tpcc::Database<MetaDataType> db;
+
   db.initialize(context, context.partition_num, n);
 
-  scar::Coordinator<WorkloadType> c(FLAGS_id, peers, db, context);
-  c.connectToPeers();
-  c.start();
+  auto c = std::make_unique<scar::Coordinator<WorkloadType>>(FLAGS_id, peers,
+                                                             db, context);
+
+  c->connectToPeers();
+  c->start();
   return 0;
 }

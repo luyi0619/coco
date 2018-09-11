@@ -12,6 +12,7 @@
 #include "core/Table.h"
 #include "protocol/Silo/SiloHelper.h"
 #include "protocol/Silo/SiloMessage.h"
+#include "protocol/Silo/SiloTransaction.h"
 #include <glog/logging.h>
 
 namespace scar {
@@ -23,11 +24,10 @@ public:
   using ContextType = typename DatabaseType::ContextType;
   using TableType = ITable<MetaDataType>;
   using MessageType = SiloMessage;
+  using TransactionType = SiloTransaction<DatabaseType>;
 
-  using MessageFactoryType = SiloMessageFactory<TableType>;
-
-  template <class Transaction>
-  using MessageHandlerType = SiloMessageHandler<TableType, Transaction>;
+  using MessageFactoryType = SiloMessageFactory;
+  using MessageHandlerType = SiloMessageHandler<DatabaseType>;
 
   static_assert(
       std::is_same<typename DatabaseType::TableType, TableType>::value,
@@ -45,8 +45,7 @@ public:
     return SiloHelper::read(row, value, value_bytes);
   }
 
-  template <class Transaction>
-  void abort(Transaction &txn,
+  void abort(TransactionType &txn,
              std::vector<std::unique_ptr<Message>> &messages) {
 
     auto &writeSet = txn.writeSet;
@@ -78,8 +77,7 @@ public:
     txn.message_flusher();
   }
 
-  template <class Transaction>
-  bool commit(Transaction &txn,
+  bool commit(TransactionType &txn,
               std::vector<std::unique_ptr<Message>> &messages) {
 
     // lock write set
@@ -107,8 +105,7 @@ public:
   }
 
 private:
-  template <class Transaction>
-  bool lock_write_set(Transaction &txn,
+  bool lock_write_set(TransactionType &txn,
                       std::vector<std::unique_ptr<Message>> &messages) {
 
     auto &readSet = txn.readSet;
@@ -157,8 +154,7 @@ private:
     return txn.abort_lock;
   }
 
-  template <class Transaction>
-  bool validate_read_set(Transaction &txn,
+  bool validate_read_set(TransactionType &txn,
                          std::vector<std::unique_ptr<Message>> &messages) {
 
     auto &readSet = txn.readSet;
@@ -214,9 +210,7 @@ private:
     return !txn.abort_read_validation;
   }
 
-  template <class Transaction>
-
-  uint64_t generate_tid(Transaction &txn) {
+  uint64_t generate_tid(TransactionType &txn) {
 
     auto &readSet = txn.readSet;
     auto &writeSet = txn.writeSet;
@@ -255,8 +249,7 @@ private:
     return next_tid;
   }
 
-  template <class Transaction>
-  void write_and_replicate(Transaction &txn, uint64_t commit_tid,
+  void write_and_replicate(TransactionType &txn, uint64_t commit_tid,
                            std::vector<std::unique_ptr<Message>> &messages) {
 
     auto &readSet = txn.readSet;
@@ -319,8 +312,7 @@ private:
     sync_messages(txn);
   }
 
-  template <class Transaction>
-  void release_lock(Transaction &txn, uint64_t commit_tid,
+  void release_lock(TransactionType &txn, uint64_t commit_tid,
                     std::vector<std::unique_ptr<Message>> &messages) {
 
     auto &readSet = txn.readSet;
@@ -349,8 +341,7 @@ private:
     sync_messages(txn, false);
   }
 
-  template <class Transaction>
-  void sync_messages(Transaction &txn, bool wait_response = true) {
+  void sync_messages(TransactionType &txn, bool wait_response = true) {
     txn.message_flusher();
     if (wait_response) {
       while (txn.pendingResponses > 0) {

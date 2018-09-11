@@ -3,16 +3,17 @@
 //
 #include "benchmark/tpcc/Database.h"
 #include "benchmark/tpcc/Workload.h"
-#include "core/Transaction.h"
 #include "protocol/RStore/RStore.h"
 #include "protocol/RStore/RStoreExecutor.h"
 #include "protocol/RStore/RStoreManager.h"
+#include "protocol/Silo/SiloTransaction.h"
 #include <gtest/gtest.h>
 
 TEST(TestRStore, TestRStoreSwitcher) {
 
   using MetaDataType = std::atomic<uint64_t>;
-  using TransactionType = scar::Transaction<scar::tpcc::Database<MetaDataType>>;
+  using TransactionType =
+      scar::SiloTransaction<scar::tpcc::Database<MetaDataType>>;
   using WorkloadType = scar::tpcc::Workload<TransactionType>;
 
   scar::tpcc::Context context;

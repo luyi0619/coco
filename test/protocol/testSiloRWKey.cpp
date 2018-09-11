@@ -2,12 +2,12 @@
 // Created by Yi Lu on 7/19/18.
 //
 
-#include "core/RWKey.h"
+#include "protocol/Silo/SiloRWKey.h"
 #include <gtest/gtest.h>
 
 TEST(TestRWKey, TestBasic) {
 
-  scar::RWKey key;
+  scar::SiloRWKey key;
 
   EXPECT_EQ(key.get_key(), nullptr);
   EXPECT_EQ(key.get_value(), nullptr);

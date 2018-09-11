@@ -8,7 +8,9 @@
 
 #include "benchmark/ycsb/Query.h"
 #include "benchmark/ycsb/Schema.h"
-#include "core/Transaction.h"
+#include "core/Defs.h"
+#include "core/Partitioner.h"
+#include "core/Table.h"
 
 namespace scar {
 namespace ycsb {
@@ -18,10 +20,10 @@ struct Storage {
   ycsb::value ycsb_values[YCSB_FIELD_SIZE];
 };
 
-template <class Database> class ReadModifyWrite : public Transaction<Database> {
+template <class Transaction> class ReadModifyWrite : public Transaction {
 
 public:
-  using DatabaseType = Database;
+  using DatabaseType = typename Transaction::DatabaseType;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
   using MetaDataType = typename DatabaseType::MetaDataType;
@@ -32,8 +34,8 @@ public:
                   std::size_t partition_id, DatabaseType &db,
                   const ContextType &context, RandomType &random,
                   Partitioner &partitioner, Storage &storage)
-      : Transaction<Database>(coordinator_id, worker_id, partition_id, db,
-                              context, random, partitioner),
+      : Transaction(coordinator_id, worker_id, partition_id, db, context,
+                    random, partitioner),
         storage(storage) {}
 
   virtual ~ReadModifyWrite() override = default;
@@ -54,7 +56,7 @@ public:
       auto key = query.Y_KEY[i];
       storage.ycsb_keys[i].Y_KEY = key;
       this->search_for_update(ycsbTableID, context.getPartitionID(key),
-                   storage.ycsb_keys[i], storage.ycsb_values[i]);
+                              storage.ycsb_keys[i], storage.ycsb_values[i]);
     }
 
     this->process_read_request();

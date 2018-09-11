@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include "core/Transaction.h"
-
 #include "benchmark/ycsb/Database.h"
 #include "benchmark/ycsb/Random.h"
 #include "benchmark/ycsb/Transaction.h"
@@ -22,7 +20,7 @@ public:
   using DatabaseType = typename TransactionType::DatabaseType;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
-  using StorageType = typename ReadModifyWrite<DatabaseType>::StorageType;
+  using StorageType = typename ReadModifyWrite<Transaction>::StorageType;
 
   Workload(std::size_t coordinator_id, std::size_t worker_id, DatabaseType &db,
            RandomType &random, Partitioner &partitioner)
@@ -34,7 +32,7 @@ public:
                                                     StorageType &storage) {
 
     std::unique_ptr<TransactionType> p =
-        std::make_unique<ReadModifyWrite<DatabaseType>>(
+        std::make_unique<ReadModifyWrite<Transaction>>(
             coordinator_id, worker_id, partition_id, db, context, random,
             partitioner, storage);
 

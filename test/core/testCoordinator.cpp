@@ -5,6 +5,7 @@
 #include "benchmark/tpcc/Database.h"
 #include "benchmark/tpcc/Workload.h"
 #include "core/Coordinator.h"
+#include "protocol/Silo/SiloTransaction.h"
 #include <gtest/gtest.h>
 
 DEFINE_int32(threads, 1, "the number of threads.");
@@ -15,7 +16,8 @@ TEST(TestCoordinator, TestTPCC) {
 
   using MetaDataType = std::atomic<uint64_t>;
   using DatabaseType = scar::tpcc::Database<MetaDataType>;
-  using WorkloadType = scar::tpcc::Workload<scar::Transaction<DatabaseType>>;
+  using WorkloadType =
+      scar::tpcc::Workload<scar::SiloTransaction<DatabaseType>>;
 
   int n = FLAGS_threads;
 
@@ -37,7 +39,8 @@ TEST(TestCoordinator, TestConnect) {
 
   using MetaDataType = std::atomic<uint64_t>;
   using DatabaseType = scar::tpcc::Database<MetaDataType>;
-  using WorkloadType = scar::tpcc::Workload<scar::Transaction<DatabaseType>>;
+  using WorkloadType =
+      scar::tpcc::Workload<scar::SiloTransaction<DatabaseType>>;
 
   int n = FLAGS_threads;
 

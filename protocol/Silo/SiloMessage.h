@@ -8,10 +8,11 @@
 #include "common/Message.h"
 #include "common/MessagePiece.h"
 #include "core/ControlMessage.h"
-#include "core/RWKey.h"
 #include "core/Table.h"
 
 #include "protocol/Silo/SiloHelper.h"
+#include "protocol/Silo/SiloRWKey.h"
+#include "protocol/Silo/SiloTransaction.h"
 
 namespace scar {
 
@@ -31,7 +32,10 @@ enum class SiloMessage {
   NFIELDS
 };
 
-template <class Table> class SiloMessageFactory {
+class SiloMessageFactory {
+
+  using Table = ITable<std::atomic<uint64_t>>;
+
 public:
   static void new_search_message(Message &message, Table &table,
                                  const void *key, uint32_t key_offset) {
@@ -191,7 +195,10 @@ public:
   }
 };
 
-template <class Table, class Transaction> class SiloMessageHandler {
+template <class Database> class SiloMessageHandler {
+  using Table = ITable<std::atomic<uint64_t>>;
+  using Transaction = SiloTransaction<Database>;
+
 public:
   static void search_request_handler(MessagePiece inputPiece,
                                      Message &responseMessage, Table &table,
@@ -275,7 +282,7 @@ public:
     Decoder dec(stringPiece);
     dec >> tid >> key_offset;
 
-    RWKey &readKey = txn.readSet[key_offset];
+    SiloRWKey &readKey = txn.readSet[key_offset];
     dec = Decoder(inputPiece.toStringPiece());
     dec.read_n_bytes(readKey.get_value(), value_size);
     readKey.set_tid(tid);
@@ -359,13 +366,13 @@ public:
 
     DCHECK(dec.size() == 0);
 
-    RWKey &writeKey = txn.writeSet[key_offset];
+    SiloRWKey &writeKey = txn.writeSet[key_offset];
 
     bool tid_changed = false;
 
     if (success) {
 
-      RWKey *readKey = txn.get_read_key(writeKey.get_key());
+      SiloRWKey *readKey = txn.get_read_key(writeKey.get_key());
 
       DCHECK(readKey != nullptr);
 
@@ -463,11 +470,7 @@ public:
 
     dec >> success >> key_offset;
 
-    RWKey &readKey = txn.readSet[key_offset];
-
-    if (success) {
-      readKey.set_read_validation_success_bit();
-    }
+    SiloRWKey &readKey = txn.readSet[key_offset];
 
     txn.pendingResponses--;
 
