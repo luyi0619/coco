@@ -35,7 +35,7 @@ public:
 
     if (context.protocol == "Silo") {
 
-      auto manager = std::make_shared<Manager<Workload, Silo<Database>>>(
+      auto manager = std::make_shared<Manager>(
           coordinator_id, context.worker_num, context, stop_flag);
 
       for (auto i = 0u; i < context.worker_num; i++) {
@@ -48,9 +48,8 @@ public:
 
     } else if (context.protocol == "SiloGC") {
 
-      auto manager =
-          std::make_shared<group_commit::Manager<Workload, SiloGC<Database>>>(
-              coordinator_id, context.worker_num, context, stop_flag);
+      auto manager = std::make_shared<group_commit::Manager>(
+          coordinator_id, context.worker_num, context, stop_flag);
 
       for (auto i = 0u; i < context.worker_num; i++) {
         workers.push_back(std::make_shared<
@@ -62,7 +61,7 @@ public:
 
     } else if (context.protocol == "RStore") {
 
-      auto switcher = std::make_shared<RStoreManager<Workload>>(
+      auto switcher = std::make_shared<RStoreManager>(
           coordinator_id, context.worker_num, context, stop_flag);
 
       for (auto i = 0u; i < context.worker_num; i++) {

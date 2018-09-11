@@ -5,5 +5,5 @@
 #pragma once
 
 namespace scar {
-enum class ExecutorStatus { START, CLEANUP, STOP, EXIT };
+enum class ExecutorStatus { START, CLEANUP, C_PHASE, S_PHASE, STOP, EXIT };
 }

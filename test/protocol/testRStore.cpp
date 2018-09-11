@@ -26,7 +26,7 @@ TEST(TestRStore, TestRStoreSwitcher) {
 
   std::atomic<bool> stopFlag;
 
-  scar::RStoreManager<WorkloadType> manager(0, 0, context, stopFlag);
+  scar::RStoreManager manager(0, 0, context, stopFlag);
   scar::RStoreExecutor<WorkloadType> e(0, 0, db, context, manager.worker_status,
                                        manager.n_completed_workers,
                                        manager.n_started_workers);

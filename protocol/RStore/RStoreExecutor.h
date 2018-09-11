@@ -61,29 +61,29 @@ public:
 
     for (;;) {
 
-      RStoreWorkerStatus status;
+      ExecutorStatus status;
       do {
-        status = static_cast<RStoreWorkerStatus>(worker_status.load());
+        status = static_cast<ExecutorStatus>(worker_status.load());
 
-        if (status == RStoreWorkerStatus::EXIT) {
+        if (status == ExecutorStatus::EXIT) {
           LOG(INFO) << "Executor " << id << " exits.";
           return;
         }
-      } while (status != RStoreWorkerStatus::C_PHASE);
+      } while (status != ExecutorStatus::C_PHASE);
 
       // c_phase
 
       if (coordinator_id == 0) {
 
         n_started_workers.fetch_add(1);
-        run_transaction(RStoreWorkerStatus::C_PHASE);
+        run_transaction(ExecutorStatus::C_PHASE);
         n_complete_workers.fetch_add(1);
 
       } else {
         n_started_workers.fetch_add(1);
 
-        while (static_cast<RStoreWorkerStatus>(worker_status.load()) !=
-               RStoreWorkerStatus::STOP) {
+        while (static_cast<ExecutorStatus>(worker_status.load()) !=
+               ExecutorStatus::STOP) {
           process_request();
         }
 
@@ -94,8 +94,8 @@ public:
 
       // wait to s_phase
 
-      while (static_cast<RStoreWorkerStatus>(worker_status.load()) !=
-             RStoreWorkerStatus::S_PHASE) {
+      while (static_cast<ExecutorStatus>(worker_status.load()) !=
+             ExecutorStatus::S_PHASE) {
         std::this_thread::yield();
       }
 
@@ -103,15 +103,15 @@ public:
 
       n_started_workers.fetch_add(1);
 
-      run_transaction(RStoreWorkerStatus::S_PHASE);
+      run_transaction(ExecutorStatus::S_PHASE);
 
       n_complete_workers.fetch_add(1);
 
       // once all workers are stop, we need to process the replication
       // requests
 
-      while (static_cast<RStoreWorkerStatus>(worker_status.load()) !=
-             RStoreWorkerStatus::STOP) {
+      while (static_cast<ExecutorStatus>(worker_status.load()) !=
+             ExecutorStatus::STOP) {
         std::this_thread::yield();
       }
 
@@ -121,7 +121,7 @@ public:
     }
   }
 
-  void run_transaction(RStoreWorkerStatus status) {
+  void run_transaction(ExecutorStatus status) {
 
     std::size_t partition_id = 0, query_num = 0;
 
@@ -129,13 +129,13 @@ public:
 
     ContextType phase_context;
 
-    if (status == RStoreWorkerStatus::C_PHASE) {
+    if (status == ExecutorStatus::C_PHASE) {
       CHECK(coordinator_id == 0);
       partition_id = random.uniform_dist(0, context.partition_num - 1);
       partitioner = c_partitioner.get();
       query_num = context.get_c_phase_query_num();
       phase_context = this->context.get_cross_partition_context();
-    } else if (status == RStoreWorkerStatus::S_PHASE) {
+    } else if (status == ExecutorStatus::S_PHASE) {
       partition_id = id * context.coordinator_num + coordinator_id;
       partitioner = s_partitioner.get();
       query_num = context.get_s_phase_query_num();
@@ -174,6 +174,11 @@ public:
         if (protocol.commit(*transaction, messages)) {
           n_commit.fetch_add(1);
           retry_transaction = false;
+          auto latency =
+              std::chrono::duration_cast<std::chrono::milliseconds>(
+                  std::chrono::steady_clock::now() - transaction->startTime)
+                  .count();
+          percentile.add(latency);
         } else {
           if (transaction->abort_lock) {
             n_abort_lock.fetch_add(1);

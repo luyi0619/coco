@@ -27,7 +27,7 @@ TEST(TestExecutor, TestTPCC) {
   scar::tpcc::Database<MetaDataType> db;
 
   std::atomic<bool> stopFlag;
-  scar::Manager<WorkloadType, ProtocolType> manager(0, 0, context, stopFlag);
+  scar::Manager manager(0, 0, context, stopFlag);
   scar::Executor<WorkloadType, ProtocolType> w(
       0, 0, db, context, manager.worker_status, manager.n_completed_workers,
       manager.n_started_workers);
@@ -51,7 +51,7 @@ TEST(TestWorker, TestYCSB) {
   scar::ycsb::Database<MetaDataType> db;
 
   std::atomic<bool> stopFlag;
-  scar::Manager<WorkloadType, ProtocolType> manager(0, 0, context, stopFlag);
+  scar::Manager manager(0, 0, context, stopFlag);
   scar::Executor<WorkloadType, ProtocolType> w(
       0, 0, db, context, manager.worker_status, manager.n_completed_workers,
       manager.n_started_workers);

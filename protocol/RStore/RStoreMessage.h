@@ -17,9 +17,6 @@ namespace scar {
 enum class RStoreMessage {
   REPLICATION_VALUE_REQUEST = static_cast<int>(ControlMessage::NFIELDS),
   REPLICATION_OPERATION_REQUEST,
-  SIGNAL,
-  C_PHASE_ACK,
-  S_PHASE_ACK,
   NFIELDS
 };
 

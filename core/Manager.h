@@ -4,25 +4,16 @@
 
 #pragma once
 
+#include "core/Context.h"
 #include "core/ControlMessage.h"
 #include "core/Defs.h"
 #include "core/Worker.h"
 
 namespace scar {
 
-template <class Workload, class Protocol> class Manager : public Worker {
+class Manager : public Worker {
 public:
-  using WorkloadType = Workload;
-  using ProtocolType = Protocol;
-  using DatabaseType = typename WorkloadType::DatabaseType;
-  using TableType = typename DatabaseType::TableType;
-  using TransactionType = typename WorkloadType::TransactionType;
-  using ContextType = typename DatabaseType::ContextType;
-  using RandomType = typename DatabaseType::RandomType;
-
-  using StorageType = typename WorkloadType::StorageType;
-
-  Manager(std::size_t coordinator_id, std::size_t id, ContextType &context,
+  Manager(std::size_t coordinator_id, std::size_t id, const Context &context,
           std::atomic<bool> &stopFlag)
       : Worker(coordinator_id, id), context(context), stopFlag(stopFlag) {
 
@@ -34,7 +25,7 @@ public:
     worker_status.store(static_cast<uint32_t>(ExecutorStatus::STOP));
   }
 
-  void coordinator_start() {
+  virtual void coordinator_start() {
 
     std::size_t n_workers = context.worker_num;
     std::size_t n_coordinators = context.coordinator_num;
@@ -60,7 +51,7 @@ public:
     wait4_ack();
   }
 
-  void non_coordinator_start() {
+  virtual void non_coordinator_start() {
 
     std::size_t n_workers = context.worker_num;
     std::size_t n_coordinators = context.coordinator_num;
@@ -295,10 +286,9 @@ private:
     message->set_worker_id(id);
   }
 
-private:
-  ContextType &context;
+protected:
+  const Context &context;
   std::atomic<bool> &stopFlag;
-  RandomType random;
   LockfreeQueue<Message *> ack_in_queue, signal_in_queue, out_queue;
   std::vector<std::unique_ptr<Message>> messages;
 
