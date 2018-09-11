@@ -83,7 +83,7 @@ public:
 
     auto warehouseTableID = warehouse::tableID;
     storage.warehouse_key = warehouse::key(W_ID);
-    this->search(warehouseTableID, W_ID - 1, storage.warehouse_key,
+    this->search_for_read(warehouseTableID, W_ID - 1, storage.warehouse_key,
                  storage.warehouse_value);
 
     // The row in the DISTRICT table with matching D_W_ID and D_ ID is selected,
@@ -93,7 +93,7 @@ public:
 
     auto districtTableID = district::tableID;
     storage.district_key = district::key(W_ID, D_ID);
-    this->search(districtTableID, W_ID - 1, storage.district_key,
+    this->search_for_update(districtTableID, W_ID - 1, storage.district_key,
                  storage.district_value);
 
     // The row in the CUSTOMER table with matching C_W_ID, C_D_ID, and C_ID is
@@ -103,7 +103,7 @@ public:
 
     auto customerTableID = customer::tableID;
     storage.customer_key = customer::key(W_ID, D_ID, C_ID);
-    this->search(customerTableID, W_ID - 1, storage.customer_key,
+    this->search_for_read(customerTableID, W_ID - 1, storage.customer_key,
                  storage.customer_value);
 
     auto itemTableID = item::tableID;
@@ -131,15 +131,14 @@ public:
         return TransactionResult::ABORT_NORETRY;
       }
 
-      this->search(itemTableID, 0, storage.item_keys[i], storage.item_values[i],
-                   true);
+      this->search_local_index(itemTableID, 0, storage.item_keys[i], storage.item_values[i]);
 
       // The row in the STOCK table with matching S_I_ID (equals OL_I_ID) and
       // S_W_ID (equals OL_SUPPLY_W_ID) is selected.
 
       storage.stock_keys[i] = stock::key(OL_SUPPLY_W_ID, OL_I_ID);
 
-      this->search(stockTableID, OL_SUPPLY_W_ID - 1, storage.stock_keys[i],
+      this->search_for_update(stockTableID, OL_SUPPLY_W_ID - 1, storage.stock_keys[i],
                    storage.stock_values[i]);
     }
 
@@ -315,7 +314,7 @@ public:
 
     auto warehouseTableID = warehouse::tableID;
     storage.warehouse_key = warehouse::key(W_ID);
-    this->search(warehouseTableID, W_ID - 1, storage.warehouse_key,
+    this->search_for_update(warehouseTableID, W_ID - 1, storage.warehouse_key,
                  storage.warehouse_value);
 
     // The row in the DISTRICT table with matching D_W_ID and D_ID is selected.
@@ -324,7 +323,7 @@ public:
 
     auto districtTableID = district::tableID;
     storage.district_key = district::key(W_ID, D_ID);
-    this->search(districtTableID, W_ID - 1, storage.district_key,
+    this->search_for_update(districtTableID, W_ID - 1, storage.district_key,
                  storage.district_value);
 
     // The row in the CUSTOMER table with matching C_W_ID, C_D_ID, and C_ID is
@@ -337,9 +336,9 @@ public:
     if (C_ID == 0) {
       storage.customer_name_idx_key =
           customer_name_idx::key(C_W_ID, C_D_ID, query.C_LAST);
-      this->search(customerNameIdxTableID, C_W_ID - 1,
+      this->search_local_index(customerNameIdxTableID, C_W_ID - 1,
                    storage.customer_name_idx_key,
-                   storage.customer_name_idx_value, true);
+                   storage.customer_name_idx_value);
     }
 
     this->process_read_request();
@@ -356,7 +355,7 @@ public:
 
     auto customerTableID = customer::tableID;
     storage.customer_key = customer::key(C_W_ID, C_D_ID, C_ID);
-    this->search(customerTableID, C_W_ID - 1, storage.customer_key,
+    this->search_for_update(customerTableID, C_W_ID - 1, storage.customer_key,
                  storage.customer_value);
 
     this->process_read_request();

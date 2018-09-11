@@ -47,11 +47,26 @@ public:
   virtual TransactionResult execute() = 0;
 
   template <class KeyType, class ValueType>
-  void search(std::size_t table_id, std::size_t partition_id,
-              const KeyType &key, ValueType &value,
-              bool local_index_read = false) {
+  void search_local_index(std::size_t table_id, std::size_t partition_id,
+                          const KeyType &key, ValueType &value) {
+    RWKey readKey;
 
-    if (!local_index_read && !partitioner.has_master_partition(partition_id)) {
+    readKey.set_table_id(table_id);
+    readKey.set_partition_id(partition_id);
+
+    readKey.set_key(&key);
+    readKey.set_value(&value);
+
+    readKey.set_local_index_read_bit();
+
+    add_to_read_set(readKey);
+  }
+
+  template <class KeyType, class ValueType>
+  void search_for_update(std::size_t table_id, std::size_t partition_id,
+              const KeyType &key, ValueType &value) {
+
+    if (partitioner.has_master_partition(partition_id)) {
       pendingResponses++;
     }
 
@@ -63,9 +78,25 @@ public:
     readKey.set_key(&key);
     readKey.set_value(&value);
 
-    if (local_index_read) {
-      readKey.set_local_index_read_bit();
+    add_to_read_set(readKey);
+  }
+
+
+  template <class KeyType, class ValueType>
+  void search_for_read(std::size_t table_id, std::size_t partition_id,
+                         const KeyType &key, ValueType &value) {
+
+    if (partitioner.has_master_partition(partition_id)) {
+      pendingResponses++;
     }
+
+    RWKey readKey;
+
+    readKey.set_table_id(table_id);
+    readKey.set_partition_id(partition_id);
+
+    readKey.set_key(&key);
+    readKey.set_value(&value);
 
     add_to_read_set(readKey);
   }

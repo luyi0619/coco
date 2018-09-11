@@ -53,7 +53,7 @@ public:
     for (auto i = 0; i < YCSB_FIELD_SIZE; i++) {
       auto key = query.Y_KEY[i];
       storage.ycsb_keys[i].Y_KEY = key;
-      this->search(ycsbTableID, context.getPartitionID(key),
+      this->search_for_update(ycsbTableID, context.getPartitionID(key),
                    storage.ycsb_keys[i], storage.ycsb_values[i]);
     }
 
