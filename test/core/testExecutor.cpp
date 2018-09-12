@@ -9,13 +9,13 @@
 #include "core/Executor.h"
 #include "core/Manager.h"
 #include "protocol/Silo/Silo.h"
+#include "protocol/Silo/SiloExecutor.h"
 #include "protocol/Silo/SiloTransaction.h"
 #include <gtest/gtest.h>
 
 TEST(TestExecutor, TestTPCC) {
 
   using MetaDataType = std::atomic<uint64_t>;
-  using ProtocolType = scar::Silo<scar::tpcc::Database<MetaDataType>>;
   using TransactionType =
       scar::SiloTransaction<scar::tpcc::Database<MetaDataType>>;
   using WorkloadType = scar::tpcc::Workload<TransactionType>;
@@ -30,9 +30,9 @@ TEST(TestExecutor, TestTPCC) {
 
   std::atomic<bool> stopFlag;
   scar::Manager manager(0, 0, context, stopFlag);
-  scar::Executor<WorkloadType, ProtocolType> w(
-      0, 0, db, context, manager.worker_status, manager.n_completed_workers,
-      manager.n_started_workers);
+  scar::SiloExecutor<WorkloadType> w(0, 0, db, context, manager.worker_status,
+                                     manager.n_completed_workers,
+                                     manager.n_started_workers);
 
   EXPECT_EQ(true, true);
 }
@@ -40,7 +40,6 @@ TEST(TestExecutor, TestTPCC) {
 TEST(TestWorker, TestYCSB) {
 
   using MetaDataType = std::atomic<uint64_t>;
-  using ProtocolType = scar::Silo<scar::ycsb::Database<MetaDataType>>;
   using TransactionType =
       scar::SiloTransaction<scar::ycsb::Database<MetaDataType>>;
   using WorkloadType = scar::ycsb::Workload<TransactionType>;
@@ -55,9 +54,9 @@ TEST(TestWorker, TestYCSB) {
 
   std::atomic<bool> stopFlag;
   scar::Manager manager(0, 0, context, stopFlag);
-  scar::Executor<WorkloadType, ProtocolType> w(
-      0, 0, db, context, manager.worker_status, manager.n_completed_workers,
-      manager.n_started_workers);
+  scar::SiloExecutor<WorkloadType> w(0, 0, db, context, manager.worker_status,
+                                     manager.n_completed_workers,
+                                     manager.n_started_workers);
 
   EXPECT_EQ(true, true);
 }

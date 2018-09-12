@@ -182,27 +182,9 @@ public:
     return size;
   }
 
-private:
-  void setupHandlers(TransactionType &txn) {
-    txn.readRequestHandler =
-        [this](std::size_t table_id, std::size_t partition_id,
-               uint32_t key_offset, const void *key, void *value,
-               bool local_index_read) -> uint64_t {
-      if (partitioner->has_master_partition(partition_id) || local_index_read) {
-        return protocol.search(table_id, partition_id, key, value);
-      } else {
-        TableType *table = db.find_table(table_id, partition_id);
-        auto coordinatorID = partitioner->master_coordinator(partition_id);
-        MessageFactoryType::new_search_message(*messages[coordinatorID], *table,
-                                               key, key_offset);
-        return 0;
-      }
-    };
+  virtual void setupHandlers(TransactionType &txn) = 0;
 
-    txn.remote_request_handler = [this]() { return process_request(); };
-    txn.message_flusher = [this]() { flush_messages(); };
-  };
-
+protected:
   void flush_messages() {
 
     for (auto i = 0u; i < messages.size(); i++) {
@@ -228,7 +210,7 @@ private:
     message->set_worker_id(id);
   }
 
-private:
+protected:
   DatabaseType &db;
   const ContextType &context;
   std::atomic<uint32_t> &worker_status;

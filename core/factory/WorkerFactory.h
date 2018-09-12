@@ -7,10 +7,12 @@
 #include "core/Executor.h"
 #include "core/Manager.h"
 #include "protocol/Silo/Silo.h"
+#include "protocol/Silo/SiloExecutor.h"
 
 #include "core/group_commit/Executor.h"
 #include "core/group_commit/Manager.h"
 #include "protocol/SiloGC/SiloGC.h"
+#include "protocol/SiloGC/SiloGCExecutor.h"
 
 #include "protocol/RStore/RStore.h"
 #include "protocol/RStore/RStoreExecutor.h"
@@ -39,7 +41,7 @@ public:
           coordinator_id, context.worker_num, context, stop_flag);
 
       for (auto i = 0u; i < context.worker_num; i++) {
-        workers.push_back(std::make_shared<Executor<Workload, Silo<Database>>>(
+        workers.push_back(std::make_shared<SiloExecutor<Workload>>(
             coordinator_id, i, db, context, manager->worker_status,
             manager->n_completed_workers, manager->n_started_workers));
       }
@@ -52,8 +54,7 @@ public:
           coordinator_id, context.worker_num, context, stop_flag);
 
       for (auto i = 0u; i < context.worker_num; i++) {
-        workers.push_back(std::make_shared<
-                          group_commit::Executor<Workload, SiloGC<Database>>>(
+        workers.push_back(std::make_shared<SiloGCExecutor<Workload>>(
             coordinator_id, i, db, context, manager->worker_status,
             manager->n_completed_workers, manager->n_started_workers));
       }
