@@ -77,7 +77,7 @@ public:
   }
 
   static uint64_t remove_lock_bit(uint64_t value) {
-    return (~(LOCK_BIT_MASK << LOCK_BIT_OFFSET)) & value;
+    return value & ~(LOCK_BIT_MASK << LOCK_BIT_OFFSET);
   }
 
 public:

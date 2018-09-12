@@ -51,6 +51,7 @@ public:
     readKey.set_value(&value);
 
     readKey.set_local_index_read_bit();
+    readKey.set_read_request_bit();
 
     add_to_read_set(readKey);
   }

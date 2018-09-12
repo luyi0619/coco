@@ -68,11 +68,9 @@ public:
     }
 
     n_started_workers.fetch_add(1);
+    bool retry_transaction = false;
 
     do {
-
-      bool retry_transaction = false;
-
       process_request();
 
       last_seed = random.get_seed();
