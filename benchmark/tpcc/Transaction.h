@@ -6,8 +6,10 @@
 
 #include "glog/logging.h"
 
+#include "benchmark/tpcc/Database.h"
 #include "benchmark/tpcc/Query.h"
 #include "benchmark/tpcc/Schema.h"
+#include "benchmark/tpcc/Storage.h"
 #include "common/Time.h"
 #include "core/Defs.h"
 #include "core/Partitioner.h"
@@ -16,43 +18,12 @@
 namespace scar {
 namespace tpcc {
 
-struct Storage {
-  warehouse::key warehouse_key;
-  warehouse::value warehouse_value;
-
-  district::key district_key;
-  district::value district_value;
-
-  customer_name_idx::key customer_name_idx_key;
-  customer_name_idx::value customer_name_idx_value;
-
-  customer::key customer_key;
-  customer::value customer_value;
-
-  item::key item_keys[15];
-  item::value item_values[15];
-
-  stock::key stock_keys[15];
-  stock::value stock_values[15];
-
-  new_order::key new_order_key;
-
-  order::key order_key;
-  order::value order_value;
-
-  order_line::key order_line_keys[15];
-  order_line::value order_line_values[15];
-
-  history::key h_key;
-  history::value h_value;
-};
-
 template <class Transaction> class NewOrder : public Transaction {
 public:
-  using DatabaseType = typename Transaction::DatabaseType;
+  using MetaDataType = typename Transaction::MetaDataType;
+  using DatabaseType = Database<MetaDataType>;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
-  using MetaDataType = typename DatabaseType::MetaDataType;
   using TableType = ITable<MetaDataType>;
   using StorageType = Storage;
 
@@ -60,9 +31,8 @@ public:
            std::size_t partition_id, DatabaseType &db,
            const ContextType &context, RandomType &random,
            Partitioner &partitioner, Storage &storage)
-      : Transaction(coordinator_id, worker_id, partition_id, db, context,
-                    random, partitioner),
-        storage(storage) {}
+      : Transaction(coordinator_id, worker_id, partition_id, partitioner),
+        db(db), context(context), random(random), storage(storage) {}
 
   virtual ~NewOrder() override = default;
 
@@ -272,15 +242,18 @@ public:
   }
 
 private:
+  DatabaseType &db;
+  const ContextType &context;
+  RandomType &random;
   Storage &storage;
 };
 
 template <class Transaction> class Payment : public Transaction {
 public:
-  using DatabaseType = typename Transaction::DatabaseType;
+  using MetaDataType = typename Transaction::MetaDataType;
+  using DatabaseType = Database<MetaDataType>;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
-  using MetaDataType = typename DatabaseType::MetaDataType;
   using TableType = ITable<MetaDataType>;
   using StorageType = Storage;
 
@@ -288,9 +261,8 @@ public:
           std::size_t partition_id, DatabaseType &db,
           const ContextType &context, RandomType &random,
           Partitioner &partitioner, Storage &storage)
-      : Transaction(coordinator_id, worker_id, partition_id, db, context,
-                    random, partitioner),
-        storage(storage) {}
+      : Transaction(coordinator_id, worker_id, partition_id, partitioner),
+        db(db), context(context), random(random), storage(storage) {}
 
   virtual ~Payment() override = default;
 
@@ -421,6 +393,9 @@ public:
   }
 
 private:
+  DatabaseType &db;
+  const ContextType &context;
+  RandomType &random;
   Storage &storage;
 };
 

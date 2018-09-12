@@ -31,25 +31,43 @@ int main(int argc, char *argv[]) {
   context.worker_num = n;
 
   // only create coordinator for tpc-c
-  std::unordered_set<std::string> protocols = {"Silo", "SiloGC", "RStore"};
+  std::unordered_set<std::string> protocols = {"Silo", "SiloGC", "RStore",
+                                               "TwoPL"};
+  std::unordered_set<std::string> silo_protocols = {"Silo", "SiloGC", "RStore"};
+  std::unordered_set<std::string> twopl_protocols = {"TwoPL"};
+
   CHECK(protocols.count(context.protocol) == 1);
 
-  // only create cooridnator for silo-like protocols
+  if (silo_protocols.count(context.protocol)) {
+    // only create cooridnator for silo-like protocols
+    using MetaDataType = std::atomic<uint64_t>;
+    using TransactionType = scar::SiloTransaction;
+    using WorkloadType = scar::tpcc::Workload<TransactionType>;
 
-  using MetaDataType = std::atomic<uint64_t>;
-  using TransactionType =
-      scar::SiloTransaction<scar::tpcc::Database<MetaDataType>>;
-  using WorkloadType = scar::tpcc::Workload<TransactionType>;
+    scar::tpcc::Database<MetaDataType> db;
 
-  scar::tpcc::Database<MetaDataType> db;
+    db.initialize(context, context.partition_num, n);
 
-  db.initialize(context, context.partition_num, n);
+    auto c = std::make_unique<scar::Coordinator<WorkloadType>>(FLAGS_id, peers,
+                                                               db, context);
 
-  auto c = std::make_unique<scar::Coordinator<WorkloadType>>(FLAGS_id, peers,
-                                                             db, context);
+    c->connectToPeers();
+    c->start();
+  } else if (twopl_protocols.count(context.protocol)) {
+    using MetaDataType = std::atomic<uint64_t>;
+    using TransactionType = scar::TwoPLTransaction;
+    using WorkloadType = scar::tpcc::Workload<TransactionType>;
 
-  c->connectToPeers();
-  c->start();
+    scar::tpcc::Database<MetaDataType> db;
+
+    db.initialize(context, context.partition_num, n);
+
+    auto c = std::make_unique<scar::Coordinator<WorkloadType>>(FLAGS_id, peers,
+                                                               db, context);
+
+    c->connectToPeers();
+    c->start();
+  }
 
   return 0;
 }

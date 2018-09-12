@@ -16,8 +16,7 @@ TEST(TestCoordinator, TestTPCC) {
 
   using MetaDataType = std::atomic<uint64_t>;
   using DatabaseType = scar::tpcc::Database<MetaDataType>;
-  using WorkloadType =
-      scar::tpcc::Workload<scar::SiloTransaction<DatabaseType>>;
+  using WorkloadType = scar::tpcc::Workload<scar::SiloTransaction>;
 
   int n = FLAGS_threads;
 
@@ -30,7 +29,7 @@ TEST(TestCoordinator, TestTPCC) {
   std::atomic<uint64_t> epoch;
   std::atomic<bool> stopFlag;
 
-  scar::Coordinator<WorkloadType> c(0, {"127.0.0.1"}, db, context);
+  scar::Coordinator<WorkloadType> c(0, {"127.0.0.1:10010"}, db, context);
 
   EXPECT_EQ(true, true);
 }
@@ -39,8 +38,7 @@ TEST(TestCoordinator, TestConnect) {
 
   using MetaDataType = std::atomic<uint64_t>;
   using DatabaseType = scar::tpcc::Database<MetaDataType>;
-  using WorkloadType =
-      scar::tpcc::Workload<scar::SiloTransaction<DatabaseType>>;
+  using WorkloadType = scar::tpcc::Workload<scar::SiloTransaction>;
 
   int n = FLAGS_threads;
 

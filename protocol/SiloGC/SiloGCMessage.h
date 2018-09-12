@@ -171,9 +171,9 @@ public:
   }
 };
 
-template <class Database> class SiloGCMessageHandler {
+class SiloGCMessageHandler {
   using Table = ITable<std::atomic<uint64_t>>;
-  using Transaction = SiloTransaction<Database>;
+  using Transaction = SiloTransaction;
 
 public:
   static void search_request_handler(MessagePiece inputPiece,

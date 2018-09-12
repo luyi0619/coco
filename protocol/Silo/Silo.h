@@ -24,10 +24,10 @@ public:
   using ContextType = typename DatabaseType::ContextType;
   using TableType = ITable<MetaDataType>;
   using MessageType = SiloMessage;
-  using TransactionType = SiloTransaction<DatabaseType>;
+  using TransactionType = SiloTransaction;
 
   using MessageFactoryType = SiloMessageFactory;
-  using MessageHandlerType = SiloMessageHandler<DatabaseType>;
+  using MessageHandlerType = SiloMessageHandler;
 
   static_assert(
       std::is_same<typename DatabaseType::TableType, TableType>::value,

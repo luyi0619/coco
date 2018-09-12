@@ -14,22 +14,16 @@
 #include <vector>
 
 namespace scar {
-template <class Database> class TwoPLTransaction {
+class TwoPLTransaction {
 
 public:
-  using DatabaseType = Database;
-  using ContextType = typename DatabaseType::ContextType;
-  using RandomType = typename DatabaseType::RandomType;
-  using MetaDataType = typename DatabaseType::MetaDataType;
-  using TableType = ITable<MetaDataType>;
+  using MetaDataType = std::atomic<uint64_t>;
 
   TwoPLTransaction(std::size_t coordinator_id, std::size_t worker_id,
-                   std::size_t partition_id, DatabaseType &db,
-                   const ContextType &context, RandomType &random,
-                   Partitioner &partitioner)
+                   std::size_t partition_id, Partitioner &partitioner)
       : coordinator_id(coordinator_id), worker_id(worker_id),
         partition_id(partition_id), startTime(std::chrono::steady_clock::now()),
-        db(db), context(context), random(random), partitioner(partitioner) {
+        partitioner(partitioner) {
     reset();
   }
 
@@ -56,6 +50,7 @@ public:
     readKey.set_value(&value);
 
     readKey.set_local_index_read_bit();
+    readKey.set_read_lock_request_bit();
 
     add_to_read_set(readKey);
   }
@@ -76,7 +71,7 @@ public:
     readKey.set_key(&key);
     readKey.set_value(&value);
 
-    readKey.set_read_request_lock_bit();
+    readKey.set_read_lock_request_bit();
 
     add_to_read_set(readKey);
   }
@@ -97,7 +92,7 @@ public:
     readKey.set_key(&key);
     readKey.set_value(&value);
 
-    readKey.set_write_request_lock_bit();
+    readKey.set_write_lock_request_bit();
 
     add_to_read_set(readKey);
   }
@@ -123,15 +118,17 @@ public:
     // cannot use unsigned type in reverse iteration
     for (int i = int(readSet.size()) - 1; i >= 0; i--) {
       // early return
-      if (readSet[i].get_read_request_lock_bit() &&
-          readSet[i].get_write_request_lock_bit()) {
+      if (!readSet[i].get_read_lock_request_bit() &&
+          !readSet[i].get_write_lock_request_bit()) {
         break;
       }
 
       const TwoPLRWKey &readKey = readSet[i];
       auto tid = lock_request_handler(readKey.get_table_id(),
                                       readKey.get_partition_id(), i,
-                                      readKey.get_key(), readKey.get_value());
+                                      readKey.get_key(), readKey.get_value(),
+                                      readSet[i].get_local_index_read_bit(),
+                                      readSet[i].get_write_lock_request_bit());
       readSet[i].set_tid(tid);
     }
 
@@ -143,7 +140,7 @@ public:
     }
   }
 
-  SiloRWKey *get_read_key(const void *key) {
+  TwoPLRWKey *get_read_key(const void *key) {
 
     for (auto i = 0u; i < readSet.size(); i++) {
       if (readSet[i].get_key() == key) {
@@ -154,12 +151,12 @@ public:
     return nullptr;
   }
 
-  std::size_t add_to_read_set(const SiloRWKey &key) {
+  std::size_t add_to_read_set(const TwoPLRWKey &key) {
     readSet.push_back(key);
     return readSet.size() - 1;
   }
 
-  std::size_t add_to_write_set(const SiloRWKey &key) {
+  std::size_t add_to_write_set(const TwoPLRWKey &key) {
     writeSet.push_back(key);
     return writeSet.size() - 1;
   }
@@ -169,21 +166,18 @@ public:
   std::chrono::steady_clock::time_point startTime;
   std::size_t pendingResponses;
 
-  bool abort_lock;
+  bool abort_lock, abort_read_validation;
 
-  // table id, partition id, key, value
+  // table id, partition id, key, value, local_index_read?, write_lock?
   std::function<uint64_t(std::size_t, std::size_t, uint32_t, const void *,
-                         void *)>
+                         void *, bool, bool)>
       lock_request_handler;
   // processed a request?
   std::function<std::size_t(void)> remote_request_handler;
 
   std::function<void()> message_flusher;
 
-  DatabaseType &db;
-  const ContextType &context;
-  RandomType &random;
   Partitioner &partitioner;
-  std::vector<TwoPLRWkey> readSet, writeSet;
+  std::vector<TwoPLRWKey> readSet, writeSet;
 };
 } // namespace scar

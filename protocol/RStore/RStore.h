@@ -27,8 +27,8 @@ public:
   using TableType = ITable<MetaDataType>;
   using MessageType = RStoreMessage;
 
-  using MessageFactoryType = RStoreMessageFactory<TableType>;
-  using MessageHandlerType = RStoreMessageHandler<TableType>;
+  using MessageFactoryType = RStoreMessageFactory;
+  using MessageHandlerType = RStoreMessageHandler;
 
   static_assert(
       std::is_same<typename DatabaseType::TableType, TableType>::value,
@@ -102,6 +102,16 @@ private:
     };
 
     bool tidChanged = false;
+
+    // set sort key
+    for (int i = 0; i < writeSet.size(); i++) {
+      auto &writeKey = writeSet[i];
+      auto tableId = writeKey.get_table_id();
+      auto partitionId = writeKey.get_partition_id();
+      auto table = db.find_table(tableId, partitionId);
+      MetaDataType &metaData = table->search_metadata(writeKey.get_key());
+      writeKey.set_sort_key(&metaData);
+    }
 
     std::sort(writeSet.begin(), writeSet.end(),
               [](const SiloRWKey &k1, const SiloRWKey &k2) {

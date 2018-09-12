@@ -6,8 +6,10 @@
 
 #include "glog/logging.h"
 
+#include "benchmark/ycsb/Database.h"
 #include "benchmark/ycsb/Query.h"
 #include "benchmark/ycsb/Schema.h"
+#include "benchmark/ycsb/Storage.h"
 #include "core/Defs.h"
 #include "core/Partitioner.h"
 #include "core/Table.h"
@@ -15,18 +17,13 @@
 namespace scar {
 namespace ycsb {
 
-struct Storage {
-  ycsb::key ycsb_keys[YCSB_FIELD_SIZE];
-  ycsb::value ycsb_values[YCSB_FIELD_SIZE];
-};
-
 template <class Transaction> class ReadModifyWrite : public Transaction {
 
 public:
-  using DatabaseType = typename Transaction::DatabaseType;
+  using MetaDataType = typename Transaction::MetaDataType;
+  using DatabaseType = Database<MetaDataType>;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
-  using MetaDataType = typename DatabaseType::MetaDataType;
   using TableType = ITable<MetaDataType>;
   using StorageType = Storage;
 
@@ -34,9 +31,8 @@ public:
                   std::size_t partition_id, DatabaseType &db,
                   const ContextType &context, RandomType &random,
                   Partitioner &partitioner, Storage &storage)
-      : Transaction(coordinator_id, worker_id, partition_id, db, context,
-                    random, partitioner),
-        storage(storage) {}
+      : Transaction(coordinator_id, worker_id, partition_id, partitioner),
+        db(db), context(context), random(random), storage(storage) {}
 
   virtual ~ReadModifyWrite() override = default;
 
@@ -93,6 +89,9 @@ public:
   }
 
 private:
+  DatabaseType &db;
+  const ContextType &context;
+  RandomType &random;
   Storage &storage;
 };
 } // namespace ycsb

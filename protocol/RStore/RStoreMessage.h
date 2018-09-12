@@ -20,7 +20,9 @@ enum class RStoreMessage {
   NFIELDS
 };
 
-template <class Table> class RStoreMessageFactory {
+class RStoreMessageFactory {
+  using Table = ITable<std::atomic<uint64_t>>;
+
 public:
   static void new_replication_value_message(Message &message, Table &table,
                                             const void *key, const void *value,
@@ -55,7 +57,9 @@ public:
   }
 };
 
-template <class Table> class RStoreMessageHandler {
+class RStoreMessageHandler {
+  using Table = ITable<std::atomic<uint64_t>>;
+
 public:
   static void replication_value_request_handler(MessagePiece inputPiece,
                                                 Message &responseMessage,

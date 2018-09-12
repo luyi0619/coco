@@ -4,10 +4,14 @@
 
 #pragma once
 
+#include "benchmark/tpcc/Workload.h"
+
 #include "core/Executor.h"
 #include "core/Manager.h"
 #include "protocol/Silo/Silo.h"
 #include "protocol/Silo/SiloExecutor.h"
+#include "protocol/TwoPL/TwoPL.h"
+#include "protocol/TwoPL/TwoPLExecutor.h"
 
 #include "core/group_commit/Executor.h"
 #include "core/group_commit/Manager.h"
@@ -25,23 +29,27 @@ namespace scar {
 class WorkerFactory {
 
 public:
-  template <class Workload, class Database, class Context>
+  template <class Database, class Context>
   static std::vector<std::shared_ptr<Worker>>
   create_workers(std::size_t coordinator_id, Database &db, Context &context,
                  std::atomic<bool> &stop_flag) {
 
-    std::unordered_set<std::string> protocols = {"Silo", "SiloGC", "RStore"};
+    std::unordered_set<std::string> protocols = {"Silo", "SiloGC", "RStore",
+                                                 "TwoPL"};
     CHECK(protocols.count(context.protocol) == 1);
 
     std::vector<std::shared_ptr<Worker>> workers;
 
     if (context.protocol == "Silo") {
 
+      using TransactionType = scar::SiloTransaction;
+      using WorkloadType = scar::tpcc::Workload<TransactionType>;
+
       auto manager = std::make_shared<Manager>(
           coordinator_id, context.worker_num, context, stop_flag);
 
       for (auto i = 0u; i < context.worker_num; i++) {
-        workers.push_back(std::make_shared<SiloExecutor<Workload>>(
+        workers.push_back(std::make_shared<SiloExecutor<WorkloadType>>(
             coordinator_id, i, db, context, manager->worker_status,
             manager->n_completed_workers, manager->n_started_workers));
       }
@@ -50,11 +58,14 @@ public:
 
     } else if (context.protocol == "SiloGC") {
 
+      using TransactionType = scar::SiloTransaction;
+      using WorkloadType = scar::tpcc::Workload<TransactionType>;
+
       auto manager = std::make_shared<group_commit::Manager>(
           coordinator_id, context.worker_num, context, stop_flag);
 
       for (auto i = 0u; i < context.worker_num; i++) {
-        workers.push_back(std::make_shared<SiloGCExecutor<Workload>>(
+        workers.push_back(std::make_shared<SiloGCExecutor<WorkloadType>>(
             coordinator_id, i, db, context, manager->worker_status,
             manager->n_completed_workers, manager->n_started_workers));
       }
@@ -62,14 +73,32 @@ public:
 
     } else if (context.protocol == "RStore") {
 
+      using TransactionType = scar::SiloTransaction;
+      using WorkloadType = scar::tpcc::Workload<TransactionType>;
+
       auto manager = std::make_shared<RStoreManager>(
           coordinator_id, context.worker_num, context, stop_flag);
 
       for (auto i = 0u; i < context.worker_num; i++) {
-        workers.push_back(std::make_shared<RStoreExecutor<Workload>>(
+        workers.push_back(std::make_shared<RStoreExecutor<WorkloadType>>(
             coordinator_id, i, db, context, manager->worker_status,
             manager->n_completed_workers, manager->n_started_workers));
       }
+      workers.push_back(manager);
+    } else if (context.protocol == "TwoPL") {
+
+      using TransactionType = scar::TwoPLTransaction;
+      using WorkloadType = scar::tpcc::Workload<TransactionType>;
+
+      auto manager = std::make_shared<Manager>(
+          coordinator_id, context.worker_num, context, stop_flag);
+
+      for (auto i = 0u; i < context.worker_num; i++) {
+        workers.push_back(std::make_shared<TwoPLExecutor<WorkloadType>>(
+            coordinator_id, i, db, context, manager->worker_status,
+            manager->n_completed_workers, manager->n_started_workers));
+      }
+
       workers.push_back(manager);
     }
 

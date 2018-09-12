@@ -6,6 +6,7 @@
 
 #include "benchmark/tpcc/Database.h"
 #include "benchmark/tpcc/Random.h"
+#include "benchmark/tpcc/Storage.h"
 #include "benchmark/tpcc/Transaction.h"
 #include "core/Partitioner.h"
 
@@ -16,13 +17,10 @@ namespace tpcc {
 template <class Transaction> class Workload {
 public:
   using TransactionType = Transaction;
-  using DatabaseType = typename TransactionType::DatabaseType;
+  using DatabaseType = Database<typename TransactionType::MetaDataType>;
   using ContextType = Context;
-  using RandomType = typename DatabaseType::RandomType;
-  using StorageType = typename NewOrder<Transaction>::StorageType;
-  static_assert(std::is_same<typename NewOrder<Transaction>::StorageType,
-                             typename Payment<Transaction>::StorageType>::value,
-                "storage types do not match");
+  using RandomType = Random;
+  using StorageType = Storage;
 
   Workload(std::size_t coordinator_id, std::size_t worker_id, DatabaseType &db,
            RandomType &random, Partitioner &partitioner)

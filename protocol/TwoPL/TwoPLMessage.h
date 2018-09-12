@@ -173,9 +173,9 @@ public:
   }
 };
 
-template <class Database> class TwoPLMessageHandler {
+class TwoPLMessageHandler {
   using Table = ITable<std::atomic<uint64_t>>;
-  using Transaction = TwoPLTransaction<Database>;
+  using Transaction = TwoPLTransaction;
 
 public:
   static void read_lock_request_handler(MessagePiece inputPiece,
@@ -321,7 +321,7 @@ public:
     DCHECK(dec.size() == 0);
 
     bool success;
-    auto tid = TwoPLHelper::write_lock(tid, success);
+    uint64_t latest_tid = TwoPLHelper::write_lock(tid, success);
 
     // prepare response message header
     auto message_size =
@@ -346,7 +346,7 @@ public:
           &responseMessage.data[0] + responseMessage.data.size() - value_size;
       // read to message buffer
       TwoPLHelper::read(row, dest, value_size);
-      encoder << tid;
+      encoder << latest_tid;
     }
 
     responseMessage.flush();

@@ -12,8 +12,7 @@
 TEST(TestRStore, TestRStoreSwitcher) {
 
   using MetaDataType = std::atomic<uint64_t>;
-  using TransactionType =
-      scar::SiloTransaction<scar::tpcc::Database<MetaDataType>>;
+  using TransactionType = scar::SiloTransaction;
   using WorkloadType = scar::tpcc::Workload<TransactionType>;
 
   scar::tpcc::Context context;

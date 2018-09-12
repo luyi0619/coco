@@ -6,8 +6,8 @@
 
 #include "benchmark/ycsb/Database.h"
 #include "benchmark/ycsb/Random.h"
+#include "benchmark/ycsb/Storage.h"
 #include "benchmark/ycsb/Transaction.h"
-
 #include "core/Partitioner.h"
 
 namespace scar {
@@ -17,10 +17,10 @@ namespace ycsb {
 template <class Transaction> class Workload {
 public:
   using TransactionType = Transaction;
-  using DatabaseType = typename TransactionType::DatabaseType;
-  using ContextType = typename DatabaseType::ContextType;
-  using RandomType = typename DatabaseType::RandomType;
-  using StorageType = typename ReadModifyWrite<Transaction>::StorageType;
+  using DatabaseType = Database<typename TransactionType::MetaDataType>;
+  using ContextType = Context;
+  using RandomType = Random;
+  using StorageType = Storage;
 
   Workload(std::size_t coordinator_id, std::size_t worker_id, DatabaseType &db,
            RandomType &random, Partitioner &partitioner)

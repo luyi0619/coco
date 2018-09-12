@@ -30,8 +30,8 @@ public:
   using ProtocolType = RStore<DatabaseType>;
 
   using MessageType = RStoreMessage;
-  using MessageFactoryType = RStoreMessageFactory<TableType>;
-  using MessageHandlerType = RStoreMessageHandler<TableType>;
+  using MessageFactoryType = RStoreMessageFactory;
+  using MessageHandlerType = RStoreMessageHandler;
 
   RStoreExecutor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
                  ContextType &context, std::atomic<uint32_t> &worker_status,

@@ -15,21 +15,15 @@
 
 namespace scar {
 
-template <class Database> class SiloTransaction {
+class SiloTransaction {
 public:
-  using DatabaseType = Database;
-  using ContextType = typename DatabaseType::ContextType;
-  using RandomType = typename DatabaseType::RandomType;
-  using MetaDataType = typename DatabaseType::MetaDataType;
-  using TableType = ITable<MetaDataType>;
+  using MetaDataType = std::atomic<uint64_t>;
 
   SiloTransaction(std::size_t coordinator_id, std::size_t worker_id,
-                  std::size_t partition_id, DatabaseType &db,
-                  const ContextType &context, RandomType &random,
-                  Partitioner &partitioner)
+                  std::size_t partition_id, Partitioner &partitioner)
       : coordinator_id(coordinator_id), worker_id(worker_id),
         partition_id(partition_id), startTime(std::chrono::steady_clock::now()),
-        db(db), context(context), random(random), partitioner(partitioner) {
+        partitioner(partitioner) {
     reset();
   }
 
@@ -115,10 +109,6 @@ public:
     // the object pointed by value will not be updated
     writeKey.set_value(const_cast<ValueType *>(&value));
 
-    TableType *table = db.find_table(table_id, partition_id);
-    MetaDataType &metaData = table->search_metadata(&key);
-    writeKey.set_sort_key(&metaData);
-
     add_to_write_set(writeKey);
   }
 
@@ -185,9 +175,6 @@ public:
 
   std::function<void()> message_flusher;
 
-  DatabaseType &db;
-  const ContextType &context;
-  RandomType &random;
   Partitioner &partitioner;
   std::vector<SiloRWKey> readSet, writeSet;
 };

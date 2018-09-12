@@ -46,8 +46,7 @@ public:
     LOG(INFO) << "Coordinator initializes " << context.worker_num
               << " workers.";
 
-    workers = WorkerFactory::create_workers<WorkloadType>(id, db, context,
-                                                          workerStopFlag);
+    workers = WorkerFactory::create_workers(id, db, context, workerStopFlag);
 
     // start dispatcher threads
     iDispatcher = std::make_unique<IncomingDispatcher>(id, inSockets, workers,
