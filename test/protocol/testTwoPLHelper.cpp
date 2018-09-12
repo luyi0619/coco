@@ -16,11 +16,15 @@ TEST(TestTwoPLHelper, TestBasic) {
   EXPECT_FALSE(TwoPLHelper::is_write_locked(0));
   EXPECT_EQ(TwoPLHelper::read_lock_num(0), 0);
 
+  bool success;
+
   for (int i = 0; i < 511; i++) {
     EXPECT_EQ(TwoPLHelper::read_lock_num(a.load()), i);
-    EXPECT_TRUE(TwoPLHelper::read_lock(a));
+    TwoPLHelper::read_lock(a, success);
+    EXPECT_TRUE(success);
   }
-  EXPECT_FALSE(TwoPLHelper::read_lock(a));
+  TwoPLHelper::read_lock(a, success);
+  EXPECT_FALSE(success);
   EXPECT_EQ(TwoPLHelper::read_lock_num(a.load()), 511);
 
   for (int i = 0; i < 511; i++) {
@@ -29,12 +33,16 @@ TEST(TestTwoPLHelper, TestBasic) {
   }
   EXPECT_EQ(TwoPLHelper::read_lock_num(a), 0);
 
-  EXPECT_TRUE(TwoPLHelper::write_lock(a));
-  EXPECT_FALSE(TwoPLHelper::read_lock(a));
+  TwoPLHelper::write_lock(a, success);
+  EXPECT_TRUE(success);
+  TwoPLHelper::read_lock(a, success);
+  EXPECT_FALSE(success);
   TwoPLHelper::write_lock_release(a);
 
-  EXPECT_TRUE(TwoPLHelper::read_lock(a));
-  EXPECT_FALSE(TwoPLHelper::write_lock(a));
+  TwoPLHelper::read_lock(a, success);
+  EXPECT_TRUE(success);
+  TwoPLHelper::write_lock(a, success);
+  EXPECT_FALSE(success);
   TwoPLHelper::read_lock_release(a);
 }
 
@@ -49,11 +57,15 @@ TEST(TestTwoPLHelper, TestValue) {
   EXPECT_FALSE(TwoPLHelper::is_write_locked(0));
   EXPECT_EQ(TwoPLHelper::read_lock_num(0), 0);
 
+  bool success;
+
   for (int i = 0; i < 511; i++) {
     EXPECT_EQ(TwoPLHelper::read_lock_num(a.load()), i);
-    EXPECT_TRUE(TwoPLHelper::read_lock(a));
+    TwoPLHelper::read_lock(a, success);
+    EXPECT_TRUE(success);
   }
-  EXPECT_FALSE(TwoPLHelper::read_lock(a));
+  TwoPLHelper::read_lock(a, success);
+  EXPECT_FALSE(success);
   EXPECT_EQ(TwoPLHelper::read_lock_num(a.load()), 511);
 
   for (int i = 0; i < 511; i++) {
@@ -62,11 +74,15 @@ TEST(TestTwoPLHelper, TestValue) {
   }
   EXPECT_EQ(TwoPLHelper::read_lock_num(a), 0);
 
-  EXPECT_TRUE(TwoPLHelper::write_lock(a));
-  EXPECT_FALSE(TwoPLHelper::read_lock(a));
+  TwoPLHelper::write_lock(a, success);
+  EXPECT_TRUE(success);
+  TwoPLHelper::read_lock(a, success);
+  EXPECT_FALSE(success);
   TwoPLHelper::write_lock_release(a);
 
-  EXPECT_TRUE(TwoPLHelper::read_lock(a));
-  EXPECT_FALSE(TwoPLHelper::write_lock(a));
+  TwoPLHelper::read_lock(a, success);
+  EXPECT_TRUE(success);
+  TwoPLHelper::write_lock(a, success);
+  EXPECT_FALSE(success);
   TwoPLHelper::read_lock_release(a);
 }

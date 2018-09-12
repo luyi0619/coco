@@ -1,10 +1,4 @@
 //
-// Created by Yi Lu on 9/11/18.
-//
-
-#pragma once
-
-//
 // Created by Yi Lu on 7/22/18.
 //
 
@@ -83,6 +77,8 @@ public:
     readKey.set_key(&key);
     readKey.set_value(&value);
 
+    readKey.set_read_request_bit();
+
     add_to_read_set(readKey);
   }
 
@@ -101,6 +97,8 @@ public:
 
     readKey.set_key(&key);
     readKey.set_value(&value);
+
+    readKey.set_read_request_bit();
 
     add_to_read_set(readKey);
   }
@@ -129,7 +127,7 @@ public:
     // cannot use unsigned type in reverse iteration
     for (int i = int(readSet.size()) - 1; i >= 0; i--) {
       // early return
-      if (readSet[i].get_read_request_bit()) {
+      if (!readSet[i].get_read_request_bit()) {
         break;
       }
 
@@ -138,7 +136,7 @@ public:
           readRequestHandler(readKey.get_table_id(), readKey.get_partition_id(),
                              i, readKey.get_key(), readKey.get_value(),
                              readKey.get_local_index_read_bit());
-      readSet[i].set_read_request_bit();
+      readSet[i].clear_read_request_bit();
       readSet[i].set_tid(tid);
     }
 

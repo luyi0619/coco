@@ -50,5 +50,6 @@ int main(int argc, char *argv[]) {
 
   c->connectToPeers();
   c->start();
+
   return 0;
 }

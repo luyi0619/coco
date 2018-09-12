@@ -29,6 +29,36 @@ public:
     return (bitvec >> LOCAL_INDEX_READ_BIT_OFFSET) & LOCAL_INDEX_READ_BIT_MASK;
   }
 
+  // read lock bit
+
+  void set_read_lock_bit() {
+    clear_read_lock_bit();
+    bitvec |= READ_LOCK_BIT_MASK << READ_LOCK_BIT_OFFSET;
+  }
+
+  void clear_read_lock_bit() {
+    bitvec &= ~(READ_LOCK_BIT_MASK << READ_LOCK_BIT_OFFSET);
+  }
+
+  uint32_t get_read_lock_bit() const {
+    return (bitvec >> READ_LOCK_BIT_OFFSET) & READ_LOCK_BIT_MASK;
+  }
+
+  // write lock bit
+
+  void set_write_lock_bit() {
+    clear_write_lock_bit();
+    bitvec |= WRITE_LOCK_BIT_MASK << WRITE_LOCK_BIT_OFFSET;
+  }
+
+  void clear_write_lock_bit() {
+    bitvec &= ~(WRITE_LOCK_BIT_MASK << WRITE_LOCK_BIT_OFFSET);
+  }
+
+  uint32_t get_write_lock_bit() const {
+    return (bitvec >> WRITE_LOCK_BIT_OFFSET) & WRITE_LOCK_BIT_MASK;
+  }
+
   // read lock request bit
 
   void set_read_lock_request_bit() {
@@ -109,12 +139,15 @@ private:
   /*
    * A bitvec is a 32-bit word.
    *
-   * [ table id (5) ] | partition id (8) | unused bit (16) |
-   * write lock bit(1) | read request bit (1) | local index read (1)  ]
+   * [ table id (5) ] | partition id (8) | unused bit (15) | request bit (1) |
+   * write lock bit(1) | read lock bit (1) | local index read (1)  ]
    *
-   * write lock bit is set when a write lock is acquired.
-   * read request bit is set when the read response is received.
+   *
    * local index read  is set when the read is from a local read only index.
+   * write lock bit is set when a write lock is acquired.
+   * read lock bit is set when a read lock is acquired.
+   * write lock request bit is set when a write lock request is needed.
+   * read lock request bit is set when a read lock request is needed.
    *
    */
 
@@ -131,10 +164,16 @@ public:
   static constexpr uint32_t PARTITION_ID_OFFSET = 19;
 
   static constexpr uint32_t WRITE_LOCK_REQUEST_BIT_MASK = 0x1;
-  static constexpr uint32_t WRITE_LOCK_REQUEST_BIT_OFFSET = 2;
+  static constexpr uint32_t WRITE_LOCK_REQUEST_BIT_OFFSET = 4;
 
   static constexpr uint32_t READ_LOCK_REQUEST_BIT_MASK = 0x1;
-  static constexpr uint32_t READ_LOCK_REQUEST_BIT_OFFSET = 1;
+  static constexpr uint32_t READ_LOCK_REQUEST_BIT_OFFSET = 3;
+
+  static constexpr uint32_t WRITE_LOCK_BIT_MASK = 0x1;
+  static constexpr uint32_t WRITE_LOCK_BIT_OFFSET = 2;
+
+  static constexpr uint32_t READ_LOCK_BIT_MASK = 0x1;
+  static constexpr uint32_t READ_LOCK_BIT_OFFSET = 1;
 
   static constexpr uint32_t LOCAL_INDEX_READ_BIT_MASK = 0x1;
   static constexpr uint32_t LOCAL_INDEX_READ_BIT_OFFSET = 0;
