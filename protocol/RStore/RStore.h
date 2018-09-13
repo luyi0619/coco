@@ -105,7 +105,7 @@ private:
     bool tidChanged = false;
 
     // set sort key
-    for (int i = 0; i < writeSet.size(); i++) {
+    for (auto i = 0u; i < writeSet.size(); i++) {
       auto &writeKey = writeSet[i];
       auto tableId = writeKey.get_table_id();
       auto partitionId = writeKey.get_partition_id();

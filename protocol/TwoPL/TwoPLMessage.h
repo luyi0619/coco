@@ -21,6 +21,7 @@ enum class TwoPLMessage {
   READ_LOCK_RESPONSE,
   WRITE_LOCK_REQUEST,
   WRITE_LOCK_RESPONSE,
+  ABORT_REQUEST,
   WRITE_REQUEST,
   WRITE_RESPONSE,
   REPLICATION_REQUEST,
@@ -78,6 +79,27 @@ public:
     encoder << message_piece_header;
     encoder.write_n_bytes(key, key_size);
     encoder << key_offset;
+    message.flush();
+  }
+
+  static void new_abort_message(Message &message, Table &table, const void *key,
+                                bool write_lock) {
+    /*
+     * The structure of a write lock request: (primary key, wrtie lock)
+     */
+
+    auto key_size = table.key_size();
+
+    auto message_size =
+        MessagePiece::get_header_size() + key_size + sizeof(bool);
+    auto message_piece_header = MessagePiece::construct_message_piece_header(
+        static_cast<uint32_t>(TwoPLMessage::ABORT_REQUEST), message_size,
+        table.tableID(), table.partitionID());
+
+    Encoder encoder(message.data);
+    encoder << message_piece_header;
+    encoder.write_n_bytes(key, key_size);
+    encoder << write_lock;
     message.flush();
   }
 
@@ -188,10 +210,11 @@ public:
     DCHECK(partition_id == table.partitionID());
     auto key_size = table.key_size();
     auto value_size = table.value_size();
-    LOG(INFO) << "read lock request " << table_id << " " << partition_id;
+
     /*
      * The structure of a read lock request: (primary key, key offset)
-     * The structure of a read lock response: (success?, key offset, value?)
+     * The structure of a read lock response: (success?, key offset, value?,
+     * tid?)
      */
 
     auto stringPiece = inputPiece.toStringPiece();
@@ -211,14 +234,14 @@ public:
     DCHECK(dec.size() == 0);
 
     bool success;
-    TwoPLHelper::read_lock(tid, success);
+    uint64_t latest_tid = TwoPLHelper::read_lock(tid, success);
 
     // prepare response message header
     auto message_size =
         MessagePiece::get_header_size() + sizeof(bool) + sizeof(key_offset);
 
     if (success) {
-      message_size += value_size;
+      message_size += value_size + sizeof(uint64_t);
     }
 
     auto message_piece_header = MessagePiece::construct_message_piece_header(
@@ -236,6 +259,7 @@ public:
           &responseMessage.data[0] + responseMessage.data.size() - value_size;
       // read to message buffer
       TwoPLHelper::read(row, dest, value_size);
+      encoder << latest_tid;
     }
 
     responseMessage.flush();
@@ -252,9 +276,10 @@ public:
     DCHECK(partition_id == table.partitionID());
     auto key_size = table.key_size();
     auto value_size = table.value_size();
-    LOG(INFO) << "read lock response " << table_id << " " << partition_id;
+
     /*
-     * The structure of a read lock response: (success?, key offset, value?)
+     * The structure of a read lock response: (success?, key offset, value?,
+     * tid?)
      */
 
     bool success;
@@ -267,11 +292,14 @@ public:
     if (success) {
       DCHECK(inputPiece.get_message_length() ==
              MessagePiece::get_header_size() + sizeof(success) +
-                 sizeof(key_offset) + value_size);
+                 sizeof(key_offset) + value_size + sizeof(uint64_t));
 
       TwoPLRWKey &readKey = txn.readSet[key_offset];
       dec.read_n_bytes(readKey.get_value(), value_size);
+      uint64_t tid;
+      dec >> tid;
       readKey.set_read_lock_bit();
+      readKey.set_tid(tid);
     } else {
       DCHECK(inputPiece.get_message_length() ==
              MessagePiece::get_header_size() + sizeof(success) +
@@ -394,6 +422,44 @@ public:
     }
 
     txn.pendingResponses--;
+  }
+
+  static void abort_request_handler(MessagePiece inputPiece,
+                                    Message &responseMessage, Table &table,
+                                    Transaction &txn) {
+
+    DCHECK(inputPiece.get_message_type() ==
+           static_cast<uint32_t>(TwoPLMessage::ABORT_REQUEST));
+    auto table_id = inputPiece.get_table_id();
+    auto partition_id = inputPiece.get_partition_id();
+    DCHECK(table_id == table.tableID());
+    DCHECK(partition_id == table.partitionID());
+    auto key_size = table.key_size();
+
+    /*
+     * The structure of an abort request: (primary key, write_lock)
+     * The structure of an abort response: null
+     */
+
+    DCHECK(inputPiece.get_message_length() ==
+           MessagePiece::get_header_size() + key_size + sizeof(bool));
+
+    auto stringPiece = inputPiece.toStringPiece();
+
+    const void *key = stringPiece.data();
+    stringPiece.remove_prefix(key_size);
+
+    bool write_lock;
+    Decoder dec(stringPiece);
+    dec >> write_lock;
+
+    std::atomic<uint64_t> &tid = table.search_metadata(key);
+
+    if (write_lock) {
+      TwoPLHelper::write_lock_release(tid);
+    } else {
+      TwoPLHelper::read_lock_release(tid);
+    }
   }
 
   static void write_request_handler(MessagePiece inputPiece,
@@ -546,8 +612,7 @@ public:
 
     const void *key = stringPiece.data();
     stringPiece.remove_prefix(key_size);
-    LOG(INFO) << "release read lock request " << table_id << " " << partition_id
-              << " " << ((const tpcc::stock::key *)(key))->S_I_ID;
+
     std::atomic<uint64_t> &tid = table.search_metadata(key);
 
     TwoPLHelper::read_lock_release(tid);
@@ -575,8 +640,6 @@ public:
     DCHECK(table_id == table.tableID());
     DCHECK(partition_id == table.partitionID());
     auto key_size = table.key_size();
-    LOG(INFO) << "release read lock response " << table_id << " "
-              << partition_id;
 
     /*
      * The structure of a release read lock response: ()
@@ -659,6 +722,7 @@ public:
     v.push_back(read_lock_response_handler);
     v.push_back(write_lock_request_handler);
     v.push_back(write_lock_response_handler);
+    v.push_back(abort_request_handler);
     v.push_back(write_request_handler);
     v.push_back(write_response_handler);
     v.push_back(replication_request_handler);

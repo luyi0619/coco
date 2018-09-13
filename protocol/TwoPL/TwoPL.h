@@ -91,10 +91,9 @@ public:
           std::atomic<uint64_t> &tid = table->search_metadata(key);
           TwoPLHelper::read_lock_release(tid);
         } else {
-          txn.pendingResponses++;
           auto coordinatorID = partitioner.master_coordinator(partitionId);
-          MessageFactoryType::new_release_read_lock_message(
-              *messages[coordinatorID], *table, readKey.get_key());
+          MessageFactoryType::new_abort_message(
+              *messages[coordinatorID], *table, readKey.get_key(), false);
         }
       }
 
@@ -105,16 +104,14 @@ public:
           std::atomic<uint64_t> &tid = table->search_metadata(key);
           TwoPLHelper::write_lock_release(tid);
         } else {
-          txn.pendingResponses++;
           auto coordinatorID = partitioner.master_coordinator(partitionId);
-          MessageFactoryType::new_release_write_lock_message(
-              *messages[coordinatorID], *table, readKey.get_key(),
-              readKey.get_tid());
+          MessageFactoryType::new_abort_message(
+              *messages[coordinatorID], *table, readKey.get_key(), true);
         }
       }
     }
 
-    sync_messages(txn);
+    sync_messages(txn, false);
   }
 
   bool commit(TransactionType &txn,
@@ -235,7 +232,7 @@ public:
         auto value = writeKey.get_value();
         std::atomic<uint64_t> &tid = table->search_metadata(key);
         table->update(key, value);
-        TwoPLHelper::write_lock_release(tid);
+        TwoPLHelper::write_lock_release(tid, commit_tid);
       } else {
         txn.pendingResponses++;
         auto coordinatorID = partitioner.master_coordinator(partitionId);

@@ -4,7 +4,10 @@
 
 #pragma once
 
+#include <atomic>
+#include <cstring>
 #include <glog/logging.h>
+#include <tuple>
 
 namespace scar {
 
@@ -82,12 +85,12 @@ public:
 
   static void read_lock_release(std::atomic<uint64_t> &a) {
     uint64_t old_value, new_value;
-    old_value = a.load();
-    DCHECK(is_read_locked(old_value));
-    DCHECK(!is_write_locked(old_value));
-    new_value = old_value - (1ull << READ_LOCK_BIT_OFFSET);
-    bool ok = a.compare_exchange_strong(old_value, new_value);
-    DCHECK(ok);
+    do {
+      old_value = a.load();
+      DCHECK(is_read_locked(old_value));
+      DCHECK(!is_write_locked(old_value));
+      new_value = old_value - (1ull << READ_LOCK_BIT_OFFSET);
+    } while (!a.compare_exchange_weak(old_value, new_value));
   }
 
   static void write_lock_release(std::atomic<uint64_t> &a) {
