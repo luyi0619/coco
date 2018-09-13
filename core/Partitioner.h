@@ -10,13 +10,13 @@ namespace scar {
 
 class Partitioner {
 public:
-  Partitioner(std::size_t coordinator_id, std::size_t coordinator_nums) {
-    DCHECK(coordinator_id < coordinator_nums);
+  Partitioner(std::size_t coordinator_id, std::size_t coordinator_num) {
+    DCHECK(coordinator_id < coordinator_num);
     this->coordinator_id = coordinator_id;
-    this->coordinator_nums = coordinator_nums;
+    this->coordinator_num = coordinator_num;
   }
 
-  std::size_t total_coordinators() const { return coordinator_nums; }
+  std::size_t total_coordinators() const { return coordinator_num; }
 
   virtual bool is_replicated() const = 0;
 
@@ -29,7 +29,7 @@ public:
 
 protected:
   std::size_t coordinator_id;
-  std::size_t coordinator_nums;
+  std::size_t coordinator_num;
 };
 
 /*
@@ -42,9 +42,9 @@ protected:
 template <std::size_t N> class HashReplicatedPartitioner : public Partitioner {
 public:
   HashReplicatedPartitioner(std::size_t coordinator_id,
-                            std::size_t coordinator_nums)
-      : Partitioner(coordinator_id, coordinator_nums) {
-    CHECK(N > 0 && N <= coordinator_nums);
+                            std::size_t coordinator_num)
+      : Partitioner(coordinator_id, coordinator_num) {
+    CHECK(N > 0 && N <= coordinator_num);
   }
 
   bool is_replicated() const override { return N > 1; }
@@ -54,14 +54,14 @@ public:
   }
 
   std::size_t master_coordinator(std::size_t partition_id) const override {
-    return partition_id % coordinator_nums;
+    return partition_id % coordinator_num;
   }
 
   bool is_partition_replicated_on(std::size_t partition_id,
                                   std::size_t coordinator_id) const override {
-    DCHECK(coordinator_id < coordinator_nums);
+    DCHECK(coordinator_id < coordinator_num);
     std::size_t first_replica = master_coordinator(partition_id);
-    std::size_t last_replica = (first_replica + N - 1) % coordinator_nums;
+    std::size_t last_replica = (first_replica + N - 1) % coordinator_num;
 
     if (last_replica >= first_replica) {
       return first_replica <= coordinator_id && coordinator_id <= last_replica;
@@ -93,9 +93,9 @@ using HashPartitioner = HashReplicatedPartitioner<1>;
 
 class RStoreSPartitioner : public Partitioner {
 public:
-  RStoreSPartitioner(std::size_t coordinator_id, std::size_t coordinator_nums)
-      : Partitioner(coordinator_id, coordinator_nums) {
-    CHECK(coordinator_nums >= 2);
+  RStoreSPartitioner(std::size_t coordinator_id, std::size_t coordinator_num)
+      : Partitioner(coordinator_id, coordinator_num) {
+    CHECK(coordinator_num >= 2);
   }
 
   bool is_replicated() const override { return true; }
@@ -105,17 +105,17 @@ public:
   }
 
   std::size_t master_coordinator(std::size_t partition_id) const override {
-    return partition_id % coordinator_nums;
+    return partition_id % coordinator_num;
   }
 
   bool is_partition_replicated_on(std::size_t partition_id,
                                   std::size_t coordinator_id) const override {
-    DCHECK(coordinator_id < coordinator_nums);
+    DCHECK(coordinator_id < coordinator_num);
 
     auto master_id = master_coordinator(partition_id);
     auto secondary_id = 0u; // case 1
     if (master_id == 0) {
-      secondary_id = partition_id % (coordinator_nums - 1) + 1; // case 2
+      secondary_id = partition_id % (coordinator_num - 1) + 1; // case 2
     }
     return coordinator_id == master_id || coordinator_id == secondary_id;
   }
@@ -123,9 +123,9 @@ public:
 
 class RStoreCPartitioner : public Partitioner {
 public:
-  RStoreCPartitioner(std::size_t coordinator_id, std::size_t coordinator_nums)
-      : Partitioner(coordinator_id, coordinator_nums) {
-    CHECK(coordinator_nums >= 2);
+  RStoreCPartitioner(std::size_t coordinator_id, std::size_t coordinator_num)
+      : Partitioner(coordinator_id, coordinator_num) {
+    CHECK(coordinator_num >= 2);
   }
 
   bool is_replicated() const override { return true; }
@@ -140,12 +140,12 @@ public:
 
   bool is_partition_replicated_on(std::size_t partition_id,
                                   std::size_t coordinator_id) const override {
-    DCHECK(coordinator_id < coordinator_nums);
+    DCHECK(coordinator_id < coordinator_num);
 
     if (coordinator_id == 0)
       return true;
 
-    return coordinator_id == (partition_id % (coordinator_nums - 1)) + 1;
+    return coordinator_id == (partition_id % (coordinator_num - 1)) + 1;
   }
 };
 
