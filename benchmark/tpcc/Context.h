@@ -67,7 +67,7 @@ public:
   }
 
   int newOrderCrossPartitionProbability = 10; // out of 100
-  int paymentCrossPartitionProbability = 15; // out of 100
+  int paymentCrossPartitionProbability = 15;  // out of 100
 };
 } // namespace tpcc
 } // namespace scar

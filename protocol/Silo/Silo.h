@@ -65,14 +65,13 @@ public:
         std::atomic<uint64_t> &tid = table->search_metadata(key);
         SiloHelper::unlock(tid);
       } else {
-        txn.pendingResponses++;
         auto coordinatorID = partitioner.master_coordinator(partitionId);
         MessageFactoryType::new_abort_message(*messages[coordinatorID], *table,
                                               writeKey.get_key());
       }
     }
 
-    txn.message_flusher();
+    sync_messages(txn, false);
   }
 
   bool commit(TransactionType &txn,

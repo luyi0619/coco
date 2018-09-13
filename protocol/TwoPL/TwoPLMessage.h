@@ -85,7 +85,7 @@ public:
   static void new_abort_message(Message &message, Table &table, const void *key,
                                 bool write_lock) {
     /*
-     * The structure of a write lock request: (primary key, wrtie lock)
+     * The structure of an abort request: (primary key, wrtie lock)
      */
 
     auto key_size = table.key_size();
@@ -175,7 +175,7 @@ public:
                                              uint64_t commit_tid) {
 
     /*
-     * The structure of a replication request: (primary key, commit tid)
+     * The structure of a release write lock request: (primary key, commit tid)
      */
 
     auto key_size = table.key_size();

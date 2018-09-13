@@ -65,14 +65,13 @@ public:
         std::atomic<uint64_t> &tid = table->search_metadata(key);
         SiloHelper::unlock(tid);
       } else {
-        txn.pendingResponses++;
         auto coordinatorID = partitioner.master_coordinator(partitionId);
         MessageFactoryType::new_abort_message(*messages[coordinatorID], *table,
                                               writeKey.get_key());
       }
     }
 
-    txn.message_flusher();
+    sync_messages(txn, false);
   }
 
   bool commit(TransactionType &txn,
@@ -294,12 +293,15 @@ private:
           std::atomic<uint64_t> &tid = table->search_metadata(key);
 
           uint64_t last_tid = SiloHelper::lock(tid);
-          DCHECK(last_tid < commit_tid);
-          table->update(key, value);
-          SiloHelper::unlock(tid, commit_tid);
+
+          if (commit_tid > last_tid) {
+            table->update(key, value);
+            SiloHelper::unlock(tid, commit_tid);
+          } else {
+            SiloHelper::unlock(tid);
+          }
 
         } else {
-          txn.pendingResponses++;
           auto coordinatorID = k;
           MessageFactoryType::new_replication_message(
               *asyncMessages[coordinatorID], *table, writeKey.get_key(),

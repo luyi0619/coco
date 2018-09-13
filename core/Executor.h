@@ -108,7 +108,7 @@ public:
           }
           random.set_seed(last_seed);
           retry_transaction = true;
-          //std::this_thread::sleep_for(std::chrono::microseconds(100));
+          // std::this_thread::sleep_for(std::chrono::microseconds(100));
         }
       } else {
         n_abort_no_retry.fetch_add(1);

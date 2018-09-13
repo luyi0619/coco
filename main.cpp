@@ -32,9 +32,9 @@ int main(int argc, char *argv[]) {
 
   // only create coordinator for tpc-c
   std::unordered_set<std::string> protocols = {"Silo", "SiloGC", "RStore",
-                                               "TwoPL"};
+                                               "TwoPL", "TwoPLGC"};
   std::unordered_set<std::string> silo_protocols = {"Silo", "SiloGC", "RStore"};
-  std::unordered_set<std::string> twopl_protocols = {"TwoPL"};
+  std::unordered_set<std::string> twopl_protocols = {"TwoPL", "TwoPLGC"};
 
   CHECK(protocols.count(context.protocol) == 1);
 
