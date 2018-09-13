@@ -106,7 +106,7 @@ public:
     DCHECK(!is_read_locked(old_value));
     DCHECK(is_write_locked(old_value));
     DCHECK(!is_read_locked(new_value));
-    DCHECK(is_write_locked(new_value));
+    DCHECK(!is_write_locked(new_value));
     bool ok = a.compare_exchange_weak(old_value, new_value);
     DCHECK(ok);
   }

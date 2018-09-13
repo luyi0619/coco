@@ -13,6 +13,8 @@ TEST(TestTPCCContext, TestBasic) {
   context.worker_num = 1;
   context.partition_num = 4;
   context.workloadType = scar::tpcc::TPCCWorkloadType::MIXED;
+  context.newOrderCrossPartitionProbability = 10;
+  context.paymentCrossPartitionProbability = 15;
 
   EXPECT_EQ(context.get_s_phase_query_num(), 875);
   EXPECT_EQ(context.get_c_phase_query_num(), 500);

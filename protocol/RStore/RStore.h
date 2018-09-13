@@ -15,6 +15,7 @@
 #include "protocol/RStore/RStoreMessage.h"
 #include "protocol/Silo/SiloHelper.h"
 #include "protocol/Silo/SiloRWKey.h"
+#include "protocol/Silo/SiloTransaction.h"
 #include <glog/logging.h>
 
 namespace scar {
@@ -26,6 +27,7 @@ public:
   using ContextType = typename DatabaseType::ContextType;
   using TableType = ITable<MetaDataType>;
   using MessageType = RStoreMessage;
+  using TransactionType = SiloTransaction;
 
   using MessageFactoryType = RStoreMessageFactory;
   using MessageHandlerType = RStoreMessageHandler;
@@ -46,7 +48,7 @@ public:
     return SiloHelper::read(row, value, value_bytes);
   }
 
-  template <class Transaction> void abort(Transaction &txn) {
+  void abort(TransactionType &txn) {
     auto &writeSet = txn.writeSet;
     // unlock locked records
     for (auto i = 0u; i < writeSet.size(); i++) {
@@ -61,8 +63,7 @@ public:
     }
   }
 
-  template <class Transaction>
-  bool commit(Transaction &txn,
+  bool commit(TransactionType &txn,
               std::vector<std::unique_ptr<Message>> &messages) {
     // lock write set
     if (lock_write_set(txn)) {
@@ -87,7 +88,7 @@ public:
   }
 
 private:
-  template <class Transaction> bool lock_write_set(Transaction &txn) {
+  bool lock_write_set(TransactionType &txn) {
 
     auto &readSet = txn.readSet;
     auto &writeSet = txn.writeSet;
@@ -142,7 +143,7 @@ private:
     return tidChanged;
   }
 
-  template <class Transaction> bool validate_read_set(Transaction &txn) {
+  bool validate_read_set(TransactionType &txn) {
 
     auto &readSet = txn.readSet;
     auto &writeSet = txn.writeSet;
@@ -178,9 +179,7 @@ private:
     return true;
   }
 
-  template <class Transaction>
-
-  uint64_t generateTid(Transaction &txn) {
+  uint64_t generateTid(TransactionType &txn) {
 
     auto &readSet = txn.readSet;
     auto &writeSet = txn.writeSet;
@@ -219,8 +218,7 @@ private:
     return next_tid;
   }
 
-  template <class Transaction>
-  void write_and_replicate(Transaction &txn, uint64_t commit_tid,
+  void write_and_replicate(TransactionType &txn, uint64_t commit_tid,
                            std::vector<std::unique_ptr<Message>> &messages) {
 
     auto &readSet = txn.readSet;

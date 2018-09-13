@@ -93,7 +93,7 @@ public:
 
     auto message_size = MessagePiece::get_header_size() + key_size + field_size;
     auto message_piece_header = MessagePiece::construct_message_piece_header(
-        static_cast<uint32_t>(TwoPLMessage::WRITE_LOCK_REQUEST), message_size,
+        static_cast<uint32_t>(TwoPLMessage::WRITE_REQUEST), message_size,
         table.tableID(), table.partitionID());
 
     Encoder encoder(message.data);
@@ -130,8 +130,7 @@ public:
   }
 
   static void new_release_read_lock_message(Message &message, Table &table,
-                                            const void *key,
-                                            const void *value) {
+                                            const void *key) {
     /*
      * The structure of a release read lock request: (primary key)
      */
@@ -150,7 +149,7 @@ public:
   }
 
   static void new_release_write_lock_message(Message &message, Table &table,
-                                             const void *key, const void *value,
+                                             const void *key,
                                              uint64_t commit_tid) {
 
     /*
@@ -181,7 +180,6 @@ public:
   static void read_lock_request_handler(MessagePiece inputPiece,
                                         Message &responseMessage, Table &table,
                                         Transaction &txn) {
-
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(TwoPLMessage::READ_LOCK_REQUEST));
     auto table_id = inputPiece.get_table_id();
@@ -190,7 +188,7 @@ public:
     DCHECK(partition_id == table.partitionID());
     auto key_size = table.key_size();
     auto value_size = table.value_size();
-
+    LOG(INFO) << "read lock request " << table_id << " " << partition_id;
     /*
      * The structure of a read lock request: (primary key, key offset)
      * The structure of a read lock response: (success?, key offset, value?)
@@ -254,7 +252,7 @@ public:
     DCHECK(partition_id == table.partitionID());
     auto key_size = table.key_size();
     auto value_size = table.value_size();
-
+    LOG(INFO) << "read lock response " << table_id << " " << partition_id;
     /*
      * The structure of a read lock response: (success?, key offset, value?)
      */
@@ -273,7 +271,7 @@ public:
 
       TwoPLRWKey &readKey = txn.readSet[key_offset];
       dec.read_n_bytes(readKey.get_value(), value_size);
-      readKey.set_read_lock_request_bit();
+      readKey.set_read_lock_bit();
     } else {
       DCHECK(inputPiece.get_message_length() ==
              MessagePiece::get_header_size() + sizeof(success) +
@@ -379,13 +377,13 @@ public:
     if (success) {
       DCHECK(inputPiece.get_message_length() ==
              MessagePiece::get_header_size() + sizeof(success) +
-                 sizeof(key_offset) + value_size);
+                 sizeof(key_offset) + value_size + sizeof(uint64_t));
 
       TwoPLRWKey &readKey = txn.readSet[key_offset];
       dec.read_n_bytes(readKey.get_value(), value_size);
       uint64_t tid;
       dec >> tid;
-      readKey.set_write_lock_request_bit();
+      readKey.set_write_lock_bit();
       readKey.set_tid(tid);
     } else {
       DCHECK(inputPiece.get_message_length() ==
@@ -460,7 +458,7 @@ public:
                                           Message &responseMessage,
                                           Table &table, Transaction &txn) {
     DCHECK(inputPiece.get_message_type() ==
-           static_cast<uint32_t>(TwoPLMessage::REPLICATION_RESPONSE));
+           static_cast<uint32_t>(TwoPLMessage::REPLICATION_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     DCHECK(table_id == table.tableID());
@@ -548,7 +546,8 @@ public:
 
     const void *key = stringPiece.data();
     stringPiece.remove_prefix(key_size);
-
+    LOG(INFO) << "release read lock request " << table_id << " " << partition_id
+              << " " << ((const tpcc::stock::key *)(key))->S_I_ID;
     std::atomic<uint64_t> &tid = table.search_metadata(key);
 
     TwoPLHelper::read_lock_release(tid);
@@ -576,6 +575,8 @@ public:
     DCHECK(table_id == table.tableID());
     DCHECK(partition_id == table.partitionID());
     auto key_size = table.key_size();
+    LOG(INFO) << "release read lock response " << table_id << " "
+              << partition_id;
 
     /*
      * The structure of a release read lock response: ()
@@ -588,6 +589,7 @@ public:
                                                  Message &responseMessage,
                                                  Table &table,
                                                  Transaction &txn) {
+
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(TwoPLMessage::RELEASE_WRITE_LOCK_REQUEST));
     auto table_id = inputPiece.get_table_id();
@@ -595,14 +597,13 @@ public:
     DCHECK(table_id == table.tableID());
     DCHECK(partition_id == table.partitionID());
     auto key_size = table.key_size();
-
     /*
      * The structure of a release write lock request: (primary key, commit tid)
      * The structure of a release write lock response: ()
      */
 
     DCHECK(inputPiece.get_message_length() ==
-           MessagePiece::get_header_size() + key_size);
+           MessagePiece::get_header_size() + key_size + sizeof(uint64_t));
 
     auto stringPiece = inputPiece.toStringPiece();
 
@@ -632,7 +633,7 @@ public:
                                                   Table &table,
                                                   Transaction &txn) {
     DCHECK(inputPiece.get_message_type() ==
-           static_cast<uint32_t>(TwoPLMessage::REPLICATION_RESPONSE));
+           static_cast<uint32_t>(TwoPLMessage::RELEASE_WRITE_LOCK_RESPONSE));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     DCHECK(table_id == table.tableID());

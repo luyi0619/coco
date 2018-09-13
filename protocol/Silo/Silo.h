@@ -63,9 +63,7 @@ public:
       if (partitioner.has_master_partition(partitionId)) {
         auto key = writeKey.get_key();
         std::atomic<uint64_t> &tid = table->search_metadata(key);
-        if (writeKey.get_write_lock_bit()) {
-          SiloHelper::unlock(tid);
-        }
+        SiloHelper::unlock(tid);
       } else {
         txn.pendingResponses++;
         auto coordinatorID = partitioner.master_coordinator(partitionId);
