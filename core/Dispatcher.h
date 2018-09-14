@@ -30,6 +30,12 @@ public:
   void start() {
     auto numCoordinators = buffered_readers.size();
     auto numWorkers = workers.size();
+
+    // single node test mode
+    if (numCoordinators == 1) {
+      return;
+    }
+
     LOG(INFO) << "Incoming Dispatcher started, numCoordinators = "
               << numCoordinators << " numWorkers = " << numWorkers;
 
@@ -75,6 +81,11 @@ public:
 
     auto numCoordinators = sockets.size();
     auto numWorkers = workers.size();
+    // single node test mode
+    if (numCoordinators == 1) {
+      return;
+    }
+
     LOG(INFO) << "Outgoing Dispatcher started, numCoordinators = "
               << numCoordinators << " numWorkers = " << numWorkers;
 

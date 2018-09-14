@@ -1,0 +1,6 @@
+Database is partitioned in Calvin. Transactions run deterministically following an order determined by Coordinator 0.
+There are some partitions on each coordinator. For concurrency reasons, some partitions comprise a shard.
+CalvinManager oversees a shard and grants read/write locks in a pre-determined order.
+Once all lock (within the shard) are acquired, CalvinManager passes the transaction
+to one of CalvinExecutor it manages.
+CalvinExecutor runs the transaction to completion and releases all acquired locks.
