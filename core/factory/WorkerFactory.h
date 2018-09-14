@@ -24,6 +24,12 @@
 #include "protocol/RStore/RStoreExecutor.h"
 #include "protocol/RStore/RStoreManager.h"
 
+#include "protocol/Calvin/Calvin.h"
+#include "protocol/Calvin/CalvinExecutor.h"
+#include "protocol/Calvin/CalvinLockManager.h"
+#include "protocol/Calvin/CalvinTransaction.h"
+
+#include <protocol/Calvin/CalvinTransaction.h>
 #include <unordered_set>
 
 namespace scar {
@@ -36,8 +42,8 @@ public:
   create_workers(std::size_t coordinator_id, Database &db, Context &context,
                  std::atomic<bool> &stop_flag) {
 
-    std::unordered_set<std::string> protocols = {"Silo", "SiloGC", "RStore",
-                                                 "TwoPL", "TwoPLGC"};
+    std::unordered_set<std::string> protocols = {"Silo",  "SiloGC",  "RStore",
+                                                 "TwoPL", "TwoPLGC", "Calvin"};
     CHECK(protocols.count(context.protocol) == 1);
 
     std::vector<std::shared_ptr<Worker>> workers;
@@ -114,6 +120,40 @@ public:
         workers.push_back(std::make_shared<TwoPLGCExecutor<WorkloadType>>(
             coordinator_id, i, db, context, manager->worker_status,
             manager->n_completed_workers, manager->n_started_workers));
+      }
+
+      workers.push_back(manager);
+    } else if (context.protocol == "Calvin") {
+
+      using TransactionType = scar::CalvinTransaction;
+      using WorkloadType = scar::tpcc::Workload<TransactionType>;
+
+      // create manager
+
+      auto manager = std::make_shared<group_commit::Manager>(
+          coordinator_id, context.worker_num, context, stop_flag);
+
+      // create lock manager
+
+      std::vector<std::shared_ptr<CalvinLockManager<WorkloadType>>>
+          lock_managers;
+
+      for (auto i = 0u; i < context.lock_manager_num; i++) {
+        lock_managers.push_back(
+            std::make_shared<CalvinLockManager<WorkloadType>>(
+                coordinator_id, i, manager->worker_status,
+                manager->n_completed_workers, manager->n_started_workers));
+      }
+
+      // create worker
+
+      DCHECK(context.worker_num % context.lock_manager_num == 0);
+
+      for (auto i = 0u; i < context.worker_num; i++) {
+        workers.push_back(std::make_shared<CalvinExecutor<WorkloadType>>(
+            coordinator_id, i, db, context,
+            lock_managers[context.worker_num / context.lock_manager_num]
+                ->stop_flag));
       }
 
       workers.push_back(manager);

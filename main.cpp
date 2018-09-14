@@ -1,12 +1,16 @@
 #include "benchmark/tpcc/Database.h"
 #include "benchmark/tpcc/Workload.h"
 #include "core/Coordinator.h"
+#include "protocol/Calvin/CalvinTransaction.h"
+#include "protocol/Silo/SiloTransaction.h"
+#include "protocol/TwoPL/TwoPLTransaction.h"
 #include <boost/algorithm/string.hpp>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 
 DEFINE_int32(id, 0, "coordinator id");
 DEFINE_int32(threads, 1, "the number of threads");
+DEFINE_int32(lock_manager_num, 1, "the number of calvin lock manager");
 DEFINE_string(servers, "127.0.0.1:10010",
               "semicolon-separated list of servers");
 DEFINE_string(protocol, "RStore", "transaction protocol");
@@ -29,11 +33,13 @@ int main(int argc, char *argv[]) {
   context.protocol = FLAGS_protocol;
   context.coordinator_num = peers.size();
   context.partition_num = n * context.coordinator_num;
+  context.lock_manager_num = FLAGS_lock_manager_num;
   context.worker_num = n;
+  context.replica_group = FLAGS_replica_group;
 
   // only create coordinator for tpc-c
-  std::unordered_set<std::string> protocols = {"Silo", "SiloGC", "RStore",
-                                               "TwoPL", "TwoPLGC"};
+  std::unordered_set<std::string> protocols = {"Silo",  "SiloGC",  "RStore",
+                                               "TwoPL", "TwoPLGC", "Calvin"};
   std::unordered_set<std::string> silo_protocols = {"Silo", "SiloGC", "RStore"};
   std::unordered_set<std::string> twopl_protocols = {"TwoPL", "TwoPLGC"};
 
@@ -57,6 +63,20 @@ int main(int argc, char *argv[]) {
   } else if (twopl_protocols.count(context.protocol)) {
     using MetaDataType = std::atomic<uint64_t>;
     using TransactionType = scar::TwoPLTransaction;
+    using WorkloadType = scar::tpcc::Workload<TransactionType>;
+
+    scar::tpcc::Database<MetaDataType> db;
+
+    db.initialize(context, context.partition_num, n);
+
+    auto c = std::make_unique<scar::Coordinator<WorkloadType>>(FLAGS_id, peers,
+                                                               db, context);
+
+    c->connectToPeers();
+    c->start();
+  } else if (context.protocol == "Calvin") {
+    using MetaDataType = std::atomic<uint64_t>;
+    using TransactionType = scar::CalvinTransaction;
     using WorkloadType = scar::tpcc::Workload<TransactionType>;
 
     scar::tpcc::Database<MetaDataType> db;

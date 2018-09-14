@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "core/Partitioner.h"
+
 #include <glog/logging.h>
 #include <numeric>
 #include <vector>
@@ -35,14 +37,13 @@ namespace scar {
  *
  */
 
-class CalvinPartitioner {
+class CalvinPartitioner : public Partitioner {
 
 public:
   CalvinPartitioner(std::size_t coordinator_id, std::size_t coordinator_num,
                     std::size_t shard_num,
                     std::vector<std::size_t> replica_group_sizes)
-      : coordinator_id(coordinator_id), coordinator_num(coordinator_num),
-        shard_num(shard_num) {
+      : Partitioner(coordinator_id, coordinator_num), shard_num(shard_num) {
 
     std::size_t size = 0;
     for (auto i = 0u; i < replica_group_sizes.size(); i++) {
@@ -60,18 +61,29 @@ public:
                            replica_group_sizes.end(), 0) == coordinator_num);
   }
 
-  std::size_t get_shard_id(std::size_t partition_id) {
-    return partition_id % shard_num;
+  bool is_replicated() const override {
+    // replica group in calvin is independent
+    return false;
   }
 
-  std::size_t master_coordinator(std::size_t shard_id) {
+  bool has_master_partition(std::size_t partition_id) const override {
+    return master_coordinator(partition_id) == coordinator_id;
+  }
+
+  std::size_t master_coordinator(std::size_t partition_id) const override {
+    auto shard_id = get_shard_id(partition_id);
     DCHECK(shard_id < shard_num);
     return shard_id % replica_group_size + coordinator_start_id;
   }
 
-  bool has_master_shard(std::size_t shard_id) {
-    DCHECK(shard_id < shard_num);
-    return master_coordinator(shard_id) == coordinator_id;
+  bool is_partition_replicated_on(std::size_t partition_id,
+                                  std::size_t coordinator_id) const override {
+    // replica group in calvin is independent
+    return false;
+  }
+
+  std::size_t get_shard_id(std::size_t partition_id) const {
+    return partition_id % shard_num;
   }
 
 public:

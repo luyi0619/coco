@@ -8,11 +8,11 @@
 
 namespace scar {
 
-  /*
-   * In the example (see comment at the top) of CalvinPartitioner.h,
-   * coordinator 0 would be the real coordinator, it collects acks from
-   * coordinator 1 and coordinator 2 in each batch of queries.
-   */
+/*
+ * In the example (see comment at the top) of CalvinPartitioner.h,
+ * coordinator 0 would be the real coordinator, it collects acks from
+ * coordinator 1 and coordinator 2 in each batch of queries.
+ */
 
 class CalvinManager : public scar::Manager {
 public:

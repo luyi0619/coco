@@ -88,11 +88,11 @@ public:
       std::size_t count = 0;
       n_started_workers.fetch_add(1);
 
+      bool retry_transaction = false;
+
       do {
 
         count++;
-
-        bool retry_transaction = false;
 
         process_request();
 
