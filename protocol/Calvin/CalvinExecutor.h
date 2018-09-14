@@ -50,7 +50,7 @@ public:
 
   ~CalvinExecutor() = default;
 
-  void start() override {}
+  void start() override { LOG(INFO) << "CalvinExecutor " << id << " started."; }
 
   void onExit() override {}
 

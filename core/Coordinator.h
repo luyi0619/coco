@@ -142,6 +142,11 @@ public:
     inSockets = std::vector<Socket>(peers.size());
     outSockets = std::vector<Socket>(peers.size());
 
+    // single node test mode
+    if (peers.size() == 1) {
+      return;
+    }
+
     auto getAddressPort = [](const std::string &addressPort) {
       std::vector<std::string> result;
       boost::algorithm::split(result, addressPort, boost::is_any_of(":"));

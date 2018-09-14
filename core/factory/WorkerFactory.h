@@ -27,6 +27,7 @@
 #include "protocol/Calvin/Calvin.h"
 #include "protocol/Calvin/CalvinExecutor.h"
 #include "protocol/Calvin/CalvinLockManager.h"
+#include "protocol/Calvin/CalvinManager.h"
 #include "protocol/Calvin/CalvinTransaction.h"
 
 #include <protocol/Calvin/CalvinTransaction.h>
@@ -130,7 +131,7 @@ public:
 
       // create manager
 
-      auto manager = std::make_shared<group_commit::Manager>(
+      auto manager = std::make_shared<CalvinManager>(
           coordinator_id, context.worker_num, context, stop_flag);
 
       // create lock manager
@@ -141,22 +142,37 @@ public:
       for (auto i = 0u; i < context.lock_manager_num; i++) {
         lock_managers.push_back(
             std::make_shared<CalvinLockManager<WorkloadType>>(
-                coordinator_id, i, manager->worker_status,
-                manager->n_completed_workers, manager->n_started_workers));
+                coordinator_id, context.worker_num + i, i,
+                manager->worker_status, manager->n_completed_workers,
+                manager->n_started_workers));
       }
 
       // create worker
 
       DCHECK(context.worker_num % context.lock_manager_num == 0);
 
+      auto worker_num_per_lock_manager =
+          context.worker_num / context.lock_manager_num;
+
       for (auto i = 0u; i < context.worker_num; i++) {
-        workers.push_back(std::make_shared<CalvinExecutor<WorkloadType>>(
+
+        auto w = std::make_shared<CalvinExecutor<WorkloadType>>(
             coordinator_id, i, db, context,
-            lock_managers[context.worker_num / context.lock_manager_num]
-                ->stop_flag));
+            lock_managers[i / worker_num_per_lock_manager]->stop_flag);
+        workers.push_back(w);
+        lock_managers[i / worker_num_per_lock_manager]->add_worker(w);
+      }
+
+      // push lock managers to workers
+
+      for (auto i = 0u; i < lock_managers.size(); i++) {
+        workers.push_back(lock_managers[i]);
       }
 
       workers.push_back(manager);
+
+      DCHECK(workers.size() ==
+             context.worker_num + context.lock_manager_num + 1);
     }
 
     return workers;
