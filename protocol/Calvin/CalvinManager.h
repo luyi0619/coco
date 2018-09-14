@@ -6,6 +6,8 @@
 
 #include "core/Manager.h"
 
+#include <thread>
+
 namespace scar {
 
 /*
@@ -28,6 +30,16 @@ public:
     std::size_t n_coordinators = context.coordinator_num;
 
     while (!stopFlag.load()) {
+
+      n_completed_workers.store(0);
+      n_started_workers.store(0);
+      signal_worker(ExecutorStatus::START);
+      wait_all_lock_managers_start();
+      wait_all_lock_managers_finish();
+      n_completed_workers.store(0);
+      set_worker_status(ExecutorStatus::STOP);
+      wait_all_lock_managers_finish();
+      wait4_ack();
     }
 
     signal_worker(ExecutorStatus::EXIT);
@@ -44,6 +56,35 @@ public:
         set_worker_status(ExecutorStatus::EXIT);
         break;
       }
+
+      DCHECK(status == ExecutorStatus::START);
+      n_completed_workers.store(0);
+      n_started_workers.store(0);
+      set_worker_status(ExecutorStatus::START);
+      wait_all_lock_managers_start();
+      wait_all_lock_managers_finish();
+      n_completed_workers.store(0);
+      set_worker_status(ExecutorStatus::STOP);
+      wait_all_lock_managers_finish();
+      send_ack();
+    }
+  }
+
+  virtual void wait_all_lock_managers_finish() {
+    std::size_t n_lock_manager = context.lock_manager_num;
+    // wait for all workers to finish
+    while (n_completed_workers.load() < n_lock_manager) {
+      // change to nop_pause()?
+      std::this_thread::yield();
+    }
+  }
+
+  virtual void wait_all_lock_managers_start() {
+    std::size_t n_lock_manager = context.lock_manager_num;
+    // wait for all workers to finish
+    while (n_started_workers.load() < n_lock_manager) {
+      // change to nop_pause()?
+      std::this_thread::yield();
     }
   }
 };

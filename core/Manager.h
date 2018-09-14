@@ -9,6 +9,8 @@
 #include "core/Defs.h"
 #include "core/Worker.h"
 
+#include <thread>
+
 namespace scar {
 
 class Manager : public Worker {
@@ -215,13 +217,17 @@ public:
   void start() override {
 
     if (coordinator_id == 0) {
-      LOG(INFO) << "Manager on the coordinator node started.";
+      LOG(INFO) << "Manager(worker id = " << id
+                << ") on the coordinator node started.";
       coordinator_start();
-      LOG(INFO) << "Manager on the coordinator node exits.";
+      LOG(INFO) << "Manager(worker id = " << id
+                << ") on the coordinator node exits.";
     } else {
-      LOG(INFO) << "Manager on the non-coordinator node started.";
+      LOG(INFO) << "Manager(worker id = " << id
+                << ") on the non-coordinator node started.";
       non_coordinator_start();
-      LOG(INFO) << "Manager on the non-coordinator node exits.";
+      LOG(INFO) << "Manager(worker id = " << id
+                << ") on the non-coordinator node exits.";
     }
   }
 

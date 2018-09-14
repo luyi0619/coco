@@ -9,6 +9,7 @@
 #include "protocol/Calvin/CalvinExecutor.h"
 #include "protocol/Calvin/CalvinMessage.h"
 #include <glog/logging.h>
+#include <thread>
 
 namespace scar {
 
@@ -44,16 +45,42 @@ public:
   void start() override {
     LOG(INFO) << "CalvinLockManager " << shard_id << " (worker id " << id
               << " ) started, ";
+
+    for (;;) {
+
+      ExecutorStatus status;
+      do {
+        status = static_cast<ExecutorStatus>(worker_status.load());
+
+        if (status == ExecutorStatus::EXIT) {
+          LOG(INFO) << "Executor " << id << " exits.";
+          return;
+        }
+      } while (status != ExecutorStatus::START);
+
+      n_started_workers.fetch_add(1);
+
+      // for debug only
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+
+      n_complete_workers.fetch_add(1);
+
+      // make sure all lock manager stopped
+
+      while (static_cast<ExecutorStatus>(worker_status.load()) !=
+             ExecutorStatus::STOP) {
+        std::this_thread::yield();
+      }
+
+      n_complete_workers.fetch_add(1);
+    }
   }
 
   void onExit() override {}
 
   void push_message(Message *message) override { CHECK(false); }
 
-  Message *pop_message() override {
-    CHECK(false);
-    return nullptr;
-  }
+  Message *pop_message() override { return nullptr; }
 
   void add_worker(const std::shared_ptr<CalvinExecutor<WorkloadType>> &w) {
     workers.push_back(w);
