@@ -27,7 +27,7 @@ public:
   virtual ~CalvinTransaction() = default;
 
   void reset() {
-    pendingResponses = 0;
+    pendingResponses.store(0);
     abort_lock = false;
     readSet.clear();
     writeSet.clear();
@@ -48,7 +48,7 @@ public:
 public:
   std::size_t coordinator_id, worker_id, partition_id;
   std::chrono::steady_clock::time_point startTime;
-  std::size_t pendingResponses;
+  std::atomic<int> pendingResponses; // could be negative
 
   bool abort_lock, abort_read_validation;
 

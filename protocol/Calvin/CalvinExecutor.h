@@ -54,9 +54,7 @@ public:
 
   void onExit() override {}
 
-  void push_message(Message *message) override {
-    in_queue.push(message);
-  }
+  void push_message(Message *message) override { in_queue.push(message); }
 
   Message *pop_message() override {
     if (out_queue.empty())
@@ -83,7 +81,8 @@ private:
   RandomType random;
   Percentile<int64_t> percentile;
   std::vector<std::unique_ptr<Message>> messages;
-  std::vector<std::function<void(MessagePiece, Message &, TableType &)>>
+  std::vector<std::function<void(MessagePiece, Message &, TableType &,
+                                 std::vector<TransactionType> &)>>
       messageHandlers;
   LockfreeQueue<Message *> in_queue, out_queue;
 };
