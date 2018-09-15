@@ -30,6 +30,11 @@ public:
   Calvin(DatabaseType &db, Partitioner &partitioner)
       : db(db), partitioner(partitioner) {}
 
+  bool commit(TransactionType &txn,
+              std::vector<std::unique_ptr<Message>> &messages) {
+    return true;
+  }
+
 private:
   DatabaseType &db;
   Partitioner &partitioner;

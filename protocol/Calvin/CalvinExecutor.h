@@ -53,7 +53,32 @@ public:
 
   ~CalvinExecutor() = default;
 
-  void start() override { LOG(INFO) << "CalvinExecutor " << id << " started."; }
+  void start() override {
+    LOG(INFO) << "CalvinExecutor " << id << " started.";
+
+    ProtocolType protocol(db, *partitioner);
+
+    while (!stop_flag.load()) {
+
+      transaction_queue.wait_till_non_empty();
+
+      TransactionType *transaction = transaction_queue.front();
+      bool ok = transaction_queue.pop();
+      DCHECK(ok);
+
+      auto result = transaction->execute();
+      if (result == TransactionResult::READY_TO_COMMIT) {
+        bool ok = protocol.commit(*transaction, messages);
+        DCHECK(ok); // transaction in calvin must commit
+        n_commit.fetch_add(1);
+      } else {
+        n_abort_no_retry.fetch_add(1);
+      }
+      flush_messages(); // push read messages
+    }
+
+    LOG(INFO) << "CalvinExecutor " << id << " exits.";
+  }
 
   void onExit() override {}
 
@@ -68,6 +93,25 @@ public:
     CHECK(ok);
 
     return message;
+  }
+
+  void flush_messages() {
+
+    for (auto i = 0u; i < messages.size(); i++) {
+      if (i == coordinator_id) {
+        continue;
+      }
+
+      if (messages[i]->get_message_count() == 0) {
+        continue;
+      }
+
+      auto message = messages[i].release();
+
+      out_queue.push(message);
+      messages[i] = std::make_unique<Message>();
+      init_message(messages[i].get(), i);
+    }
   }
 
   void init_message(Message *message, std::size_t dest_node_id) {
@@ -87,5 +131,7 @@ private:
                                  std::vector<TransactionType> &)>>
       messageHandlers;
   LockfreeQueue<Message *> in_queue, out_queue;
+
+  LockfreeQueue<TransactionType *> transaction_queue;
 };
 } // namespace scar
