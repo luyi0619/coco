@@ -32,17 +32,15 @@ public:
                   RandomType &random, Partitioner &partitioner,
                   Storage &storage)
       : Transaction(coordinator_id, partition_id, partitioner), db(db),
-        context(context), random(random), storage(storage) {}
+        context(context), random(random), storage(storage),
+        query(makeYCSBQuery<YCSB_FIELD_SIZE>()(context, partition_id, random)) {
+  }
 
   virtual ~ReadModifyWrite() override = default;
 
   TransactionResult execute() override {
 
-    const ContextType &context = this->context;
-    RandomType &random = this->random;
-
-    YCSBQuery<YCSB_FIELD_SIZE> query =
-        makeYCSBQuery<YCSB_FIELD_SIZE>()(context, this->partition_id, random);
+    RandomType random;
 
     DCHECK(context.keysPerTransaction == YCSB_FIELD_SIZE);
 
@@ -95,6 +93,7 @@ private:
   const ContextType &context;
   RandomType &random;
   Storage &storage;
+  YCSBQuery<YCSB_FIELD_SIZE> query;
 };
 } // namespace ycsb
 

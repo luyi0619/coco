@@ -31,17 +31,14 @@ public:
            DatabaseType &db, const ContextType &context, RandomType &random,
            Partitioner &partitioner, Storage &storage)
       : Transaction(coordinator_id, partition_id, partitioner), db(db),
-        context(context), random(random), storage(storage) {}
+        context(context), random(random), storage(storage),
+        query(makeNewOrderQuery()(context, partition_id + 1, random)) {}
 
   virtual ~NewOrder() override = default;
 
   TransactionResult execute() override {
 
-    const ContextType &context = this->context;
-    RandomType &random = this->random;
-
     int32_t W_ID = this->partition_id + 1;
-    NewOrderQuery query = makeNewOrderQuery()(context, W_ID, random);
 
     // The input data (see Clause 2.4.3.2) are communicated to the SUT.
 
@@ -247,6 +244,7 @@ private:
   const ContextType &context;
   RandomType &random;
   Storage &storage;
+  NewOrderQuery query;
 };
 
 template <class Transaction> class Payment : public Transaction {
@@ -262,17 +260,14 @@ public:
           DatabaseType &db, const ContextType &context, RandomType &random,
           Partitioner &partitioner, Storage &storage)
       : Transaction(coordinator_id, partition_id, partitioner), db(db),
-        context(context), random(random), storage(storage) {}
+        context(context), random(random), storage(storage),
+        query(makePaymentQuery()(context, partition_id + 1, random)) {}
 
   virtual ~Payment() override = default;
 
   TransactionResult execute() override {
 
-    const ContextType &context = this->context;
-    RandomType &random = this->random;
-
     int32_t W_ID = this->partition_id + 1;
-    PaymentQuery query = makePaymentQuery()(context, W_ID, random);
 
     // The input data (see Clause 2.5.3.2) are communicated to the SUT.
 
@@ -401,6 +396,7 @@ private:
   const ContextType &context;
   RandomType &random;
   Storage &storage;
+  PaymentQuery query;
 };
 
 } // namespace tpcc

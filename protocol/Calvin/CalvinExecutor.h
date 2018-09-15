@@ -11,6 +11,7 @@
 #include "glog/logging.h"
 
 #include "protocol/Calvin/Calvin.h"
+#include "protocol/Calvin/CalvinHelper.h"
 #include "protocol/Calvin/CalvinMessage.h"
 
 #include <chrono>
@@ -37,7 +38,9 @@ public:
   CalvinExecutor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
                  ContextType &context, std::atomic<bool> &stop_flag)
       : Worker(coordinator_id, id), db(db), context(context),
-        // TODO: partitioner
+        partitioner(std::make_unique<CalvinPartitioner>(
+            coordinator_id, context.coordinator_num, context.lock_manager_num,
+            CalvinHelper::get_replica_group_sizes(context.replica_group))),
         stop_flag(stop_flag) {
 
     for (auto i = 0u; i < context.coordinator_num; i++) {
@@ -79,7 +82,6 @@ private:
   std::unique_ptr<Partitioner> partitioner;
   std::atomic<bool> &stop_flag;
   RandomType random;
-  Percentile<int64_t> percentile;
   std::vector<std::unique_ptr<Message>> messages;
   std::vector<std::function<void(MessagePiece, Message &, TableType &,
                                  std::vector<TransactionType> &)>>

@@ -50,7 +50,6 @@ public:
   void update(std::size_t table_id, std::size_t partition_id,
               const KeyType &key, const ValueType &value) {}
 
-
   std::size_t add_to_read_set(const CalvinRWKey &key) {
     readSet.push_back(key);
     return readSet.size() - 1;

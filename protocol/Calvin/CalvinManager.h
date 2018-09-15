@@ -6,12 +6,11 @@
 
 #include "core/Manager.h"
 #include "core/Partitioner.h"
+#include "protocol/Calvin/CalvinHelper.h"
 #include "protocol/Calvin/CalvinPartitioner.h"
 
 #include <thread>
 #include <vector>
-
-#include <boost/algorithm/string.hpp>
 
 namespace scar {
 
@@ -36,21 +35,10 @@ public:
 
   CalvinManager(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
                 const ContextType &context, std::atomic<bool> &stopFlag)
-      : base_type(coordinator_id, id, context, stopFlag), db(db) {
-
-    // parse replica_group_sizes and create partitioner
-
-    std::vector<std::string> replica_group_sizes_string;
-    boost::algorithm::split(replica_group_sizes_string, context.replica_group,
-                            boost::is_any_of(","));
-    std::vector<std::size_t> replica_group_sizes;
-    for (auto i = 0u; i < replica_group_sizes_string.size(); i++) {
-      replica_group_sizes.push_back(
-          std::atoi(replica_group_sizes_string[i].c_str()));
-    }
-    partitioner = std::make_unique<CalvinPartitioner>(
-        coordinator_id, context.coordinator_num, context.lock_manager_num,
-        replica_group_sizes);
+      : base_type(coordinator_id, id, context, stopFlag), db(db),
+        partitioner(std::make_unique<CalvinPartitioner>(
+            coordinator_id, context.coordinator_num, context.lock_manager_num,
+            CalvinHelper::get_replica_group_sizes(context.replica_group))) {
 
     // calculate master partitions
 
