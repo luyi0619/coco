@@ -55,7 +55,10 @@ public:
                               storage.ycsb_keys[i], storage.ycsb_values[i]);
     }
 
-    this->process_read_request();
+    if (this->process_requests())
+    {
+      return TransactionResult::ABORT;
+    }
 
     for (auto i = 0; i < YCSB_FIELD_SIZE; i++) {
       auto key = query.Y_KEY[i];

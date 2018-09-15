@@ -114,7 +114,10 @@ public:
                               storage.stock_keys[i], storage.stock_values[i]);
     }
 
-    this->process_read_request();
+    if (this->process_requests())
+    {
+      return TransactionResult::ABORT;
+    }
 
     float W_TAX = storage.warehouse_value.W_YTD;
 
@@ -313,9 +316,21 @@ public:
       this->search_local_index(customerNameIdxTableID, C_W_ID - 1,
                                storage.customer_name_idx_key,
                                storage.customer_name_idx_value);
+
+      bool abort = this->process_requests();
+      DCHECK(!abort);
+      C_ID = storage.customer_name_idx_value.C_ID;
     }
 
-    this->process_read_request();
+    auto customerTableID = customer::tableID;
+    storage.customer_key = customer::key(C_W_ID, C_D_ID, C_ID);
+    this->search_for_update(customerTableID, C_W_ID - 1, storage.customer_key,
+                            storage.customer_value);
+
+    if (this->process_requests())
+    {
+      return TransactionResult::ABORT;
+    }
 
     // the warehouse's year-to-date balance, is increased by H_ AMOUNT.
     storage.warehouse_value.W_YTD += H_AMOUNT;
@@ -326,13 +341,6 @@ public:
     storage.district_value.D_YTD += H_AMOUNT;
     this->update(districtTableID, W_ID - 1, storage.district_key,
                  storage.district_value);
-
-    auto customerTableID = customer::tableID;
-    storage.customer_key = customer::key(C_W_ID, C_D_ID, C_ID);
-    this->search_for_update(customerTableID, C_W_ID - 1, storage.customer_key,
-                            storage.customer_value);
-
-    this->process_read_request();
 
     if (storage.customer_value.C_CREDIT == "BC") {
 

@@ -113,7 +113,7 @@ public:
     add_to_write_set(writeKey);
   }
 
-  void process_read_request() {
+  bool process_requests() {
 
     // cannot use unsigned type in reverse iteration
     for (int i = int(readSet.size()) - 1; i >= 0; i--) {
@@ -137,6 +137,7 @@ public:
         remote_request_handler();
       }
     }
+    return false;
   }
 
   SiloRWKey *get_read_key(const void *key) {
