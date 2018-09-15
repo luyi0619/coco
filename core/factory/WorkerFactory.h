@@ -143,7 +143,7 @@ public:
       for (auto i = 0u; i < context.lock_manager_num; i++) {
         lock_managers.push_back(
             std::make_shared<CalvinLockManager<WorkloadType>>(
-                coordinator_id, context.worker_num + i, i,
+                coordinator_id, context.worker_num + i, i, db, context,
                 manager->transactions, manager->worker_status,
                 manager->n_completed_workers, manager->n_started_workers));
       }

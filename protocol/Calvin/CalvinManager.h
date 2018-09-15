@@ -8,6 +8,7 @@
 #include "core/Partitioner.h"
 #include "protocol/Calvin/CalvinHelper.h"
 #include "protocol/Calvin/CalvinPartitioner.h"
+#include "protocol/Calvin/CalvinTransaction.h"
 
 #include <thread>
 #include <vector>
@@ -29,7 +30,10 @@ public:
   using StorageType = typename WorkloadType::StorageType;
 
   using TableType = typename DatabaseType::TableType;
-  using TransactionType = typename WorkloadType::TransactionType;
+  using TransactionType = CalvinTransaction;
+  static_assert(std::is_same<typename WorkloadType::TransactionType,
+                             TransactionType>::value,
+                "Transaction types do not match.");
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
 

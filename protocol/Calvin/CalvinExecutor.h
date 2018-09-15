@@ -25,7 +25,11 @@ public:
   using StorageType = typename WorkloadType::StorageType;
 
   using TableType = typename DatabaseType::TableType;
-  using TransactionType = typename WorkloadType::TransactionType;
+  using TransactionType = CalvinTransaction;
+  static_assert(std::is_same<typename WorkloadType::TransactionType,
+                             TransactionType>::value,
+                "Transaction types do not match.");
+
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
 
@@ -38,10 +42,10 @@ public:
   CalvinExecutor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
                  ContextType &context, std::atomic<bool> &stop_flag)
       : Worker(coordinator_id, id), db(db), context(context),
+        stop_flag(stop_flag),
         partitioner(std::make_unique<CalvinPartitioner>(
             coordinator_id, context.coordinator_num, context.lock_manager_num,
-            CalvinHelper::get_replica_group_sizes(context.replica_group))),
-        stop_flag(stop_flag) {
+            CalvinHelper::get_replica_group_sizes(context.replica_group))) {
 
     for (auto i = 0u; i < context.coordinator_num; i++) {
       messages.emplace_back(std::make_unique<Message>());
@@ -120,12 +124,16 @@ public:
     message->set_worker_id(id);
   }
 
+  void add_transaction(TransactionType *transaction) {
+    transaction_queue.push(transaction);
+  }
+
 private:
   DatabaseType &db;
   ContextType &context;
-  std::unique_ptr<Partitioner> partitioner;
   std::atomic<bool> &stop_flag;
   RandomType random;
+  std::unique_ptr<Partitioner> partitioner;
   std::vector<std::unique_ptr<Message>> messages;
   std::vector<std::function<void(MessagePiece, Message &, TableType &,
                                  std::vector<TransactionType> &)>>

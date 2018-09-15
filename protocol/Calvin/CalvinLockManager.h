@@ -20,7 +20,10 @@ public:
   using StorageType = typename WorkloadType::StorageType;
 
   using TableType = typename DatabaseType::TableType;
-  using TransactionType = typename WorkloadType::TransactionType;
+  using TransactionType = CalvinTransaction;
+  static_assert(std::is_same<typename WorkloadType::TransactionType,
+                             TransactionType>::value,
+                "Transaction types do not match.");
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
 
@@ -31,14 +34,18 @@ public:
   using MessageHandlerType = CalvinMessageHandler;
 
   CalvinLockManager(std::size_t coordinator_id, std::size_t id,
-                    std::size_t shard_id,
+                    std::size_t shard_id, DatabaseType &db,
+                    ContextType &context,
                     std::vector<std::unique_ptr<TransactionType>> &transactions,
                     std::atomic<uint32_t> &worker_status,
                     std::atomic<uint32_t> &n_complete_workers,
                     std::atomic<uint32_t> &n_started_workers)
-      : Worker(coordinator_id, id), shard_id(shard_id),
-        transactions(transactions), worker_status(worker_status),
-        n_complete_workers(n_complete_workers),
+      : Worker(coordinator_id, id), shard_id(shard_id), db(db),
+        transactions(transactions),
+        partitioner(std::make_unique<CalvinPartitioner>(
+            coordinator_id, context.coordinator_num, context.lock_manager_num,
+            CalvinHelper::get_replica_group_sizes(context.replica_group))),
+        worker_status(worker_status), n_complete_workers(n_complete_workers),
         n_started_workers(n_started_workers) {
     stop_flag.store(false);
   }
@@ -63,8 +70,9 @@ public:
 
       n_started_workers.fetch_add(1);
 
-      // for debug only
-      std::this_thread::sleep_for(std::chrono::seconds(1));
+      // grant locks to each transaction in the pre-determined order
+
+      schedule_transactions();
 
       n_complete_workers.fetch_add(1);
 
@@ -89,10 +97,38 @@ public:
     workers.push_back(w);
   }
 
+  void schedule_transactions() {
+
+    // grant locks, once all locks are acquired, assign the transaction to
+    // a worker thread in a round-robin manner.
+
+    for (auto i = 0u; i < transactions.size(); i++) {
+      auto &readSet = transactions[i]->readSet;
+      for (auto k = 0u; k < readSet.size(); i++) {
+
+        auto tableId = readSet[k].get_table_id();
+        auto partitionId = readSet[k].get_partition_id();
+        auto table = db.find_table(tableId, partitionId);
+        auto key = readSet[k].get_key();
+        std::atomic<uint64_t> &tid = table->search_metadata(key);
+        if (readSet[k].get_write_lock_bit()) {
+          CalvinHelper::write_lock(tid);
+        } else if (readSet[k].get_read_lock_bit()) {
+          CalvinHelper::read_lock(tid);
+        } else {
+          CHECK(false);
+        }
+      }
+      workers[i % workers.size()]->add_transaction(transactions[i].get());
+    }
+  }
+
 public:
   std::size_t shard_id;
+  DatabaseType &db;
   std::vector<std::unique_ptr<TransactionType>> &transactions;
   std::vector<std::shared_ptr<CalvinExecutor<WorkloadType>>> workers;
+  std::unique_ptr<Partitioner> partitioner;
   std::atomic<bool> stop_flag;
   std::atomic<uint32_t> &worker_status;
   std::atomic<uint32_t> &n_complete_workers, &n_started_workers;

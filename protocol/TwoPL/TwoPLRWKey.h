@@ -139,8 +139,9 @@ private:
   /*
    * A bitvec is a 32-bit word.
    *
-   * [ table id (5) ] | partition id (8) | unused bit (15) | request bit (1) |
-   * write lock bit(1) | read lock bit (1) | local index read (1)  ]
+   * [ table id (5) ] | partition id (8) | unused bit (14) |
+   *   write lock request bit (1) | read lock request bit (1)
+   *   write lock bit(1) | read lock bit (1) | local index read (1)  ]
    *
    *
    * local index read  is set when the read is from a local read only index.
