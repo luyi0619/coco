@@ -27,12 +27,12 @@ public:
   using TableType = ITable<MetaDataType>;
   using StorageType = Storage;
 
-  ReadModifyWrite(std::size_t coordinator_id, std::size_t worker_id,
-                  std::size_t partition_id, DatabaseType &db,
-                  const ContextType &context, RandomType &random,
-                  Partitioner &partitioner, Storage &storage)
-      : Transaction(coordinator_id, worker_id, partition_id, partitioner),
-        db(db), context(context), random(random), storage(storage) {}
+  ReadModifyWrite(std::size_t coordinator_id, std::size_t partition_id,
+                  DatabaseType &db, const ContextType &context,
+                  RandomType &random, Partitioner &partitioner,
+                  Storage &storage)
+      : Transaction(coordinator_id, partition_id, partitioner), db(db),
+        context(context), random(random), storage(storage) {}
 
   virtual ~ReadModifyWrite() override = default;
 
@@ -55,8 +55,7 @@ public:
                               storage.ycsb_keys[i], storage.ycsb_values[i]);
     }
 
-    if (this->process_requests())
-    {
+    if (this->process_requests()) {
       return TransactionResult::ABORT;
     }
 

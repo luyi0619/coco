@@ -19,11 +19,10 @@ class SiloTransaction {
 public:
   using MetaDataType = std::atomic<uint64_t>;
 
-  SiloTransaction(std::size_t coordinator_id, std::size_t worker_id,
-                  std::size_t partition_id, Partitioner &partitioner)
-      : coordinator_id(coordinator_id), worker_id(worker_id),
-        partition_id(partition_id), startTime(std::chrono::steady_clock::now()),
-        partitioner(partitioner) {
+  SiloTransaction(std::size_t coordinator_id, std::size_t partition_id,
+                  Partitioner &partitioner)
+      : coordinator_id(coordinator_id), partition_id(partition_id),
+        startTime(std::chrono::steady_clock::now()), partitioner(partitioner) {
     reset();
   }
 
@@ -162,7 +161,7 @@ public:
   }
 
 public:
-  std::size_t coordinator_id, worker_id, partition_id;
+  std::size_t coordinator_id, partition_id;
   std::chrono::steady_clock::time_point startTime;
   std::size_t pendingResponses;
 

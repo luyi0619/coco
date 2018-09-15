@@ -147,7 +147,7 @@ public:
     CHECK(partitioner->has_master_partition(partition_id));
 
     ProtocolType protocol(db, *partitioner);
-    WorkloadType workload(coordinator_id, id, db, random, *partitioner);
+    WorkloadType workload(coordinator_id, db, random, *partitioner);
 
     StorageType storage;
     uint64_t last_seed = 0;

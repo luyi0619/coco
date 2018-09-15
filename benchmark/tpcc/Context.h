@@ -30,7 +30,7 @@ public:
   }
 
   std::size_t get_s_phase_query_num() const override {
-    auto total_query = batch_query * partition_num;
+    auto total_query = batch_size * partition_num;
     if (workloadType == TPCCWorkloadType::NEW_ORDER_ONLY) {
       auto s_phase_new_order =
           total_query * (100 - newOrderCrossPartitionProbability) / 100.0;
@@ -48,7 +48,7 @@ public:
     }
   }
   std::size_t get_c_phase_query_num() const override {
-    auto total_query = batch_query * partition_num;
+    auto total_query = batch_size * partition_num;
     if (workloadType == TPCCWorkloadType::NEW_ORDER_ONLY) {
       auto s_phase_new_order =
           total_query * newOrderCrossPartitionProbability / 100.0;

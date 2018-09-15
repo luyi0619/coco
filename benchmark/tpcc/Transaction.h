@@ -27,12 +27,11 @@ public:
   using TableType = ITable<MetaDataType>;
   using StorageType = Storage;
 
-  NewOrder(std::size_t coordinator_id, std::size_t worker_id,
-           std::size_t partition_id, DatabaseType &db,
-           const ContextType &context, RandomType &random,
+  NewOrder(std::size_t coordinator_id, std::size_t partition_id,
+           DatabaseType &db, const ContextType &context, RandomType &random,
            Partitioner &partitioner, Storage &storage)
-      : Transaction(coordinator_id, worker_id, partition_id, partitioner),
-        db(db), context(context), random(random), storage(storage) {}
+      : Transaction(coordinator_id, partition_id, partitioner), db(db),
+        context(context), random(random), storage(storage) {}
 
   virtual ~NewOrder() override = default;
 
@@ -114,8 +113,7 @@ public:
                               storage.stock_keys[i], storage.stock_values[i]);
     }
 
-    if (this->process_requests())
-    {
+    if (this->process_requests()) {
       return TransactionResult::ABORT;
     }
 
@@ -260,12 +258,11 @@ public:
   using TableType = ITable<MetaDataType>;
   using StorageType = Storage;
 
-  Payment(std::size_t coordinator_id, std::size_t worker_id,
-          std::size_t partition_id, DatabaseType &db,
-          const ContextType &context, RandomType &random,
+  Payment(std::size_t coordinator_id, std::size_t partition_id,
+          DatabaseType &db, const ContextType &context, RandomType &random,
           Partitioner &partitioner, Storage &storage)
-      : Transaction(coordinator_id, worker_id, partition_id, partitioner),
-        db(db), context(context), random(random), storage(storage) {}
+      : Transaction(coordinator_id, partition_id, partitioner), db(db),
+        context(context), random(random), storage(storage) {}
 
   virtual ~Payment() override = default;
 
@@ -327,8 +324,7 @@ public:
     this->search_for_update(customerTableID, C_W_ID - 1, storage.customer_key,
                             storage.customer_value);
 
-    if (this->process_requests())
-    {
+    if (this->process_requests()) {
       return TransactionResult::ABORT;
     }
 

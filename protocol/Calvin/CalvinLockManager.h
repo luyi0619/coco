@@ -31,11 +31,14 @@ public:
   using MessageHandlerType = CalvinMessageHandler;
 
   CalvinLockManager(std::size_t coordinator_id, std::size_t id,
-                    std::size_t shard_id, std::atomic<uint32_t> &worker_status,
+                    std::size_t shard_id,
+                    std::vector<std::unique_ptr<TransactionType>> &transactions,
+                    std::atomic<uint32_t> &worker_status,
                     std::atomic<uint32_t> &n_complete_workers,
                     std::atomic<uint32_t> &n_started_workers)
       : Worker(coordinator_id, id), shard_id(shard_id),
-        worker_status(worker_status), n_complete_workers(n_complete_workers),
+        transactions(transactions), worker_status(worker_status),
+        n_complete_workers(n_complete_workers),
         n_started_workers(n_started_workers) {
     stop_flag.store(false);
   }
@@ -88,6 +91,7 @@ public:
 
 public:
   std::size_t shard_id;
+  std::vector<std::unique_ptr<TransactionType>> &transactions;
   std::vector<std::shared_ptr<CalvinExecutor<WorkloadType>>> workers;
   std::atomic<bool> stop_flag;
   std::atomic<uint32_t> &worker_status;

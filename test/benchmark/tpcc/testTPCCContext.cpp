@@ -8,7 +8,7 @@
 
 TEST(TestTPCCContext, TestBasic) {
   scar::tpcc::Context context;
-  context.batch_query = 1000;
+  context.batch_size = 1000;
   context.coordinator_num = 4;
   context.worker_num = 1;
   context.partition_num = 4;

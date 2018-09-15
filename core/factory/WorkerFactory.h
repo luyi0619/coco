@@ -131,8 +131,8 @@ public:
 
       // create manager
 
-      auto manager = std::make_shared<CalvinManager>(
-          coordinator_id, context.worker_num + context.lock_manager_num,
+      auto manager = std::make_shared<CalvinManager<WorkloadType>>(
+          coordinator_id, context.worker_num + context.lock_manager_num, db,
           context, stop_flag);
 
       // create lock manager
@@ -144,8 +144,8 @@ public:
         lock_managers.push_back(
             std::make_shared<CalvinLockManager<WorkloadType>>(
                 coordinator_id, context.worker_num + i, i,
-                manager->worker_status, manager->n_completed_workers,
-                manager->n_started_workers));
+                manager->transactions, manager->worker_status,
+                manager->n_completed_workers, manager->n_started_workers));
       }
 
       // create worker

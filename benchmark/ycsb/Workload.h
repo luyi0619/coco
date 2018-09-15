@@ -22,10 +22,10 @@ public:
   using RandomType = Random;
   using StorageType = Storage;
 
-  Workload(std::size_t coordinator_id, std::size_t worker_id, DatabaseType &db,
-           RandomType &random, Partitioner &partitioner)
-      : coordinator_id(coordinator_id), worker_id(worker_id), db(db),
-        random(random), partitioner(partitioner) {}
+  Workload(std::size_t coordinator_id, DatabaseType &db, RandomType &random,
+           Partitioner &partitioner)
+      : coordinator_id(coordinator_id), db(db), random(random),
+        partitioner(partitioner) {}
 
   std::unique_ptr<TransactionType> next_transaction(const ContextType &context,
                                                     std::size_t partition_id,
@@ -33,15 +33,14 @@ public:
 
     std::unique_ptr<TransactionType> p =
         std::make_unique<ReadModifyWrite<Transaction>>(
-            coordinator_id, worker_id, partition_id, db, context, random,
-            partitioner, storage);
+            coordinator_id, partition_id, db, context, random, partitioner,
+            storage);
 
     return p;
   }
 
 private:
   std::size_t coordinator_id;
-  std::size_t worker_id;
   DatabaseType &db;
   RandomType &random;
   Partitioner &partitioner;

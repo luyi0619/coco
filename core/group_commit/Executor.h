@@ -40,7 +40,7 @@ public:
         partitioner(std::make_unique<HashReplicatedPartitioner<2>>(
             coordinator_id, context.coordinator_num)),
         protocol(db, *partitioner),
-        workload(coordinator_id, id, db, random, *partitioner) {
+        workload(coordinator_id, db, random, *partitioner) {
 
     for (auto i = 0u; i < context.coordinator_num; i++) {
       sync_messages.emplace_back(std::make_unique<Message>());
