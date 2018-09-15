@@ -40,14 +40,14 @@ public:
   CalvinManager(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
                 const ContextType &context, std::atomic<bool> &stopFlag)
       : base_type(coordinator_id, id, context, stopFlag), db(db),
-        partitioner(std::make_unique<CalvinPartitioner>(
+        partitioner(
             coordinator_id, context.coordinator_num, context.lock_manager_num,
-            CalvinHelper::get_replica_group_sizes(context.replica_group))) {
+            CalvinHelper::get_replica_group_sizes(context.replica_group)) {
 
     // calculate master partitions
 
     for (auto i = 0u; i < context.partition_num; i++) {
-      if (partitioner->has_master_partition(i)) {
+      if (partitioner.has_master_partition(i)) {
         master_partitions.push_back(i);
       }
     }
@@ -59,7 +59,7 @@ public:
     storages.resize(context.batch_size);
 
     // create a workload
-    WorkloadType workload(coordinator_id, db, random, *partitioner);
+    WorkloadType workload(coordinator_id, db, random, partitioner);
     // generate transactions
     for (auto i = 0u; i < context.batch_size; i++) {
       auto partition_idx = random.uniform_dist(0, master_partitions.size() - 1);
@@ -151,7 +151,7 @@ public:
 public:
   RandomType random;
   DatabaseType &db;
-  std::unique_ptr<Partitioner> partitioner;
+  CalvinPartitioner partitioner;
   std::vector<std::size_t> master_partitions;
   std::vector<StorageType> storages;
   std::vector<std::unique_ptr<TransactionType>> transactions;

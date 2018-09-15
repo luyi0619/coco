@@ -158,7 +158,7 @@ public:
       for (auto i = 0u; i < context.worker_num; i++) {
 
         auto w = std::make_shared<CalvinExecutor<WorkloadType>>(
-            coordinator_id, i, db, context,
+            coordinator_id, i, i / worker_num_per_lock_manager, db, context,
             lock_managers[i / worker_num_per_lock_manager]->stop_flag);
         workers.push_back(w);
         lock_managers[i / worker_num_per_lock_manager]->add_worker(w);

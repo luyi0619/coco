@@ -42,9 +42,9 @@ public:
                     std::atomic<uint32_t> &n_started_workers)
       : Worker(coordinator_id, id), shard_id(shard_id), db(db),
         transactions(transactions),
-        partitioner(std::make_unique<CalvinPartitioner>(
+        partitioner(
             coordinator_id, context.coordinator_num, context.lock_manager_num,
-            CalvinHelper::get_replica_group_sizes(context.replica_group))),
+            CalvinHelper::get_replica_group_sizes(context.replica_group)),
         worker_status(worker_status), n_complete_workers(n_complete_workers),
         n_started_workers(n_started_workers) {
     stop_flag.store(false);
@@ -128,7 +128,7 @@ public:
   DatabaseType &db;
   std::vector<std::unique_ptr<TransactionType>> &transactions;
   std::vector<std::shared_ptr<CalvinExecutor<WorkloadType>>> workers;
-  std::unique_ptr<Partitioner> partitioner;
+  CalvinPartitioner partitioner;
   std::atomic<bool> stop_flag;
   std::atomic<uint32_t> &worker_status;
   std::atomic<uint32_t> &n_complete_workers, &n_started_workers;

@@ -39,13 +39,14 @@ public:
   using MessageFactoryType = CalvinMessageFactory;
   using MessageHandlerType = CalvinMessageHandler;
 
-  CalvinExecutor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
-                 ContextType &context, std::atomic<bool> &stop_flag)
-      : Worker(coordinator_id, id), db(db), context(context),
-        stop_flag(stop_flag),
-        partitioner(std::make_unique<CalvinPartitioner>(
+  CalvinExecutor(std::size_t coordinator_id, std::size_t id,
+                 std::size_t shard_id, DatabaseType &db, ContextType &context,
+                 std::atomic<bool> &stop_flag)
+      : Worker(coordinator_id, id), shard_id(shard_id), db(db),
+        context(context), stop_flag(stop_flag),
+        partitioner(
             coordinator_id, context.coordinator_num, context.lock_manager_num,
-            CalvinHelper::get_replica_group_sizes(context.replica_group))) {
+            CalvinHelper::get_replica_group_sizes(context.replica_group)) {
 
     for (auto i = 0u; i < context.coordinator_num; i++) {
       messages.emplace_back(std::make_unique<Message>());
@@ -60,7 +61,7 @@ public:
   void start() override {
     LOG(INFO) << "CalvinExecutor " << id << " started.";
 
-    ProtocolType protocol(db, *partitioner);
+    ProtocolType protocol(db, partitioner, shard_id);
 
     while (!stop_flag.load()) {
 
@@ -72,7 +73,7 @@ public:
 
       auto result = transaction->execute();
       if (result == TransactionResult::READY_TO_COMMIT) {
-        bool ok = protocol.commit(*transaction, messages);
+        bool ok = protocol.commit(*transaction);
         DCHECK(ok); // transaction in calvin must commit
         n_commit.fetch_add(1);
       } else {
@@ -129,11 +130,12 @@ public:
   }
 
 private:
+  std::size_t shard_id;
   DatabaseType &db;
   ContextType &context;
   std::atomic<bool> &stop_flag;
   RandomType random;
-  std::unique_ptr<Partitioner> partitioner;
+  CalvinPartitioner partitioner;
   std::vector<std::unique_ptr<Message>> messages;
   std::vector<std::function<void(MessagePiece, Message &, TableType &,
                                  std::vector<TransactionType> &)>>
