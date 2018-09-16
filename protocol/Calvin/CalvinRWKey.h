@@ -55,6 +55,38 @@ public:
     return (bitvec >> WRITE_LOCK_BIT_OFFSET) & WRITE_LOCK_BIT_MASK;
   }
 
+  // prepare processed bit
+
+  void set_prepare_processed_bit() {
+    clear_prepare_processed_bit();
+    bitvec |= PREPARE_PROCESSED_BIT_MASK << PREPARE_PROCESSED_BIT_OFFSET;
+  }
+
+  void clear_prepare_processed_bit() {
+    bitvec &= ~(PREPARE_PROCESSED_BIT_MASK << PREPARE_PROCESSED_BIT_OFFSET);
+  }
+
+  uint32_t get_prepare_processed_bit() const {
+    return (bitvec >> PREPARE_PROCESSED_BIT_OFFSET) &
+           PREPARE_PROCESSED_BIT_MASK;
+  }
+
+  // execution processed bit
+
+  void set_execution_processed_bit() {
+    clear_execution_processed_bit();
+    bitvec |= EXECUTION_PROCESSED_BIT_MASK << EXECUTION_PROCESSED_BIT_OFFSET;
+  }
+
+  void clear_execution_processed_bit() {
+    bitvec &= ~(EXECUTION_PROCESSED_BIT_MASK << EXECUTION_PROCESSED_BIT_OFFSET);
+  }
+
+  uint32_t get_execution_processed_bit() const {
+    return (bitvec >> EXECUTION_PROCESSED_BIT_OFFSET) &
+           EXECUTION_PROCESSED_BIT_MASK;
+  }
+
   // table id
 
   void set_table_id(uint32_t table_id) {
@@ -98,13 +130,16 @@ private:
   /*
    * A bitvec is a 32-bit word.
    *
-   * [ table id (5) ] | partition id (8) | unused bit (16) |
+   * [ table id (5) ] | partition id (8) | unused bit (14) |
+   * prepare processed bit (1) | execute processed bit(1) |
    * write lock bit(1) | read lock bit (1) | local index read (1)  ]
    *
    * local index read  is set when the read is from a local read only index.
    * write lock bit is set when a write lock is acquired.
    * read lock bit is set when a read lock is acquired.
-   *
+   * prepare processed bit is set when process_request has processed this key in
+   * prepare phase exucution processed bit is set when process_request has
+   * processed this key in execution phase
    */
 
   uint64_t bitvec = 0;
@@ -117,6 +152,12 @@ public:
 
   static constexpr uint32_t PARTITION_ID_MASK = 0xff;
   static constexpr uint32_t PARTITION_ID_OFFSET = 19;
+
+  static constexpr uint32_t EXECUTION_PROCESSED_BIT_MASK = 0x1;
+  static constexpr uint32_t EXECUTION_PROCESSED_BIT_OFFSET = 3;
+
+  static constexpr uint32_t PREPARE_PROCESSED_BIT_MASK = 0x1;
+  static constexpr uint32_t PREPARE_PROCESSED_BIT_OFFSET = 3;
 
   static constexpr uint32_t WRITE_LOCK_BIT_MASK = 0x1;
   static constexpr uint32_t WRITE_LOCK_BIT_OFFSET = 2;

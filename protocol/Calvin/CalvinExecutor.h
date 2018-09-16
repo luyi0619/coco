@@ -129,6 +129,16 @@ public:
     transaction_queue.push(transaction);
   }
 
+  void setupHandlers(TransactionType &txn) {
+    txn.read_handler = [this](std::size_t table_id, std::size_t partition_id,
+                              const void *key, void *value) {
+      // check if it's a local read or a remote read and push message
+      TableType *table = this->db.find_table(table_id, partition_id);
+      CalvinHelper::read(table->search(key), value, table->value_size());
+    };
+    txn.setup_process_requests_in_execution_phase();
+  };
+
 private:
   std::size_t shard_id;
   DatabaseType &db;

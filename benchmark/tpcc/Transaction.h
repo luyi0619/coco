@@ -309,8 +309,7 @@ public:
                                storage.customer_name_idx_key,
                                storage.customer_name_idx_value);
 
-      bool abort = this->process_requests();
-      DCHECK(!abort);
+      this->process_requests();
       C_ID = storage.customer_name_idx_value.C_ID;
     }
 

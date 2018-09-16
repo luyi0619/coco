@@ -104,16 +104,21 @@ public:
 
     for (auto i = 0u; i < transactions.size(); i++) {
       auto &readSet = transactions[i]->readSet;
-      for (auto k = 0u; k < readSet.size(); i++) {
-
-        auto tableId = readSet[k].get_table_id();
-        auto partitionId = readSet[k].get_partition_id();
+      for (auto k = 0u; k < readSet.size(); k++) {
+        auto &readKey = readSet[k];
+        auto tableId = readKey.get_table_id();
+        auto partitionId = readKey.get_partition_id();
         auto table = db.find_table(tableId, partitionId);
-        auto key = readSet[k].get_key();
+        auto key = readKey.get_key();
+
+        if (readKey.get_local_index_read_bit()) {
+          continue;
+        }
+
         std::atomic<uint64_t> &tid = table->search_metadata(key);
-        if (readSet[k].get_write_lock_bit()) {
+        if (readKey.get_write_lock_bit()) {
           CalvinHelper::write_lock(tid);
-        } else if (readSet[k].get_read_lock_bit()) {
+        } else if (readKey.get_read_lock_bit()) {
           CalvinHelper::read_lock(tid);
         } else {
           CHECK(false);

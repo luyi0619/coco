@@ -15,6 +15,8 @@ namespace scar {
 class CalvinHelper {
 
 public:
+  using MetaDataType = std::atomic<uint64_t>;
+
   static std::vector<std::size_t>
   get_replica_group_sizes(const std::string &replica_group) {
     std::vector<std::string> replica_group_sizes_string;
@@ -27,6 +29,14 @@ public:
     }
 
     return replica_group_sizes;
+  }
+
+  static void read(const std::tuple<MetaDataType *, void *> &row, void *dest,
+                   std::size_t size) {
+
+    MetaDataType &tid = *std::get<0>(row);
+    void *src = std::get<1>(row);
+    std::memcpy(dest, src, size);
   }
 
   /**

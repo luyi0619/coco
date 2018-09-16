@@ -6,6 +6,7 @@
 
 #include "core/Manager.h"
 #include "core/Partitioner.h"
+#include "protocol/Calvin/Calvin.h"
 #include "protocol/Calvin/CalvinHelper.h"
 #include "protocol/Calvin/CalvinPartitioner.h"
 #include "protocol/Calvin/CalvinTransaction.h"
@@ -143,10 +144,21 @@ public:
 
     for (auto i = 0u; i < transactions.size(); i++) {
       transactions[i]->reset();
+      setupHandlers(*transactions[i]);
       // run execute to prepare read/write set
       transactions[i]->execute();
     }
   }
+
+  void setupHandlers(TransactionType &txn) {
+    txn.local_index_read_handler = [this](std::size_t table_id,
+                                          std::size_t partition_id,
+                                          const void *key, void *value) {
+      TableType *table = this->db.find_table(table_id, partition_id);
+      CalvinHelper::read(table->search(key), value, table->value_size());
+    };
+    txn.setup_process_requests_in_prepare_phase();
+  };
 
 public:
   RandomType random;

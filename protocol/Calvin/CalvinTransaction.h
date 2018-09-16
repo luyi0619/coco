@@ -5,6 +5,7 @@
 #pragma once
 
 #include "core/Defs.h"
+#include "core/Table.h"
 #include "protocol/Calvin/CalvinPartitioner.h"
 #include "protocol/Calvin/CalvinRWKey.h"
 #include <chrono>
@@ -15,6 +16,7 @@ class CalvinTransaction {
 
 public:
   using MetaDataType = std::atomic<uint64_t>;
+  using TableType = ITable<MetaDataType>;
 
   CalvinTransaction(std::size_t coordinator_id, std::size_t partition_id,
                     Partitioner &partitioner)
@@ -111,14 +113,74 @@ public:
     return writeSet.size() - 1;
   }
 
+  void setup_process_requests_in_prepare_phase() {
+    process_requests = [this]() {
+      // cannot use unsigned type in reverse iteration
+      for (int i = int(readSet.size()) - 1; i >= 0; i--) {
+        // early return
+        if (readSet[i].get_prepare_processed_bit()) {
+          break;
+        }
+
+        if (readSet[i].get_local_index_read_bit()) {
+          // this is a local index read
+          auto &readKey = readSet[i];
+          local_index_read_handler(readKey.get_table_id(),
+                                   readKey.get_partition_id(),
+                                   readKey.get_key(), readKey.get_value());
+        }
+
+        readSet[i].set_prepare_processed_bit();
+      }
+      return true;
+    };
+  }
+
+  void setup_process_requests_in_execution_phase() {
+    process_requests = [this]() {
+      // cannot use unsigned type in reverse iteration
+      for (int i = int(readSet.size()) - 1; i >= 0; i--) {
+        // early return
+        if (readSet[i].get_execution_processed_bit()) {
+          break;
+        }
+
+        if (!readSet[i].get_local_index_read_bit()) {
+          // this is a local index read
+          auto &readKey = readSet[i];
+          read_handler(readKey.get_table_id(), readKey.get_partition_id(),
+                       readKey.get_key(), readKey.get_value());
+        }
+
+        readSet[i].set_execution_processed_bit();
+      }
+
+      if (pendingResponses.load() != 0) {
+        message_flusher();
+        while (pendingResponses.load() != 0) {
+          remote_request_handler();
+        }
+      }
+      return false;
+    };
+  }
+
 public:
   std::size_t coordinator_id, partition_id;
   std::chrono::steady_clock::time_point startTime;
-  std::atomic<int> pendingResponses; // could be negative
+  std::atomic<int32_t> pendingResponses; // could be negative
 
   bool abort_lock, abort_read_validation;
 
   std::function<bool(void)> process_requests;
+
+  // table id, partition id, key, value
+  std::function<void(std::size_t, std::size_t, const void *, void *)>
+      local_index_read_handler;
+
+  // table id, partition id, key, value
+  std::function<void(std::size_t, std::size_t, const void *, void *)>
+      read_handler;
 
   // processed a request?
   std::function<std::size_t(void)> remote_request_handler;
