@@ -30,6 +30,7 @@ public:
   void reset() {
     pendingResponses.store(0);
     abort_lock = false;
+    active_coordinators.clear();
     readSet.clear();
     writeSet.clear();
   }
@@ -113,6 +114,8 @@ public:
     return writeSet.size() - 1;
   }
 
+  void set_id(std::size_t id) { this->id = id; }
+
   void setup_process_requests_in_prepare_phase() {
     process_requests = [this]() {
       // cannot use unsigned type in reverse iteration
@@ -148,8 +151,8 @@ public:
         if (!readSet[i].get_local_index_read_bit()) {
           // this is a local index read
           auto &readKey = readSet[i];
-          read_handler(readKey.get_table_id(), readKey.get_partition_id(),
-                       readKey.get_key(), readKey.get_value());
+          read_handler(readKey.get_table_id(), readKey.get_partition_id(), id,
+                       i, readKey.get_key(), readKey.get_value());
         }
 
         readSet[i].set_execution_processed_bit();
@@ -166,7 +169,7 @@ public:
   }
 
 public:
-  std::size_t coordinator_id, partition_id;
+  std::size_t coordinator_id, partition_id, id;
   std::chrono::steady_clock::time_point startTime;
   std::atomic<int32_t> pendingResponses; // could be negative
 
@@ -178,8 +181,9 @@ public:
   std::function<void(std::size_t, std::size_t, const void *, void *)>
       local_index_read_handler;
 
-  // table id, partition id, key, value
-  std::function<void(std::size_t, std::size_t, const void *, void *)>
+  // table id, partition id, id, key_offset, key, value
+  std::function<void(std::size_t, std::size_t, std::size_t, uint32_t,
+                     const void *, void *)>
       read_handler;
 
   // processed a request?
@@ -188,6 +192,7 @@ public:
   std::function<void()> message_flusher;
 
   Partitioner &partitioner;
+  std::vector<std::size_t> active_coordinators;
   std::vector<CalvinRWKey> readSet, writeSet;
 };
 } // namespace scar

@@ -10,7 +10,6 @@
 
 DEFINE_int32(id, 0, "coordinator id");
 DEFINE_int32(threads, 1, "the number of threads");
-DEFINE_int32(lock_manager_num, 1, "the number of calvin lock manager");
 DEFINE_int32(batch_size, 240, "rstore or calvin batch size");
 DEFINE_string(servers, "127.0.0.1:10010",
               "semicolon-separated list of servers");
@@ -34,7 +33,6 @@ int main(int argc, char *argv[]) {
   context.protocol = FLAGS_protocol;
   context.coordinator_num = peers.size();
   context.partition_num = n * context.coordinator_num;
-  context.lock_manager_num = FLAGS_lock_manager_num;
   context.batch_size = FLAGS_batch_size;
   context.worker_num = n;
   context.replica_group = FLAGS_replica_group;

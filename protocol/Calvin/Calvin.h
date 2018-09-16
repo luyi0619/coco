@@ -28,8 +28,8 @@ public:
       std::is_same<typename DatabaseType::TableType, TableType>::value,
       "The database table type is different from the one in protocol.");
 
-  Calvin(DatabaseType &db, CalvinPartitioner &partitioner, std::size_t shard_id)
-      : db(db), partitioner(partitioner), shard_id(shard_id) {}
+  Calvin(DatabaseType &db, CalvinPartitioner &partitioner)
+      : db(db), partitioner(partitioner) {}
 
   bool commit(TransactionType &txn) {
 
@@ -51,7 +51,7 @@ public:
       auto partitionId = writeKey.get_partition_id();
       auto table = db.find_table(tableId, partitionId);
 
-      if (partitioner.get_shard_id(partitionId) != shard_id) {
+      if (!partitioner.has_master_partition(partitionId)) {
         continue;
       }
 
@@ -71,7 +71,7 @@ public:
       auto partitionId = readKey.get_partition_id();
       auto table = db.find_table(tableId, partitionId);
 
-      if (partitioner.get_shard_id(partitionId) != shard_id) {
+      if (!partitioner.has_master_partition(partitionId)) {
         continue;
       }
 
@@ -94,11 +94,7 @@ public:
       auto partitionId = writeKey.get_partition_id();
       auto table = db.find_table(tableId, partitionId);
 
-      if (partitioner.get_shard_id(partitionId) != shard_id) {
-        continue;
-      }
-
-      if (!writeKey.get_read_lock_bit()) {
+      if (!partitioner.has_master_partition(partitionId)) {
         continue;
       }
 
@@ -112,6 +108,5 @@ public:
 private:
   DatabaseType &db;
   CalvinPartitioner &partitioner;
-  std::size_t shard_id;
 };
 } // namespace scar

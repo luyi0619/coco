@@ -15,6 +15,7 @@
 #include "protocol/Calvin/CalvinMessage.h"
 
 #include <chrono>
+#include <thread>
 
 namespace scar {
 
@@ -39,14 +40,22 @@ public:
   using MessageFactoryType = CalvinMessageFactory;
   using MessageHandlerType = CalvinMessageHandler;
 
-  CalvinExecutor(std::size_t coordinator_id, std::size_t id,
-                 std::size_t shard_id, DatabaseType &db, ContextType &context,
-                 std::atomic<bool> &stop_flag)
-      : Worker(coordinator_id, id), shard_id(shard_id), db(db),
-        context(context), stop_flag(stop_flag),
+  CalvinExecutor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
+                 ContextType &context,
+                 std::vector<std::unique_ptr<TransactionType>> &transactions,
+                 std::atomic<uint32_t> &complete_transaction_num,
+                 std::atomic<uint32_t> &worker_status,
+                 std::atomic<uint32_t> &n_completed_workers,
+                 std::atomic<uint32_t> &n_started_workers)
+      : Worker(coordinator_id, id), db(db), context(context),
+        transactions(transactions),
+        complete_transaction_num(complete_transaction_num),
+        worker_status(worker_status), n_completed_workers(n_completed_workers),
+        n_started_workers(n_started_workers),
         partitioner(
-            coordinator_id, context.coordinator_num, context.lock_manager_num,
-            CalvinHelper::get_replica_group_sizes(context.replica_group)) {
+            coordinator_id, context.coordinator_num,
+            CalvinHelper::get_replica_group_sizes(context.replica_group)),
+        protocol(db, partitioner) {
 
     for (auto i = 0u; i < context.coordinator_num; i++) {
       messages.emplace_back(std::make_unique<Message>());
@@ -59,30 +68,50 @@ public:
   ~CalvinExecutor() = default;
 
   void start() override {
-    LOG(INFO) << "CalvinExecutor " << id << " started.";
+    LOG(INFO) << "CalvinExecutor " << id << " ) started. ";
 
-    ProtocolType protocol(db, partitioner, shard_id);
+    for (;;) {
 
-    while (!stop_flag.load()) {
+      ExecutorStatus status;
+      do {
+        status = static_cast<ExecutorStatus>(worker_status.load());
 
-      transaction_queue.wait_till_non_empty();
+        if (status == ExecutorStatus::EXIT) {
+          LOG(INFO) << "CalvinExecutor " << id << " ) exits. ";
+          return;
+        }
+      } while (status != ExecutorStatus::START);
 
-      TransactionType *transaction = transaction_queue.front();
-      bool ok = transaction_queue.pop();
-      DCHECK(ok);
+      // make sure all lock manager stopped
 
-      auto result = transaction->execute();
-      if (result == TransactionResult::READY_TO_COMMIT) {
-        bool ok = protocol.commit(*transaction);
-        DCHECK(ok); // transaction in calvin must commit
-        n_commit.fetch_add(1);
-      } else {
-        n_abort_no_retry.fetch_add(1);
+      n_started_workers.fetch_add(1);
+
+      while (complete_transaction_num.load() < context.batch_size) {
+
+        if (transaction_queue.empty()) {
+          std::this_thread::yield();
+          continue;
+        }
+
+        TransactionType *transaction = transaction_queue.front();
+        bool ok = transaction_queue.pop();
+        DCHECK(ok);
+        run_transaction(*transaction);
+        complete_transaction_num.fetch_add(1);
       }
-      flush_messages(); // push read messages
-    }
 
-    LOG(INFO) << "CalvinExecutor " << id << " exits.";
+      n_completed_workers.fetch_add(1);
+
+      // once all workers are stop, we need to process the replication
+      // requests
+
+      while (static_cast<ExecutorStatus>(worker_status.load()) !=
+             ExecutorStatus::STOP) {
+        std::this_thread::yield();
+      }
+
+      n_completed_workers.fetch_add(1);
+    }
   }
 
   void onExit() override {}
@@ -129,26 +158,86 @@ public:
     transaction_queue.push(transaction);
   }
 
+  void run_transaction(TransactionType &txn) {
+    setupHandlers(txn);
+    auto result = txn.execute();
+    if (result == TransactionResult::READY_TO_COMMIT) {
+      bool ok = protocol.commit(txn);
+      DCHECK(ok); // transaction in calvin must commit
+      n_commit.fetch_add(1);
+    } else {
+      n_abort_no_retry.fetch_add(1);
+    }
+    flush_messages(); // push read messages
+  }
+
   void setupHandlers(TransactionType &txn) {
-    txn.read_handler = [this](std::size_t table_id, std::size_t partition_id,
-                              const void *key, void *value) {
-      // check if it's a local read or a remote read and push message
-      TableType *table = this->db.find_table(table_id, partition_id);
-      CalvinHelper::read(table->search(key), value, table->value_size());
+    txn.read_handler = [this, &txn](std::size_t table_id,
+                                    std::size_t partition_id, std::size_t id,
+                                    uint32_t key_offset, const void *key,
+                                    void *value) {
+      if (partitioner.has_master_partition(partition_id)) {
+        TableType *table = this->db.find_table(table_id, partition_id);
+        CalvinHelper::read(table->search(key), value, table->value_size());
+
+        auto &active_coordinators = txn.active_coordinators;
+        for (auto i = 0u; i < active_coordinators.size(); i++) {
+          if (active_coordinators[i] == coordinator_id)
+            continue;
+
+          MessageFactoryType::new_read_message(
+              *messages[active_coordinators[i]], *table, id, key_offset, value);
+        }
+      } else {
+        txn.pendingResponses.fetch_add(1);
+      }
     };
     txn.setup_process_requests_in_execution_phase();
+    txn.remote_request_handler = [this]() { return this->process_request(); };
+    txn.message_flusher = [this]() { this->flush_messages(); };
   };
 
+  std::size_t process_request() {
+
+    std::size_t size = 0;
+
+    while (!in_queue.empty()) {
+      std::unique_ptr<Message> message(in_queue.front());
+      bool ok = in_queue.pop();
+      CHECK(ok);
+
+      for (auto it = message->begin(); it != message->end(); it++) {
+
+        MessagePiece messagePiece = *it;
+        auto type = messagePiece.get_message_type();
+        DCHECK(type < messageHandlers.size());
+        TableType *table = db.find_table(messagePiece.get_table_id(),
+                                         messagePiece.get_partition_id());
+        messageHandlers[type](messagePiece,
+                              *messages[message->get_source_node_id()], *table,
+                              transactions);
+      }
+
+      size += message->get_message_count();
+      flush_messages();
+    }
+    return size;
+  }
+
 private:
-  std::size_t shard_id;
   DatabaseType &db;
   ContextType &context;
-  std::atomic<bool> &stop_flag;
+  std::vector<std::unique_ptr<TransactionType>> &transactions;
+  std::atomic<uint32_t> &complete_transaction_num, &worker_status;
+  std::atomic<uint32_t> &n_completed_workers;
+  std::atomic<uint32_t> &n_started_workers;
   RandomType random;
   CalvinPartitioner partitioner;
+  ProtocolType protocol;
   std::vector<std::unique_ptr<Message>> messages;
-  std::vector<std::function<void(MessagePiece, Message &, TableType &,
-                                 std::vector<TransactionType> &)>>
+  std::vector<
+      std::function<void(MessagePiece, Message &, TableType &,
+                         std::vector<std::unique_ptr<TransactionType>> &)>>
       messageHandlers;
   LockfreeQueue<Message *> in_queue, out_queue;
 

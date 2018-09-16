@@ -52,9 +52,10 @@ class CalvinMessageHandler {
   using Transaction = CalvinTransaction;
 
 public:
-  static void read_request_handler(MessagePiece inputPiece,
-                                   Message &responseMessage, Table &table,
-                                   std::vector<Transaction> &txns) {
+  static void
+  read_request_handler(MessagePiece inputPiece, Message &responseMessage,
+                       Table &table,
+                       std::vector<std::unique_ptr<Transaction>> &txns) {
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(CalvinMessage::READ_REQUEST));
     auto table_id = inputPiece.get_table_id();
@@ -78,17 +79,19 @@ public:
     StringPiece stringPiece = inputPiece.toStringPiece();
     Decoder dec(stringPiece);
     dec >> tid >> key_offset;
-    CalvinRWKey &readKey = txns[tid].readSet[key_offset];
+    CalvinRWKey &readKey = txns[tid]->readSet[key_offset];
 
     dec.read_n_bytes(readKey.get_value(), value_size);
-    txns[tid].pendingResponses.fetch_add(-1);
+    txns[tid]->pendingResponses.fetch_add(-1);
   }
 
-  static std::vector<std::function<void(MessagePiece, Message &, Table &,
-                                        std::vector<Transaction> &)>>
+  static std::vector<
+      std::function<void(MessagePiece, Message &, Table &,
+                         std::vector<std::unique_ptr<Transaction>> &)>>
   get_message_handlers() {
-    std::vector<std::function<void(MessagePiece, Message &, Table &,
-                                   std::vector<Transaction> &)>>
+    std::vector<
+        std::function<void(MessagePiece, Message &, Table &,
+                           std::vector<std::unique_ptr<Transaction>> &)>>
         v;
     v.resize(static_cast<int>(ControlMessage::NFIELDS));
     v.push_back(read_request_handler);

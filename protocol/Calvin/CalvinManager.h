@@ -7,6 +7,7 @@
 #include "core/Manager.h"
 #include "core/Partitioner.h"
 #include "protocol/Calvin/Calvin.h"
+#include "protocol/Calvin/CalvinExecutor.h"
 #include "protocol/Calvin/CalvinHelper.h"
 #include "protocol/Calvin/CalvinPartitioner.h"
 #include "protocol/Calvin/CalvinTransaction.h"
@@ -15,12 +16,6 @@
 #include <vector>
 
 namespace scar {
-
-/*
- * In the example (see comment at the top) of CalvinPartitioner.h,
- * coordinator 0 would be the real coordinator, it collects acks from
- * coordinator 1 and coordinator 2 in each batch of queries.
- */
 
 template <class Workload> class CalvinManager : public scar::Manager {
 public:
@@ -41,9 +36,11 @@ public:
   CalvinManager(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
                 const ContextType &context, std::atomic<bool> &stopFlag)
       : base_type(coordinator_id, id, context, stopFlag), db(db),
+        workload_context(context),
         partitioner(
-            coordinator_id, context.coordinator_num, context.lock_manager_num,
-            CalvinHelper::get_replica_group_sizes(context.replica_group)) {
+            coordinator_id, context.coordinator_num,
+            CalvinHelper::get_replica_group_sizes(context.replica_group)),
+        workload(coordinator_id, db, random, partitioner) {
 
     // calculate master partitions
 
@@ -54,20 +51,7 @@ public:
     }
 
     CHECK(master_partitions.size() > 0);
-
-    // allocate storage and transactions.
-
     storages.resize(context.batch_size);
-
-    // create a workload
-    WorkloadType workload(coordinator_id, db, random, partitioner);
-    // generate transactions
-    for (auto i = 0u; i < context.batch_size; i++) {
-      auto partition_idx = random.uniform_dist(0, master_partitions.size() - 1);
-      auto partition_id = master_partitions[partition_idx];
-      transactions.push_back(
-          workload.next_transaction(context, partition_id, storages[i]));
-    }
   }
 
   void coordinator_start() override {
@@ -76,18 +60,18 @@ public:
     std::size_t n_coordinators = context.coordinator_num;
 
     while (!stopFlag.load()) {
-
-      n_completed_workers.store(0);
-      n_started_workers.store(0);
       LOG(INFO) << "Seed: " << random.get_seed();
-      // init transactions
-      init_batch_transactions();
+      complete_transaction_num.store(0);
+      n_started_workers.store(0);
+      n_completed_workers.store(0);
       signal_worker(ExecutorStatus::START);
-      wait_all_lock_managers_start();
-      wait_all_lock_managers_finish();
+      wait_all_workers_start();
+      schedule_transactions();
+      wait_transaction_complete();
+      wait_all_workers_finish();
       n_completed_workers.store(0);
       set_worker_status(ExecutorStatus::STOP);
-      wait_all_lock_managers_finish();
+      wait_all_workers_finish();
       wait4_ack();
     }
 
@@ -107,46 +91,100 @@ public:
       }
 
       DCHECK(status == ExecutorStatus::START);
+      LOG(INFO) << "Seed: " << random.get_seed();
       n_completed_workers.store(0);
       n_started_workers.store(0);
-      LOG(INFO) << "Seed: " << random.get_seed();
-      // init transactions
-      init_batch_transactions();
       set_worker_status(ExecutorStatus::START);
-      wait_all_lock_managers_start();
-      wait_all_lock_managers_finish();
+      wait_all_workers_start();
+      schedule_transactions();
+      wait_transaction_complete();
+      wait_all_workers_finish();
       n_completed_workers.store(0);
       set_worker_status(ExecutorStatus::STOP);
-      wait_all_lock_managers_finish();
+      wait_all_workers_finish();
       send_ack();
     }
   }
 
-  virtual void wait_all_lock_managers_finish() {
-    std::size_t n_lock_manager = context.lock_manager_num;
-    // wait for all workers to finish
-    while (n_completed_workers.load() < n_lock_manager) {
-      // change to nop_pause()?
-      std::this_thread::yield();
-    }
+  void add_worker(const std::shared_ptr<CalvinExecutor<WorkloadType>> &w) {
+    workers.push_back(w);
   }
 
-  virtual void wait_all_lock_managers_start() {
-    std::size_t n_lock_manager = context.lock_manager_num;
-    // wait for all workers to finish
-    while (n_started_workers.load() < n_lock_manager) {
-      // change to nop_pause()?
-      std::this_thread::yield();
-    }
-  }
+  void schedule_transactions() {
 
-  void init_batch_transactions() {
+    transactions.clear();
+
+    // generate transactions
+    for (auto i = 0u; i < context.batch_size; i++) {
+      auto partition_idx = random.uniform_dist(0, master_partitions.size() - 1);
+      auto partition_id = master_partitions[partition_idx];
+      transactions.push_back(workload.next_transaction(
+          workload_context, partition_id, storages[i]));
+    }
+
+    // grant locks, once all locks are acquired, assign the transaction to
+    // a worker thread in a round-robin manner.
 
     for (auto i = 0u; i < transactions.size(); i++) {
-      transactions[i]->reset();
+
       setupHandlers(*transactions[i]);
       // run execute to prepare read/write set
       transactions[i]->execute();
+      analyze_active_coordinator(*transactions[i]);
+
+      auto &readSet = transactions[i]->readSet;
+      for (auto k = 0u; k < readSet.size(); k++) {
+        auto &readKey = readSet[k];
+        auto tableId = readKey.get_table_id();
+        auto partitionId = readKey.get_partition_id();
+
+        if (!partitioner.has_master_partition(partitionId)) {
+          continue;
+        }
+
+        auto table = db.find_table(tableId, partitionId);
+        auto key = readKey.get_key();
+
+        if (readKey.get_local_index_read_bit()) {
+          continue;
+        }
+
+        std::atomic<uint64_t> &tid = table->search_metadata(key);
+        if (readKey.get_write_lock_bit()) {
+          CalvinHelper::write_lock(tid);
+        } else if (readKey.get_read_lock_bit()) {
+          CalvinHelper::read_lock(tid);
+        } else {
+          CHECK(false);
+        }
+      }
+
+      workers[i % workers.size()]->add_transaction(transactions[i].get());
+    }
+  }
+
+  void wait_transaction_complete() {
+    while (complete_transaction_num.load() < transactions.size()) {
+      std::this_thread::yield();
+    }
+  }
+
+  void analyze_active_coordinator(TransactionType &transaction) {
+
+    std::vector<bool> coordinators(partitioner.total_coordinators(), false);
+    auto &writeSet = transaction.writeSet;
+    auto &active_coordinators = transaction.active_coordinators;
+
+    for (auto i = 0u; i < writeSet.size(); i++) {
+      auto &writekey = writeSet[i];
+      auto partitionID = writekey.get_partition_id();
+      coordinators[partitioner.master_coordinator(partitionID)] = true;
+    }
+
+    for (auto i = 0u; i < coordinators.size(); i++) {
+      if (coordinators[i]) {
+        active_coordinators.push_back(i);
+      }
     }
   }
 
@@ -163,8 +201,12 @@ public:
 public:
   RandomType random;
   DatabaseType &db;
+  const ContextType &workload_context;
   CalvinPartitioner partitioner;
+  WorkloadType workload;
+  std::atomic<uint32_t> complete_transaction_num;
   std::vector<std::size_t> master_partitions;
+  std::vector<std::shared_ptr<CalvinExecutor<WorkloadType>>> workers;
   std::vector<StorageType> storages;
   std::vector<std::unique_ptr<TransactionType>> transactions;
 };

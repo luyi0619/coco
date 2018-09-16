@@ -13,7 +13,6 @@ public:
   std::size_t partition_num = 0;
   std::size_t worker_num = 0;
   std::size_t coordinator_num = 0;
-  std::size_t lock_manager_num = 0;
   std::string protocol;
   std::string replica_group;
   std::size_t batch_size = 240; // rstore or calvin batch size

@@ -26,7 +26,6 @@
 
 #include "protocol/Calvin/Calvin.h"
 #include "protocol/Calvin/CalvinExecutor.h"
-#include "protocol/Calvin/CalvinLockManager.h"
 #include "protocol/Calvin/CalvinManager.h"
 #include "protocol/Calvin/CalvinTransaction.h"
 
@@ -132,48 +131,22 @@ public:
       // create manager
 
       auto manager = std::make_shared<CalvinManager<WorkloadType>>(
-          coordinator_id, context.worker_num + context.lock_manager_num, db,
-          context, stop_flag);
-
-      // create lock manager
-
-      std::vector<std::shared_ptr<CalvinLockManager<WorkloadType>>>
-          lock_managers;
-
-      for (auto i = 0u; i < context.lock_manager_num; i++) {
-        lock_managers.push_back(
-            std::make_shared<CalvinLockManager<WorkloadType>>(
-                coordinator_id, context.worker_num + i, i, db, context,
-                manager->transactions, manager->worker_status,
-                manager->n_completed_workers, manager->n_started_workers));
-      }
+          coordinator_id, context.worker_num, db, context, stop_flag);
 
       // create worker
-
-      DCHECK(context.worker_num % context.lock_manager_num == 0);
-
-      auto worker_num_per_lock_manager =
-          context.worker_num / context.lock_manager_num;
 
       for (auto i = 0u; i < context.worker_num; i++) {
 
         auto w = std::make_shared<CalvinExecutor<WorkloadType>>(
-            coordinator_id, i, i / worker_num_per_lock_manager, db, context,
-            lock_managers[i / worker_num_per_lock_manager]->stop_flag);
+            coordinator_id, i, db, context, manager->transactions,
+            manager->complete_transaction_num, manager->worker_status,
+            manager->n_completed_workers, manager->n_started_workers);
         workers.push_back(w);
-        lock_managers[i / worker_num_per_lock_manager]->add_worker(w);
+        manager->add_worker(w);
       }
 
-      // push lock managers to workers
-
-      for (auto i = 0u; i < lock_managers.size(); i++) {
-        workers.push_back(lock_managers[i]);
-      }
-
+      // push manager to workers
       workers.push_back(manager);
-
-      DCHECK(workers.size() ==
-             context.worker_num + context.lock_manager_num + 1);
     }
 
     return workers;
