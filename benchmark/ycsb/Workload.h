@@ -8,6 +8,7 @@
 #include "benchmark/ycsb/Random.h"
 #include "benchmark/ycsb/Storage.h"
 #include "benchmark/ycsb/Transaction.h"
+#include "benchmark/tpcc/Context.h"
 #include "core/Partitioner.h"
 
 namespace scar {

@@ -82,7 +82,7 @@ public:
     CalvinRWKey &readKey = txns[tid]->readSet[key_offset];
 
     dec.read_n_bytes(readKey.get_value(), value_size);
-    txns[tid]->pendingResponses.fetch_add(-1);
+    txns[tid]->pendingResponses--;
   }
 
   static std::vector<

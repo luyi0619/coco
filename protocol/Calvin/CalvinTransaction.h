@@ -28,8 +28,8 @@ public:
   virtual ~CalvinTransaction() = default;
 
   void reset() {
-    pendingResponses.store(0);
-    abort_lock = false;
+    pendingResponses = 0;
+    prepare_phase = true;
     active_coordinators.clear();
     readSet.clear();
     writeSet.clear();
@@ -49,7 +49,6 @@ public:
     readKey.set_value(&value);
 
     readKey.set_local_index_read_bit();
-    readKey.set_read_lock_bit();
 
     add_to_read_set(readKey);
   }
@@ -57,7 +56,6 @@ public:
   template <class KeyType, class ValueType>
   void search_for_read(std::size_t table_id, std::size_t partition_id,
                        const KeyType &key, ValueType &value) {
-
     CalvinRWKey readKey;
 
     readKey.set_table_id(table_id);
@@ -74,7 +72,6 @@ public:
   template <class KeyType, class ValueType>
   void search_for_update(std::size_t table_id, std::size_t partition_id,
                          const KeyType &key, ValueType &value) {
-
     CalvinRWKey readKey;
 
     readKey.set_table_id(table_id);
@@ -158,9 +155,9 @@ public:
         readSet[i].set_execution_processed_bit();
       }
 
-      if (pendingResponses.load() != 0) {
+      if (pendingResponses != 0) {
         message_flusher();
-        while (pendingResponses.load() != 0) {
+        while (pendingResponses != 0) {
           remote_request_handler();
         }
       }
@@ -168,12 +165,18 @@ public:
     };
   }
 
+  void clear_read_write_set(){
+    readSet.clear();
+    writeSet.clear();
+  }
+
 public:
   std::size_t coordinator_id, partition_id, id;
   std::chrono::steady_clock::time_point startTime;
-  std::atomic<int32_t> pendingResponses; // could be negative
+  int32_t pendingResponses; // could be negative
 
   bool abort_lock, abort_read_validation;
+  bool prepare_phase;
 
   std::function<bool(void)> process_requests;
 

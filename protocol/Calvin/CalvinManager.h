@@ -60,7 +60,7 @@ public:
     std::size_t n_coordinators = context.coordinator_num;
 
     while (!stopFlag.load()) {
-      LOG(INFO) << "Seed: " << random.get_seed();
+      //LOG(INFO) << "Seed: " << random.get_seed();
       complete_transaction_num.store(0);
       n_started_workers.store(0);
       n_completed_workers.store(0);
@@ -129,36 +129,38 @@ public:
 
       setupHandlers(*transactions[i]);
       // run execute to prepare read/write set
-      transactions[i]->execute();
+      auto result = transactions[i]->execute();
       analyze_active_coordinator(*transactions[i]);
 
-      auto &readSet = transactions[i]->readSet;
-      for (auto k = 0u; k < readSet.size(); k++) {
-        auto &readKey = readSet[k];
-        auto tableId = readKey.get_table_id();
-        auto partitionId = readKey.get_partition_id();
+      // do not grant locks to abort no retry transaction
+      if (result != TransactionResult::ABORT_NORETRY){
+        auto &readSet = transactions[i]->readSet;
+        for (auto k = 0u; k < readSet.size(); k++) {
+          auto &readKey = readSet[k];
+          auto tableId = readKey.get_table_id();
+          auto partitionId = readKey.get_partition_id();
 
-        if (!partitioner.has_master_partition(partitionId)) {
-          continue;
-        }
+          if (!partitioner.has_master_partition(partitionId)) {
+            continue;
+          }
 
-        auto table = db.find_table(tableId, partitionId);
-        auto key = readKey.get_key();
+          auto table = db.find_table(tableId, partitionId);
+          auto key = readKey.get_key();
 
-        if (readKey.get_local_index_read_bit()) {
-          continue;
-        }
+          if (readKey.get_local_index_read_bit()) {
+            continue;
+          }
 
-        std::atomic<uint64_t> &tid = table->search_metadata(key);
-        if (readKey.get_write_lock_bit()) {
-          CalvinHelper::write_lock(tid);
-        } else if (readKey.get_read_lock_bit()) {
-          CalvinHelper::read_lock(tid);
-        } else {
-          CHECK(false);
+          std::atomic<uint64_t> &tid = table->search_metadata(key);
+          if (readKey.get_write_lock_bit()) {
+            CalvinHelper::write_lock(tid);
+          } else if (readKey.get_read_lock_bit()) {
+            CalvinHelper::read_lock(tid);
+          } else {
+            CHECK(false);
+          }
         }
       }
-
       workers[i % workers.size()]->add_transaction(transactions[i].get());
     }
   }

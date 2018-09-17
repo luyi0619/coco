@@ -160,6 +160,7 @@ public:
 
   void run_transaction(TransactionType &txn) {
     setupHandlers(txn);
+    txn.clear_read_write_set();
     auto result = txn.execute();
     if (result == TransactionResult::READY_TO_COMMIT) {
       bool ok = protocol.commit(txn);
@@ -189,7 +190,7 @@ public:
               *messages[active_coordinators[i]], *table, id, key_offset, value);
         }
       } else {
-        txn.pendingResponses.fetch_add(1);
+        txn.pendingResponses++;
       }
     };
     txn.setup_process_requests_in_execution_phase();
