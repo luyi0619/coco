@@ -9,7 +9,7 @@
 
 namespace scar {
 
-enum class ControlMessage { EXIT_MESSAGE, SIGNAL, ACK, NFIELDS };
+enum class ControlMessage { SIGNAL, ACK, OPERATION_REPLICATOIN, NFIELDS };
 
 class ControlMessageFactory {
 

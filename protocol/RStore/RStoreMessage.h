@@ -16,7 +16,6 @@ namespace scar {
 
 enum class RStoreMessage {
   REPLICATION_VALUE_REQUEST = static_cast<int>(ControlMessage::NFIELDS),
-  REPLICATION_OPERATION_REQUEST,
   NFIELDS
 };
 
@@ -48,12 +47,6 @@ public:
     table.serialize_value(encoder, value);
     encoder << commit_tid;
     message.flush();
-  }
-
-  static void new_replication_operation_message(Message &message, Table &table,
-                                                const void *key,
-                                                const void *value) {
-    // TODO
   }
 };
 
@@ -109,27 +102,11 @@ public:
     }
   }
 
-  static void replication_operation_request_handler(MessagePiece inputPiece,
-                                                    Message &responseMessage,
-                                                    Table &table) {
-
-    DCHECK(inputPiece.get_message_type() ==
-           static_cast<uint32_t>(RStoreMessage::REPLICATION_VALUE_REQUEST));
-    auto table_id = inputPiece.get_table_id();
-    auto partition_id = inputPiece.get_partition_id();
-    DCHECK(table_id == table.tableID());
-    DCHECK(partition_id == table.partitionID());
-    auto key_size = table.key_size();
-
-    // TODO
-  }
-
   static std::vector<std::function<void(MessagePiece, Message &, Table &)>>
   get_message_handlers() {
     std::vector<std::function<void(MessagePiece, Message &, Table &)>> v;
     v.resize(static_cast<int>(ControlMessage::NFIELDS));
     v.push_back(RStoreMessageHandler::replication_value_request_handler);
-    v.push_back(RStoreMessageHandler::replication_operation_request_handler);
     return v;
   }
 };

@@ -7,6 +7,7 @@
 #include "glog/logging.h"
 
 #include "benchmark/tpcc/Database.h"
+#include "benchmark/tpcc/Operation.h"
 #include "benchmark/tpcc/Query.h"
 #include "benchmark/tpcc/Schema.h"
 #include "benchmark/tpcc/Storage.h"
@@ -26,15 +27,14 @@ public:
   using RandomType = typename DatabaseType::RandomType;
   using TableType = ITable<MetaDataType>;
   using StorageType = Storage;
-  using OperationStorageType = OperationStorage;
+  using OperationType = Operation;
 
   NewOrder(std::size_t coordinator_id, std::size_t partition_id,
            DatabaseType &db, const ContextType &context, RandomType &random,
-           Partitioner &partitioner, Storage &storage,
-           OperationStorage &operation_storage)
+           Partitioner &partitioner, Storage &storage, OperationType &operation)
       : Transaction(coordinator_id, partition_id, partitioner), db(db),
         context(context), random(random), storage(storage),
-        operation_storage(operation_storage),
+        operation(operation),
         query(makeNewOrderQuery()(context, partition_id + 1, random)) {}
 
   virtual ~NewOrder() override = default;
@@ -128,10 +128,10 @@ public:
                  storage.district_value);
 
     if (context.operation_replication) {
-      operation_storage.QUERY_TYPE = 0;
-      operation_storage.D_W_ID = storage.district_key.D_W_ID;
-      operation_storage.D_ID = storage.district_key.D_ID;
-      operation_storage.D_NEXT_O_ID = storage.district_value.D_NEXT_O_ID;
+      operation.QUERY_TYPE = 0;
+      operation.D_W_ID = storage.district_key.D_W_ID;
+      operation.D_ID = storage.district_key.D_ID;
+      operation.D_NEXT_O_ID = storage.district_value.D_NEXT_O_ID;
     }
 
     float C_DISCOUNT = storage.customer_value.C_DISCOUNT;
@@ -189,13 +189,13 @@ public:
                    storage.stock_values[i]);
 
       if (context.operation_replication) {
-        operation_storage.S_W_ID[i] = storage.stock_keys[i].S_W_ID;
-        operation_storage.S_I_ID[i] = storage.stock_keys[i].S_I_ID;
-        operation_storage.S_QUANTITY[i] = storage.stock_values[i].S_QUANTITY;
-        operation_storage.S_YTD[i] = storage.stock_values[i].S_YTD;
-        operation_storage.S_ORDER_CNT[i] = storage.stock_values[i].S_ORDER_CNT;
-        operation_storage.S_REMOTE_CNT[i] =
-            storage.stock_values[i].S_REMOTE_CNT;
+        operation.O_OL_CNT = query.O_OL_CNT;
+        operation.S_W_ID[i] = storage.stock_keys[i].S_W_ID;
+        operation.S_I_ID[i] = storage.stock_keys[i].S_I_ID;
+        operation.S_QUANTITY[i] = storage.stock_values[i].S_QUANTITY;
+        operation.S_YTD[i] = storage.stock_values[i].S_YTD;
+        operation.S_ORDER_CNT[i] = storage.stock_values[i].S_ORDER_CNT;
+        operation.S_REMOTE_CNT[i] = storage.stock_values[i].S_REMOTE_CNT;
       }
 
       float OL_AMOUNT = I_PRICE * OL_QUANTITY;
@@ -264,7 +264,7 @@ private:
   const ContextType &context;
   RandomType &random;
   Storage &storage;
-  OperationStorage &operation_storage;
+  Operation &operation;
   NewOrderQuery query;
 };
 
@@ -276,15 +276,14 @@ public:
   using RandomType = typename DatabaseType::RandomType;
   using TableType = ITable<MetaDataType>;
   using StorageType = Storage;
-  using OperationStorageType = OperationStorage;
+  using OperationType = Operation;
 
   Payment(std::size_t coordinator_id, std::size_t partition_id,
           DatabaseType &db, const ContextType &context, RandomType &random,
-          Partitioner &partitioner, Storage &storage,
-          OperationStorage &operation_storage)
+          Partitioner &partitioner, Storage &storage, OperationType &operation)
       : Transaction(coordinator_id, partition_id, partitioner), db(db),
         context(context), random(random), storage(storage),
-        operation_storage(operation_storage),
+        operation(operation),
         query(makePaymentQuery()(context, partition_id + 1, random)) {}
 
   virtual ~Payment() override = default;
@@ -352,9 +351,9 @@ public:
                  storage.warehouse_value);
 
     if (context.operation_replication) {
-      operation_storage.QUERY_TYPE = 1;
-      operation_storage.W_ID = storage.warehouse_key.W_ID;
-      operation_storage.W_YTD = storage.warehouse_value.W_YTD;
+      operation.QUERY_TYPE = 1;
+      operation.W_ID = storage.warehouse_key.W_ID;
+      operation.W_YTD = storage.warehouse_value.W_YTD;
     }
 
     // the district's year-to-date balance, is increased by H_AMOUNT.
@@ -363,8 +362,9 @@ public:
                  storage.district_value);
 
     if (context.operation_replication) {
-      operation_storage.D_W_ID = storage.district_key.D_W_ID;
-      operation_storage.D_ID = storage.district_key.D_ID;
+      operation.D_W_ID = storage.district_key.D_W_ID;
+      operation.D_ID = storage.district_key.D_ID;
+      operation.D_YTD = storage.district_value.D_YTD;
     }
 
     char C_DATA[501];
@@ -393,13 +393,8 @@ public:
 
       const char *old_C_DATA = storage.customer_value.C_DATA.c_str();
 
-      int k = total_written;
-
-      for (std::size_t i = 0;
-           i < storage.customer_value.C_DATA.length() && k < 500; i++, k++) {
-        C_DATA[k] = old_C_DATA[i];
-      }
-      C_DATA[k] = 0;
+      std::memcpy(C_DATA + total_written, old_C_DATA, 500 - total_written);
+      C_DATA[500] = 0;
 
       storage.customer_value.C_DATA.assign(C_DATA);
     }
@@ -412,13 +407,13 @@ public:
                  storage.customer_value);
 
     if (context.operation_replication) {
-      operation_storage.C_W_ID = storage.customer_key.C_W_ID;
-      operation_storage.C_D_ID = storage.customer_key.C_D_ID;
-      operation_storage.C_ID = storage.customer_key.C_ID;
-      operation_storage.C_DATA = std::string(C_DATA, total_written);
-      operation_storage.C_BALANCE = storage.customer_value.C_BALANCE;
-      operation_storage.C_YTD_PAYMENT = storage.customer_value.C_YTD_PAYMENT;
-      operation_storage.C_PAYMENT_CNT = storage.customer_value.C_PAYMENT_CNT;
+      operation.C_W_ID = storage.customer_key.C_W_ID;
+      operation.C_D_ID = storage.customer_key.C_D_ID;
+      operation.C_ID = storage.customer_key.C_ID;
+      operation.C_DATA = std::string(C_DATA, total_written);
+      operation.C_BALANCE = storage.customer_value.C_BALANCE;
+      operation.C_YTD_PAYMENT = storage.customer_value.C_YTD_PAYMENT;
+      operation.C_PAYMENT_CNT = storage.customer_value.C_PAYMENT_CNT;
     }
 
     char H_DATA[25];
@@ -441,7 +436,7 @@ private:
   const ContextType &context;
   RandomType &random;
   Storage &storage;
-  OperationStorage &operation_storage;
+  Operation &operation;
   PaymentQuery query;
 };
 

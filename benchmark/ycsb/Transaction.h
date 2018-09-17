@@ -7,6 +7,7 @@
 #include "glog/logging.h"
 
 #include "benchmark/ycsb/Database.h"
+#include "benchmark/ycsb/Operation.h"
 #include "benchmark/ycsb/Query.h"
 #include "benchmark/ycsb/Schema.h"
 #include "benchmark/ycsb/Storage.h"
@@ -26,15 +27,15 @@ public:
   using RandomType = typename DatabaseType::RandomType;
   using TableType = ITable<MetaDataType>;
   using StorageType = Storage;
-  using OperationStorageType = OperationStorage;
+  using OperationType = Operation;
 
   ReadModifyWrite(std::size_t coordinator_id, std::size_t partition_id,
                   DatabaseType &db, const ContextType &context,
                   RandomType &random, Partitioner &partitioner,
-                  Storage &storage, OperationStorage &operation_storage)
+                  Storage &storage, OperationType &operation)
       : Transaction(coordinator_id, partition_id, partitioner), db(db),
         context(context), random(random), storage(storage),
-        operation_storage(operation_storage),
+        operation(operation),
         query(makeYCSBQuery<YCSB_FIELD_SIZE>()(context, partition_id, random)) {
   }
 
@@ -95,7 +96,7 @@ private:
   const ContextType &context;
   RandomType &random;
   Storage &storage;
-  OperationStorage &operation_storage;
+  Operation &operation;
   YCSBQuery<YCSB_FIELD_SIZE> query;
 };
 } // namespace ycsb

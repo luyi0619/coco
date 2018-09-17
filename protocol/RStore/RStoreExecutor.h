@@ -21,7 +21,7 @@ public:
   using WorkloadType = Workload;
   using DatabaseType = typename WorkloadType::DatabaseType;
   using StorageType = typename WorkloadType::StorageType;
-  using OperationStorageType = typename WorkloadType::OperationStorageType;
+  using OperationType = typename WorkloadType::OperationType;
 
   using TableType = typename DatabaseType::TableType;
   using TransactionType = typename WorkloadType::TransactionType;
@@ -151,7 +151,7 @@ public:
     WorkloadType workload(coordinator_id, db, random, *partitioner);
 
     StorageType storage;
-    OperationStorageType operation_storage;
+    OperationType operation;
 
     uint64_t last_seed = 0;
 
@@ -169,7 +169,7 @@ public:
           transaction->reset();
         } else {
           transaction = workload.next_transaction(phase_context, partition_id,
-                                                  storage, operation_storage);
+                                                  storage, operation);
           setupHandlers(*transaction, protocol);
         }
 
@@ -243,8 +243,16 @@ private:
         DCHECK(type < messageHandlers.size());
         TableType *table = db.find_table(messagePiece.get_table_id(),
                                          messagePiece.get_partition_id());
-        messageHandlers[type](messagePiece,
-                              *messages[message->get_source_node_id()], *table);
+
+        if (type ==
+            static_cast<uint32_t>(ControlMessage::OPERATION_REPLICATOIN)) {
+          OperationType operation;
+          operation.deserialize(messagePiece.stringPiece);
+          db.install_operation_replication(operation);
+        } else {
+          messageHandlers[type](
+              messagePiece, *messages[message->get_source_node_id()], *table);
+        }
       }
 
       size += message->get_message_count();

@@ -5,6 +5,7 @@
 #pragma once
 
 #include "benchmark/ycsb/Context.h"
+#include "benchmark/ycsb/Operation.h"
 #include "benchmark/ycsb/Random.h"
 #include "benchmark/ycsb/Schema.h"
 #include "core/Table.h"
@@ -23,6 +24,7 @@ public:
   using ContextType = Context;
   using RandomType = Random;
   using TableType = ITable<MetaDataType>;
+  using OperationType = Operation;
 
   TableType *find_table(std::size_t table_id, std::size_t partition_id) {
     DCHECK(table_id < tbl_vecs.size());
@@ -77,6 +79,10 @@ public:
                  ycsbInit(context, partitionID);
                },
                partitionNum, threadsNum);
+  }
+
+  void install_operation_replication(OperationType &operation) {
+    CHECK(false); // not supported
   }
 
 private:

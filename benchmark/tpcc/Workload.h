@@ -6,6 +6,7 @@
 
 #include "benchmark/tpcc/Context.h"
 #include "benchmark/tpcc/Database.h"
+#include "benchmark/tpcc/Operation.h"
 #include "benchmark/tpcc/Random.h"
 #include "benchmark/tpcc/Storage.h"
 #include "benchmark/tpcc/Transaction.h"
@@ -22,16 +23,17 @@ public:
   using ContextType = Context;
   using RandomType = Random;
   using StorageType = Storage;
-  using OperationStorageType = OperationStorage;
+  using OperationType = Operation;
 
   Workload(std::size_t coordinator_id, DatabaseType &db, RandomType &random,
            Partitioner &partitioner)
       : coordinator_id(coordinator_id), db(db), random(random),
         partitioner(partitioner) {}
 
-  std::unique_ptr<TransactionType>
-  next_transaction(const ContextType &context, std::size_t partition_id,
-                   StorageType &storage, OperationStorage &operation_storage) {
+  std::unique_ptr<TransactionType> next_transaction(const ContextType &context,
+                                                    std::size_t partition_id,
+                                                    StorageType &storage,
+                                                    Operation &operation) {
 
     int x = random.uniform_dist(1, 100);
     std::unique_ptr<TransactionType> p;
@@ -40,20 +42,20 @@ public:
       if (x <= 50) {
         p = std::make_unique<NewOrder<Transaction>>(
             coordinator_id, partition_id, db, context, random, partitioner,
-            storage, operation_storage);
+            storage, operation);
       } else {
         p = std::make_unique<Payment<Transaction>>(
             coordinator_id, partition_id, db, context, random, partitioner,
-            storage, operation_storage);
+            storage, operation);
       }
     } else if (context.workloadType == TPCCWorkloadType::NEW_ORDER_ONLY) {
       p = std::make_unique<NewOrder<Transaction>>(
           coordinator_id, partition_id, db, context, random, partitioner,
-          storage, operation_storage);
+          storage, operation);
     } else {
       p = std::make_unique<Payment<Transaction>>(
           coordinator_id, partition_id, db, context, random, partitioner,
-          storage, operation_storage);
+          storage, operation);
     }
 
     return p;

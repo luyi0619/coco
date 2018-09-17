@@ -6,6 +6,7 @@
 
 #include "benchmark/tpcc/Context.h"
 #include "benchmark/ycsb/Database.h"
+#include "benchmark/ycsb/Operation.h"
 #include "benchmark/ycsb/Random.h"
 #include "benchmark/ycsb/Storage.h"
 #include "benchmark/ycsb/Transaction.h"
@@ -22,21 +23,22 @@ public:
   using ContextType = Context;
   using RandomType = Random;
   using StorageType = Storage;
-  using OperationStorageType = OperationStorage;
+  using OperationType = Operation;
 
   Workload(std::size_t coordinator_id, DatabaseType &db, RandomType &random,
            Partitioner &partitioner)
       : coordinator_id(coordinator_id), db(db), random(random),
         partitioner(partitioner) {}
 
-  std::unique_ptr<TransactionType>
-  next_transaction(const ContextType &context, std::size_t partition_id,
-                   StorageType &storage, OperationStorage &operation_storage) {
+  std::unique_ptr<TransactionType> next_transaction(const ContextType &context,
+                                                    std::size_t partition_id,
+                                                    StorageType &storage,
+                                                    Operation &operation) {
 
     std::unique_ptr<TransactionType> p =
         std::make_unique<ReadModifyWrite<Transaction>>(
             coordinator_id, partition_id, db, context, random, partitioner,
-            storage, operation_storage);
+            storage, operation);
 
     return p;
   }

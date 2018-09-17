@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "core/Partitioner.h"
-
 #include "common/Percentile.h"
+#include "core/ControlMessage.h"
 #include "core/Defs.h"
+#include "core/Partitioner.h"
 #include "core/Worker.h"
 #include "glog/logging.h"
 
@@ -30,7 +30,7 @@ public:
   using MessageHandlerType = typename ProtocolType::MessageHandlerType;
 
   using StorageType = typename WorkloadType::StorageType;
-  using OperationStorageType = typename WorkloadType::OperationStorageType;
+  using OperationType = typename WorkloadType::OperationType;
 
   Executor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
            const ContextType &context, std::atomic<uint32_t> &worker_status,
@@ -59,7 +59,7 @@ public:
     LOG(INFO) << "Executor " << id << " starts.";
 
     StorageType storage;
-    OperationStorageType operation_storage;
+    OperationType operation;
     uint64_t last_seed = 0;
 
     ExecutorStatus status;
@@ -88,7 +88,7 @@ public:
                             coordinator_id;
 
         transaction = workload.next_transaction(context, partition_id, storage,
-                                                operation_storage);
+                                                operation);
         setupHandlers(*transaction);
       }
 
@@ -173,9 +173,17 @@ public:
         DCHECK(type < messageHandlers.size());
         TableType *table = db.find_table(messagePiece.get_table_id(),
                                          messagePiece.get_partition_id());
-        messageHandlers[type](messagePiece,
-                              *messages[message->get_source_node_id()], *table,
-                              *transaction);
+
+        if (type ==
+            static_cast<uint32_t>(ControlMessage::OPERATION_REPLICATOIN)) {
+          OperationType operation;
+          operation.deserialize(messagePiece.stringPiece);
+          db.install_operation_replication(operation);
+        } else {
+          messageHandlers[type](messagePiece,
+                                *messages[message->get_source_node_id()],
+                                *table, *transaction);
+        }
       }
 
       size += message->get_message_count();
