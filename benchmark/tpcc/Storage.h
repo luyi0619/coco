@@ -39,5 +39,33 @@ struct Storage {
   history::value h_value;
 };
 
+struct OperationStorage {
+  int32_t QUERY_TYPE; // 0 new order, 1 payment
+
+  int32_t W_ID;
+  float W_YTD;
+
+  int32_t D_W_ID;
+  int32_t D_ID;
+  float D_YTD;
+  int32_t D_NEXT_O_ID;
+
+  int32_t S_W_ID[15];
+  int32_t S_I_ID[15];
+  int16_t S_QUANTITY[15];
+  float S_YTD[15];
+  int32_t S_ORDER_CNT[15];
+  int32_t S_REMOTE_CNT[15];
+
+  int32_t C_W_ID;
+  int32_t C_D_ID;
+  int32_t C_ID;
+
+  std::string C_DATA;
+  float C_BALANCE;
+  float C_YTD_PAYMENT;
+  int32_t C_PAYMENT_CNT;
+};
+
 } // namespace tpcc
 } // namespace scar

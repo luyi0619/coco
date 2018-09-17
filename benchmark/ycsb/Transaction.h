@@ -26,13 +26,15 @@ public:
   using RandomType = typename DatabaseType::RandomType;
   using TableType = ITable<MetaDataType>;
   using StorageType = Storage;
+  using OperationStorageType = OperationStorage;
 
   ReadModifyWrite(std::size_t coordinator_id, std::size_t partition_id,
                   DatabaseType &db, const ContextType &context,
                   RandomType &random, Partitioner &partitioner,
-                  Storage &storage)
+                  Storage &storage, OperationStorage &operation_storage)
       : Transaction(coordinator_id, partition_id, partitioner), db(db),
         context(context), random(random), storage(storage),
+        operation_storage(operation_storage),
         query(makeYCSBQuery<YCSB_FIELD_SIZE>()(context, partition_id, random)) {
   }
 
@@ -93,6 +95,7 @@ private:
   const ContextType &context;
   RandomType &random;
   Storage &storage;
+  OperationStorage &operation_storage;
   YCSBQuery<YCSB_FIELD_SIZE> query;
 };
 } // namespace ycsb

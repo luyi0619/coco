@@ -13,5 +13,8 @@ struct Storage {
   ycsb::key ycsb_keys[YCSB_FIELD_SIZE];
   ycsb::value ycsb_values[YCSB_FIELD_SIZE];
 };
+
+using OperationStorage = int32_t; // void;
+
 } // namespace ycsb
 } // namespace scar

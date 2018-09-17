@@ -23,8 +23,9 @@ TEST(TestYCSBTransaction, TestBasic) {
   scar::Silo<decltype(db)> silo(db, partitioner);
 
   scar::ycsb::Storage storage;
+  scar::ycsb::OperationStorage operation_storage;
 
   scar::ycsb::ReadModifyWrite<scar::SiloTransaction> t(
-      0, 0, db, context, random, partitioner, storage);
+      0, 0, db, context, random, partitioner, storage, operation_storage);
   EXPECT_EQ(true, true);
 }

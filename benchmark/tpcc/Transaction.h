@@ -26,12 +26,15 @@ public:
   using RandomType = typename DatabaseType::RandomType;
   using TableType = ITable<MetaDataType>;
   using StorageType = Storage;
+  using OperationStorageType = OperationStorage;
 
   NewOrder(std::size_t coordinator_id, std::size_t partition_id,
            DatabaseType &db, const ContextType &context, RandomType &random,
-           Partitioner &partitioner, Storage &storage)
+           Partitioner &partitioner, Storage &storage,
+           OperationStorage &operation_storage)
       : Transaction(coordinator_id, partition_id, partitioner), db(db),
         context(context), random(random), storage(storage),
+        operation_storage(operation_storage),
         query(makeNewOrderQuery()(context, partition_id + 1, random)) {}
 
   virtual ~NewOrder() override = default;
@@ -124,6 +127,13 @@ public:
     this->update(districtTableID, W_ID - 1, storage.district_key,
                  storage.district_value);
 
+    if (context.operation_replication) {
+      operation_storage.QUERY_TYPE = 0;
+      operation_storage.D_W_ID = storage.district_key.D_W_ID;
+      operation_storage.D_ID = storage.district_key.D_ID;
+      operation_storage.D_NEXT_O_ID = storage.district_value.D_NEXT_O_ID;
+    }
+
     float C_DISCOUNT = storage.customer_value.C_DISCOUNT;
 
     // A new row is inserted into both the NEW-ORDER table and the ORDER table
@@ -177,6 +187,16 @@ public:
 
       this->update(stockTableID, OL_SUPPLY_W_ID - 1, storage.stock_keys[i],
                    storage.stock_values[i]);
+
+      if (context.operation_replication) {
+        operation_storage.S_W_ID[i] = storage.stock_keys[i].S_W_ID;
+        operation_storage.S_I_ID[i] = storage.stock_keys[i].S_I_ID;
+        operation_storage.S_QUANTITY[i] = storage.stock_values[i].S_QUANTITY;
+        operation_storage.S_YTD[i] = storage.stock_values[i].S_YTD;
+        operation_storage.S_ORDER_CNT[i] = storage.stock_values[i].S_ORDER_CNT;
+        operation_storage.S_REMOTE_CNT[i] =
+            storage.stock_values[i].S_REMOTE_CNT;
+      }
 
       float OL_AMOUNT = I_PRICE * OL_QUANTITY;
       storage.order_line_keys[i] =
@@ -244,6 +264,7 @@ private:
   const ContextType &context;
   RandomType &random;
   Storage &storage;
+  OperationStorage &operation_storage;
   NewOrderQuery query;
 };
 
@@ -255,12 +276,15 @@ public:
   using RandomType = typename DatabaseType::RandomType;
   using TableType = ITable<MetaDataType>;
   using StorageType = Storage;
+  using OperationStorageType = OperationStorage;
 
   Payment(std::size_t coordinator_id, std::size_t partition_id,
           DatabaseType &db, const ContextType &context, RandomType &random,
-          Partitioner &partitioner, Storage &storage)
+          Partitioner &partitioner, Storage &storage,
+          OperationStorage &operation_storage)
       : Transaction(coordinator_id, partition_id, partitioner), db(db),
         context(context), random(random), storage(storage),
+        operation_storage(operation_storage),
         query(makePaymentQuery()(context, partition_id + 1, random)) {}
 
   virtual ~Payment() override = default;
@@ -327,15 +351,27 @@ public:
     this->update(warehouseTableID, W_ID - 1, storage.warehouse_key,
                  storage.warehouse_value);
 
+    if (context.operation_replication) {
+      operation_storage.QUERY_TYPE = 1;
+      operation_storage.W_ID = storage.warehouse_key.W_ID;
+      operation_storage.W_YTD = storage.warehouse_value.W_YTD;
+    }
+
     // the district's year-to-date balance, is increased by H_AMOUNT.
     storage.district_value.D_YTD += H_AMOUNT;
     this->update(districtTableID, W_ID - 1, storage.district_key,
                  storage.district_value);
 
-    if (storage.customer_value.C_CREDIT == "BC") {
+    if (context.operation_replication) {
+      operation_storage.D_W_ID = storage.district_key.D_W_ID;
+      operation_storage.D_ID = storage.district_key.D_ID;
+    }
 
-      char C_DATA[501];
-      int written, total_written = 0;
+    char C_DATA[501];
+    int total_written = 0;
+
+    if (storage.customer_value.C_CREDIT == "BC") {
+      int written;
 
       written = std::sprintf(C_DATA + total_written, "%d ", C_ID);
       total_written += written;
@@ -375,6 +411,16 @@ public:
     this->update(customerTableID, C_W_ID - 1, storage.customer_key,
                  storage.customer_value);
 
+    if (context.operation_replication) {
+      operation_storage.C_W_ID = storage.customer_key.C_W_ID;
+      operation_storage.C_D_ID = storage.customer_key.C_D_ID;
+      operation_storage.C_ID = storage.customer_key.C_ID;
+      operation_storage.C_DATA = std::string(C_DATA, total_written);
+      operation_storage.C_BALANCE = storage.customer_value.C_BALANCE;
+      operation_storage.C_YTD_PAYMENT = storage.customer_value.C_YTD_PAYMENT;
+      operation_storage.C_PAYMENT_CNT = storage.customer_value.C_PAYMENT_CNT;
+    }
+
     char H_DATA[25];
     int written;
 
@@ -395,6 +441,7 @@ private:
   const ContextType &context;
   RandomType &random;
   Storage &storage;
+  OperationStorage &operation_storage;
   PaymentQuery query;
 };
 

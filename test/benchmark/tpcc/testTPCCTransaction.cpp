@@ -21,11 +21,12 @@ TEST(TestTPCCTransaction, TestBasic) {
   scar::HashPartitioner partitioner(0, 1);
 
   scar::tpcc::Storage storage;
+  scar::tpcc::OperationStorage operation_storage;
 
   scar::Silo<decltype(db)> silo(db, partitioner);
-  scar::tpcc::NewOrder<scar::SiloTransaction> t1(0, 0, db, context, random,
-                                                 partitioner, storage);
-  scar::tpcc::Payment<scar::SiloTransaction> t2(0, 0, db, context, random,
-                                                partitioner, storage);
+  scar::tpcc::NewOrder<scar::SiloTransaction> t1(
+      0, 0, db, context, random, partitioner, storage, operation_storage);
+  scar::tpcc::Payment<scar::SiloTransaction> t2(
+      0, 0, db, context, random, partitioner, storage, operation_storage);
   EXPECT_EQ(true, true);
 }

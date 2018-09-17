@@ -19,6 +19,8 @@ public:
   std::size_t batch_flush = 10;
   std::size_t group_time = 40; // ms
 
+  bool operation_replication;
+
   virtual std::size_t get_s_phase_query_num() const = 0;
   virtual std::size_t get_c_phase_query_num() const = 0;
 };

@@ -24,6 +24,7 @@ public:
   using WorkloadType = Workload;
   using DatabaseType = typename WorkloadType::DatabaseType;
   using StorageType = typename WorkloadType::StorageType;
+  using OperationStorageType = typename WorkloadType::OperationStorageType;
 
   using TableType = typename DatabaseType::TableType;
   using TransactionType = CalvinTransaction;
@@ -43,6 +44,7 @@ public:
         workload(coordinator_id, db, random, partitioner) {
 
     storages.resize(context.batch_size);
+    operation_storages.resize(context.batch_size);
   }
 
   void coordinator_start() override {
@@ -107,6 +109,7 @@ public:
   }
 
   void prepare_read_wrie_set() {
+
     transactions.clear();
     results.clear();
 
@@ -114,7 +117,7 @@ public:
     for (auto i = 0u; i < context.batch_size; i++) {
       auto partition_id = random.uniform_dist(0, context.partition_num - 1);
       transactions.push_back(workload.next_transaction(
-          workload_context, partition_id, storages[i]));
+          workload_context, partition_id, storages[i], operation_storages[i]));
       transactions[i]->set_id(i);
     }
 
@@ -209,6 +212,7 @@ public:
   std::atomic<uint32_t> complete_transaction_num;
   std::vector<std::shared_ptr<CalvinExecutor<WorkloadType>>> workers;
   std::vector<StorageType> storages;
+  std::vector<OperationStorageType> operation_storages;
   std::vector<std::unique_ptr<TransactionType>> transactions;
   std::vector<bool> results;
 };

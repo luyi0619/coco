@@ -35,6 +35,8 @@ public:
                            replica_group_sizes.end(), 0u) == coordinator_num);
   }
 
+  ~CalvinPartitioner() override = default;
+
   bool is_replicated() const override {
     // replica group in calvin is independent
     return false;

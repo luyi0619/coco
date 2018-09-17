@@ -21,6 +21,7 @@ public:
   using WorkloadType = Workload;
   using DatabaseType = typename WorkloadType::DatabaseType;
   using StorageType = typename WorkloadType::StorageType;
+  using OperationStorageType = typename WorkloadType::OperationStorageType;
 
   using TableType = typename DatabaseType::TableType;
   using TransactionType = typename WorkloadType::TransactionType;
@@ -150,6 +151,8 @@ public:
     WorkloadType workload(coordinator_id, db, random, *partitioner);
 
     StorageType storage;
+    OperationStorageType operation_storage;
+
     uint64_t last_seed = 0;
 
     std::unique_ptr<TransactionType> transaction;
@@ -158,40 +161,43 @@ public:
 
       bool retry_transaction = false;
 
-      process_request();
-      last_seed = random.get_seed();
+      do {
+        process_request();
+        last_seed = random.get_seed();
 
-      if (retry_transaction) {
-        transaction->reset();
-      } else {
-        transaction =
-            workload.next_transaction(phase_context, partition_id, storage);
-        setupHandlers(*transaction, protocol);
-      }
-
-      auto result = transaction->execute();
-      if (result == TransactionResult::READY_TO_COMMIT) {
-        if (protocol.commit(*transaction, messages)) {
-          n_commit.fetch_add(1);
-          retry_transaction = false;
-          auto latency =
-              std::chrono::duration_cast<std::chrono::milliseconds>(
-                  std::chrono::steady_clock::now() - transaction->startTime)
-                  .count();
-          percentile.add(latency);
+        if (retry_transaction) {
+          transaction->reset();
         } else {
-          if (transaction->abort_lock) {
-            n_abort_lock.fetch_add(1);
-          } else {
-            DCHECK(transaction->abort_read_validation);
-            n_abort_read_validation.fetch_add(1);
-          }
-          random.set_seed(last_seed);
-          retry_transaction = true;
+          transaction = workload.next_transaction(phase_context, partition_id,
+                                                  storage, operation_storage);
+          setupHandlers(*transaction, protocol);
         }
-      } else {
-        n_abort_no_retry.fetch_add(1);
-      }
+
+        auto result = transaction->execute();
+        if (result == TransactionResult::READY_TO_COMMIT) {
+          if (protocol.commit(*transaction, messages)) {
+            n_commit.fetch_add(1);
+            retry_transaction = false;
+            auto latency =
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - transaction->startTime)
+                    .count();
+            percentile.add(latency);
+          } else {
+            if (transaction->abort_lock) {
+              n_abort_lock.fetch_add(1);
+            } else {
+              DCHECK(transaction->abort_read_validation);
+              n_abort_read_validation.fetch_add(1);
+            }
+            random.set_seed(last_seed);
+            retry_transaction = true;
+          }
+        } else {
+          n_abort_no_retry.fetch_add(1);
+        }
+      } while (retry_transaction);
+
       if (i % phase_context.batch_flush == 0) {
         flush_messages();
       }

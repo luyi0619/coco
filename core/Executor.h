@@ -30,6 +30,7 @@ public:
   using MessageHandlerType = typename ProtocolType::MessageHandlerType;
 
   using StorageType = typename WorkloadType::StorageType;
+  using OperationStorageType = typename WorkloadType::OperationStorageType;
 
   Executor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
            const ContextType &context, std::atomic<uint32_t> &worker_status,
@@ -58,6 +59,7 @@ public:
     LOG(INFO) << "Executor " << id << " starts.";
 
     StorageType storage;
+    OperationStorageType operation_storage;
     uint64_t last_seed = 0;
 
     ExecutorStatus status;
@@ -85,7 +87,8 @@ public:
                                 context.coordinator_num +
                             coordinator_id;
 
-        transaction = workload.next_transaction(context, partition_id, storage);
+        transaction = workload.next_transaction(context, partition_id, storage,
+                                                operation_storage);
         setupHandlers(*transaction);
       }
 

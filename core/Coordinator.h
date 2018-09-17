@@ -16,16 +16,7 @@
 
 namespace scar {
 
-class ICoordinator {
-public:
-  ~ICoordinator() = default;
-
-  virtual void start() = 0;
-
-  virtual void connectToPeers() = 0;
-};
-
-template <class Workload> class Coordinator : public ICoordinator {
+template <class Workload> class Coordinator {
 public:
   using WorkloadType = Workload;
   using DatabaseType = typename WorkloadType::DatabaseType;
@@ -41,7 +32,7 @@ public:
 
   ~Coordinator() = default;
 
-  void start() override {
+  void start() {
 
     LOG(INFO) << "Coordinator initializes " << context.worker_num
               << " workers.";
@@ -137,7 +128,7 @@ public:
     LOG(INFO) << "Coordinator exits.";
   }
 
-  void connectToPeers() override {
+  void connectToPeers() {
 
     inSockets = std::vector<Socket>(peers.size());
     outSockets = std::vector<Socket>(peers.size());

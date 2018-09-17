@@ -16,6 +16,8 @@ public:
     this->coordinator_num = coordinator_num;
   }
 
+  virtual ~Partitioner() = default;
+
   std::size_t total_coordinators() const { return coordinator_num; }
 
   virtual bool is_replicated() const = 0;
@@ -46,6 +48,8 @@ public:
       : Partitioner(coordinator_id, coordinator_num) {
     CHECK(N > 0 && N <= coordinator_num);
   }
+
+  ~HashReplicatedPartitioner() override = default;
 
   bool is_replicated() const override { return N > 1; }
 
@@ -98,6 +102,8 @@ public:
     CHECK(coordinator_num >= 2);
   }
 
+  ~RStoreSPartitioner() override = default;
+
   bool is_replicated() const override { return true; }
 
   bool has_master_partition(std::size_t partition_id) const override {
@@ -127,6 +133,8 @@ public:
       : Partitioner(coordinator_id, coordinator_num) {
     CHECK(coordinator_num >= 2);
   }
+
+  ~RStoreCPartitioner() override = default;
 
   bool is_replicated() const override { return true; }
 
