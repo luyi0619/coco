@@ -173,13 +173,17 @@ public:
         readSet[i].set_execution_processed_bit();
       }
 
-      if (pendingResponses != 0) {
-        message_flusher();
+      message_flusher();
+
+      if (active_coordinators[coordinator_id]) {
         while (pendingResponses != 0) {
           remote_request_handler();
         }
+        return false;
+      } else {
+        // abort if not active
+        return true;
       }
-      return false;
     };
   }
 
@@ -208,7 +212,7 @@ public:
   std::function<void()> message_flusher;
 
   Partitioner &partitioner;
-  std::vector<std::size_t> active_coordinators;
+  std::vector<bool> active_coordinators;
   std::vector<CalvinRWKey> readSet, writeSet;
 };
 } // namespace scar

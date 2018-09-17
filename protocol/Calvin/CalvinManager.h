@@ -51,10 +51,11 @@ public:
     std::size_t n_coordinators = context.coordinator_num;
 
     while (!stopFlag.load()) {
-      LOG(INFO) << "Seed: " << random.get_seed();
+
       complete_transaction_num.store(0);
       n_started_workers.store(0);
-      n_completed_workers.store(0);
+      complete_transaction_num.store(0);
+      // LOG(INFO) << "Seed: " << random.get_seed();
       prepare_read_wrie_set();
       signal_worker(ExecutorStatus::START);
       wait_all_workers_start();
@@ -76,6 +77,8 @@ public:
     std::size_t n_coordinators = context.coordinator_num;
 
     for (;;) {
+      // LOG(INFO) << "Seed: " << random.get_seed();
+      prepare_read_wrie_set();
       ExecutorStatus status = wait4_signal();
       if (status == ExecutorStatus::EXIT) {
         set_worker_status(ExecutorStatus::EXIT);
@@ -83,10 +86,10 @@ public:
       }
 
       DCHECK(status == ExecutorStatus::START);
-      LOG(INFO) << "Seed: " << random.get_seed();
       n_completed_workers.store(0);
       n_started_workers.store(0);
-      prepare_read_wrie_set();
+      complete_transaction_num.store(0);
+
       set_worker_status(ExecutorStatus::START);
       wait_all_workers_start();
       schedule_transactions();
@@ -175,20 +178,15 @@ public:
   void analyze_active_coordinator(TransactionType &transaction) {
 
     // assuming no blind write
-    std::vector<bool> coordinators(partitioner.total_coordinators(), false);
     auto &readSet = transaction.readSet;
     auto &active_coordinators = transaction.active_coordinators;
+    active_coordinators =
+        std::vector<bool>(partitioner.total_coordinators(), false);
 
     for (auto i = 0u; i < readSet.size(); i++) {
       auto &readkey = readSet[i];
       auto partitionID = readkey.get_partition_id();
-      coordinators[partitioner.master_coordinator(partitionID)] = true;
-    }
-
-    for (auto i = 0u; i < coordinators.size(); i++) {
-      if (coordinators[i]) {
-        active_coordinators.push_back(i);
-      }
+      active_coordinators[partitioner.master_coordinator(partitionID)] = true;
     }
   }
 

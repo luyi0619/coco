@@ -82,7 +82,6 @@ public:
     DCHECK(tid < txns.size());
     DCHECK(key_offset < txns[tid]->readSet.size());
     CalvinRWKey &readKey = txns[tid]->readSet[key_offset];
-
     dec.read_n_bytes(readKey.get_value(), value_size);
     txns[tid]->pendingResponses--;
   }

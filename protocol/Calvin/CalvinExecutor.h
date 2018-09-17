@@ -68,7 +68,7 @@ public:
   ~CalvinExecutor() = default;
 
   void start() override {
-    LOG(INFO) << "CalvinExecutor " << id << " ) started. ";
+    LOG(INFO) << "CalvinExecutor " << id << " started. ";
 
     for (;;) {
 
@@ -77,7 +77,7 @@ public:
         status = static_cast<ExecutorStatus>(worker_status.load());
 
         if (status == ExecutorStatus::EXIT) {
-          LOG(INFO) << "CalvinExecutor " << id << " ) exits. ";
+          LOG(INFO) << "CalvinExecutor " << id << " exits. ";
           return;
         }
       } while (status != ExecutorStatus::START);
@@ -85,8 +85,6 @@ public:
       // make sure all lock manager stopped
 
       n_started_workers.fetch_add(1);
-
-      LOG(INFO) << "worker starts one loop.";
 
       while (complete_transaction_num.load() < context.batch_size) {
 
@@ -113,8 +111,6 @@ public:
       }
 
       n_completed_workers.fetch_add(1);
-
-      LOG(INFO) << "worker finishes one loop.";
     }
   }
 
@@ -167,13 +163,14 @@ public:
     txn.execution_phase = true;
     auto result = txn.execute();
     if (result == TransactionResult::READY_TO_COMMIT) {
-      bool ok = protocol.commit(txn);
-      DCHECK(ok); // transaction in calvin must commit
+      protocol.commit(txn);
+      n_commit.fetch_add(1);
+    } else if (result == TransactionResult::ABORT) {
+      // non-active transactions
       n_commit.fetch_add(1);
     } else {
       n_abort_no_retry.fetch_add(1);
     }
-    flush_messages(); // push read messages
   }
 
   void setupHandlers(TransactionType &txn) {
@@ -187,11 +184,11 @@ public:
 
         auto &active_coordinators = txn.active_coordinators;
         for (auto i = 0u; i < active_coordinators.size(); i++) {
-          if (active_coordinators[i] == coordinator_id)
+          if (i == coordinator_id || !active_coordinators[i])
             continue;
 
-          MessageFactoryType::new_read_message(
-              *messages[active_coordinators[i]], *table, id, key_offset, value);
+          MessageFactoryType::new_read_message(*messages[i], *table, id,
+                                               key_offset, value);
         }
       } else {
         txn.pendingResponses++;

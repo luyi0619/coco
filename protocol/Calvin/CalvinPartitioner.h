@@ -32,7 +32,7 @@ public:
       }
     }
     DCHECK(std::accumulate(replica_group_sizes.begin(),
-                           replica_group_sizes.end(), 0) == coordinator_num);
+                           replica_group_sizes.end(), 0u) == coordinator_num);
   }
 
   bool is_replicated() const override {

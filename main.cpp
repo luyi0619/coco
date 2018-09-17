@@ -10,7 +10,7 @@
 
 DEFINE_int32(id, 0, "coordinator id");
 DEFINE_int32(threads, 1, "the number of threads");
-DEFINE_int32(batch_size, 1, "rstore or calvin batch size");
+DEFINE_int32(batch_size, 240, "rstore or calvin batch size");
 DEFINE_string(servers, "127.0.0.1:10010",
               "semicolon-separated list of servers");
 DEFINE_string(protocol, "RStore", "transaction protocol");
