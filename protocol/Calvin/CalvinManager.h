@@ -42,15 +42,6 @@ public:
             CalvinHelper::get_replica_group_sizes(context.replica_group)),
         workload(coordinator_id, db, random, partitioner) {
 
-    // calculate master partitions
-
-    for (auto i = 0u; i < context.partition_num; i++) {
-      if (partitioner.has_master_partition(i)) {
-        master_partitions.push_back(i);
-      }
-    }
-
-    CHECK(master_partitions.size() > 0);
     storages.resize(context.batch_size);
   }
 
@@ -60,10 +51,11 @@ public:
     std::size_t n_coordinators = context.coordinator_num;
 
     while (!stopFlag.load()) {
-      //LOG(INFO) << "Seed: " << random.get_seed();
+      LOG(INFO) << "Seed: " << random.get_seed();
       complete_transaction_num.store(0);
       n_started_workers.store(0);
       n_completed_workers.store(0);
+      prepare_read_wrie_set();
       signal_worker(ExecutorStatus::START);
       wait_all_workers_start();
       schedule_transactions();
@@ -94,6 +86,7 @@ public:
       LOG(INFO) << "Seed: " << random.get_seed();
       n_completed_workers.store(0);
       n_started_workers.store(0);
+      prepare_read_wrie_set();
       set_worker_status(ExecutorStatus::START);
       wait_all_workers_start();
       schedule_transactions();
@@ -110,30 +103,38 @@ public:
     workers.push_back(w);
   }
 
-  void schedule_transactions() {
-
+  void prepare_read_wrie_set() {
     transactions.clear();
+    results.clear();
 
     // generate transactions
     for (auto i = 0u; i < context.batch_size; i++) {
-      auto partition_idx = random.uniform_dist(0, master_partitions.size() - 1);
-      auto partition_id = master_partitions[partition_idx];
+      auto partition_id = random.uniform_dist(0, context.partition_num - 1);
       transactions.push_back(workload.next_transaction(
           workload_context, partition_id, storages[i]));
+      transactions[i]->set_id(i);
     }
+
+    // prepare read/write set
+
+    for (auto i = 0u; i < transactions.size(); i++) {
+      setupHandlers(*transactions[i]);
+      // run execute to prepare read/write set
+      auto result = transactions[i]->execute();
+      results.push_back(result != TransactionResult::ABORT_NORETRY);
+    }
+  }
+
+  void schedule_transactions() {
 
     // grant locks, once all locks are acquired, assign the transaction to
     // a worker thread in a round-robin manner.
 
     for (auto i = 0u; i < transactions.size(); i++) {
 
-      setupHandlers(*transactions[i]);
-      // run execute to prepare read/write set
-      auto result = transactions[i]->execute();
       analyze_active_coordinator(*transactions[i]);
-
       // do not grant locks to abort no retry transaction
-      if (result != TransactionResult::ABORT_NORETRY){
+      if (results[i]) {
         auto &readSet = transactions[i]->readSet;
         for (auto k = 0u; k < readSet.size(); k++) {
           auto &readKey = readSet[k];
@@ -173,13 +174,14 @@ public:
 
   void analyze_active_coordinator(TransactionType &transaction) {
 
+    // assuming no blind write
     std::vector<bool> coordinators(partitioner.total_coordinators(), false);
-    auto &writeSet = transaction.writeSet;
+    auto &readSet = transaction.readSet;
     auto &active_coordinators = transaction.active_coordinators;
 
-    for (auto i = 0u; i < writeSet.size(); i++) {
-      auto &writekey = writeSet[i];
-      auto partitionID = writekey.get_partition_id();
+    for (auto i = 0u; i < readSet.size(); i++) {
+      auto &readkey = readSet[i];
+      auto partitionID = readkey.get_partition_id();
       coordinators[partitioner.master_coordinator(partitionID)] = true;
     }
 
@@ -207,9 +209,9 @@ public:
   CalvinPartitioner partitioner;
   WorkloadType workload;
   std::atomic<uint32_t> complete_transaction_num;
-  std::vector<std::size_t> master_partitions;
   std::vector<std::shared_ptr<CalvinExecutor<WorkloadType>>> workers;
   std::vector<StorageType> storages;
   std::vector<std::unique_ptr<TransactionType>> transactions;
+  std::vector<bool> results;
 };
 } // namespace scar

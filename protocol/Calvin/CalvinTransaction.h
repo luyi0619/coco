@@ -29,7 +29,7 @@ public:
 
   void reset() {
     pendingResponses = 0;
-    prepare_phase = true;
+    execution_phase = false;
     active_coordinators.clear();
     readSet.clear();
     writeSet.clear();
@@ -40,6 +40,11 @@ public:
   template <class KeyType, class ValueType>
   void search_local_index(std::size_t table_id, std::size_t partition_id,
                           const KeyType &key, ValueType &value) {
+
+    if (execution_phase) {
+      return;
+    }
+
     CalvinRWKey readKey;
 
     readKey.set_table_id(table_id);
@@ -56,6 +61,11 @@ public:
   template <class KeyType, class ValueType>
   void search_for_read(std::size_t table_id, std::size_t partition_id,
                        const KeyType &key, ValueType &value) {
+
+    if (execution_phase) {
+      return;
+    }
+
     CalvinRWKey readKey;
 
     readKey.set_table_id(table_id);
@@ -72,6 +82,10 @@ public:
   template <class KeyType, class ValueType>
   void search_for_update(std::size_t table_id, std::size_t partition_id,
                          const KeyType &key, ValueType &value) {
+    if (execution_phase) {
+      return;
+    }
+
     CalvinRWKey readKey;
 
     readKey.set_table_id(table_id);
@@ -88,6 +102,10 @@ public:
   template <class KeyType, class ValueType>
   void update(std::size_t table_id, std::size_t partition_id,
               const KeyType &key, const ValueType &value) {
+
+    if (!execution_phase) {
+      return;
+    }
 
     CalvinRWKey writeKey;
 
@@ -165,18 +183,13 @@ public:
     };
   }
 
-  void clear_read_write_set(){
-    readSet.clear();
-    writeSet.clear();
-  }
-
 public:
   std::size_t coordinator_id, partition_id, id;
   std::chrono::steady_clock::time_point startTime;
   int32_t pendingResponses; // could be negative
 
   bool abort_lock, abort_read_validation;
-  bool prepare_phase;
+  bool execution_phase;
 
   std::function<bool(void)> process_requests;
 

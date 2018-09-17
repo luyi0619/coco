@@ -4,11 +4,11 @@
 
 #pragma once
 
+#include "benchmark/tpcc/Context.h"
 #include "benchmark/tpcc/Database.h"
 #include "benchmark/tpcc/Random.h"
 #include "benchmark/tpcc/Storage.h"
 #include "benchmark/tpcc/Transaction.h"
-#include "benchmark/tpcc/Context.h"
 #include "core/Partitioner.h"
 
 namespace scar {

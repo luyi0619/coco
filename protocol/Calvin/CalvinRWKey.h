@@ -154,7 +154,7 @@ public:
   static constexpr uint32_t PARTITION_ID_OFFSET = 19;
 
   static constexpr uint32_t EXECUTION_PROCESSED_BIT_MASK = 0x1;
-  static constexpr uint32_t EXECUTION_PROCESSED_BIT_OFFSET = 3;
+  static constexpr uint32_t EXECUTION_PROCESSED_BIT_OFFSET = 4;
 
   static constexpr uint32_t PREPARE_PROCESSED_BIT_MASK = 0x1;
   static constexpr uint32_t PREPARE_PROCESSED_BIT_OFFSET = 3;

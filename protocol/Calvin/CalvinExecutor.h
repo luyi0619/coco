@@ -86,10 +86,12 @@ public:
 
       n_started_workers.fetch_add(1);
 
+      LOG(INFO) << "worker starts one loop.";
+
       while (complete_transaction_num.load() < context.batch_size) {
 
+        process_request();
         if (transaction_queue.empty()) {
-          std::this_thread::yield();
           continue;
         }
 
@@ -111,6 +113,8 @@ public:
       }
 
       n_completed_workers.fetch_add(1);
+
+      LOG(INFO) << "worker finishes one loop.";
     }
   }
 
@@ -160,7 +164,7 @@ public:
 
   void run_transaction(TransactionType &txn) {
     setupHandlers(txn);
-    txn.clear_read_write_set();
+    txn.execution_phase = true;
     auto result = txn.execute();
     if (result == TransactionResult::READY_TO_COMMIT) {
       bool ok = protocol.commit(txn);

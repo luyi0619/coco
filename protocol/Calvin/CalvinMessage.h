@@ -65,11 +65,11 @@ public:
     auto value_size = table.value_size();
 
     /*
-     * The structure of a read request: (tid, key offset, key, value)
+     * The structure of a read request: (tid, key offset, value)
      * The structure of a read response: null
      */
 
-    uint64_t tid;
+    uint32_t tid;
     uint32_t key_offset;
 
     DCHECK(inputPiece.get_message_length() ==
@@ -79,6 +79,8 @@ public:
     StringPiece stringPiece = inputPiece.toStringPiece();
     Decoder dec(stringPiece);
     dec >> tid >> key_offset;
+    DCHECK(tid < txns.size());
+    DCHECK(key_offset < txns[tid]->readSet.size());
     CalvinRWKey &readKey = txns[tid]->readSet[key_offset];
 
     dec.read_n_bytes(readKey.get_value(), value_size);
