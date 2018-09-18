@@ -320,6 +320,7 @@ public:
     }
 
     txn.pendingResponses--;
+    txn.network_size += inputPiece.get_message_length();
   }
 
   static void write_lock_request_handler(MessagePiece inputPiece,
@@ -433,6 +434,7 @@ public:
     }
 
     txn.pendingResponses--;
+    txn.network_size += inputPiece.get_message_length();
   }
 
   static void abort_request_handler(MessagePiece inputPiece,
@@ -529,6 +531,7 @@ public:
      */
 
     txn.pendingResponses--;
+    txn.network_size += inputPiece.get_message_length();
   }
 
   static void replication_request_handler(MessagePiece inputPiece,
@@ -596,6 +599,7 @@ public:
      */
 
     txn.pendingResponses--;
+    txn.network_size += inputPiece.get_message_length();
   }
 
   static void release_read_lock_request_handler(MessagePiece inputPiece,
@@ -657,6 +661,7 @@ public:
      */
 
     txn.pendingResponses--;
+    txn.network_size += inputPiece.get_message_length();
   }
 
   static void release_write_lock_request_handler(MessagePiece inputPiece,
@@ -719,6 +724,7 @@ public:
      */
 
     txn.pendingResponses--;
+    txn.network_size += inputPiece.get_message_length();
   }
 
 public:

@@ -91,14 +91,18 @@ public:
         static_cast<uint32_t>(ControlMessage::OPERATION_REPLICATION_REQUEST));
 
     auto message_size = inputPiece.get_message_length();
-    Decoder dec(inputPiece.stringPiece);
+    Decoder dec(inputPiece.toStringPiece());
     Operation operation;
     dec >> operation.bitvec;
 
-    DCHECK(operation.get_table_id() == inputPiece.get_table_id());
-    DCHECK(operation.get_partition_id() == inputPiece.get_partition_id());
-    operation.data.resize(message_size);
-    dec.read_n_bytes(&operation.data[0], message_size);
+    auto data_size =
+        message_size - MessagePiece::get_header_size() - sizeof(uint32_t);
+    DCHECK(data_size > 0);
+
+    operation.data.resize(data_size);
+    dec.read_n_bytes(&operation.data[0], data_size);
+
+    DCHECK(dec.size() == 0);
 
     db.apply_operation(operation);
 

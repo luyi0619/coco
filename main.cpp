@@ -11,6 +11,7 @@
 DEFINE_int32(id, 0, "coordinator id");
 DEFINE_int32(threads, 1, "the number of threads");
 DEFINE_int32(batch_size, 240, "rstore or calvin batch size");
+DEFINE_int32(group_time, 40, "group commit frequency");
 DEFINE_string(servers, "127.0.0.1:10010",
               "semicolon-separated list of servers");
 DEFINE_string(protocol, "RStore", "transaction protocol");
@@ -36,6 +37,7 @@ int main(int argc, char *argv[]) {
   context.coordinator_num = peers.size();
   context.partition_num = n * context.coordinator_num;
   context.batch_size = FLAGS_batch_size;
+  context.group_time = FLAGS_group_time;
   context.worker_num = n;
   context.replica_group = FLAGS_replica_group;
   context.operation_replication = FLAGS_operation_replication;

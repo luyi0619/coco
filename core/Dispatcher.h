@@ -20,7 +20,7 @@ public:
   IncomingDispatcher(std::size_t id, std::vector<Socket> &sockets,
                      const std::vector<std::shared_ptr<Worker>> &workers,
                      std::atomic<bool> &stopFlag)
-      : id(id), workers(workers), stopFlag(stopFlag) {
+      : id(id), network_size(0), workers(workers), stopFlag(stopFlag) {
 
     for (auto i = 0u; i < sockets.size(); i++) {
       buffered_readers.emplace_back(sockets[i]);
@@ -51,6 +51,7 @@ public:
         if (message == nullptr) {
           continue;
         }
+        network_size += message->get_message_length();
         auto workerId = message->get_worker_id();
         // release the unique ptr
         workers[workerId]->push_message(message.release());
@@ -58,13 +59,14 @@ public:
       }
     }
 
-    LOG(INFO) << "Incoming Dispatcher exits.";
+    LOG(INFO) << "Incoming Dispatcher exits, network size: " << network_size;
   }
 
   std::unique_ptr<Message> fetchMessage(Socket &socket) { return nullptr; }
 
 private:
   std::size_t id;
+  std::size_t network_size;
   std::vector<BufferedReader> buffered_readers;
   std::vector<std::shared_ptr<Worker>> workers;
   std::atomic<bool> &stopFlag;
@@ -75,7 +77,8 @@ public:
   OutgoingDispatcher(std::size_t id, std::vector<Socket> &sockets,
                      const std::vector<std::shared_ptr<Worker>> &workers,
                      std::atomic<bool> &stopFlag)
-      : id(id), sockets(sockets), workers(workers), stopFlag(stopFlag) {}
+      : id(id), network_size(0), sockets(sockets), workers(workers),
+        stopFlag(stopFlag) {}
 
   void start() {
 
@@ -96,7 +99,7 @@ public:
       }
     }
 
-    LOG(INFO) << "Outgoing Dispatcher exits.";
+    LOG(INFO) << "Outgoing Dispatcher exits, network size: " << network_size;
   }
 
   void dispatchMessage(const std::shared_ptr<Worker> &worker) {
@@ -115,10 +118,13 @@ public:
 
     sockets[dest_node_id].write_n_bytes(message->get_raw_ptr(),
                                         message->get_message_length());
+
+    network_size += message->get_message_length();
   }
 
 private:
   std::size_t id;
+  std::size_t network_size;
   std::vector<Socket> &sockets;
   std::vector<std::shared_ptr<Worker>> workers;
   std::atomic<bool> &stopFlag;

@@ -188,6 +188,7 @@ public:
                    static_cast<uint32_t>(
                        ControlMessage::OPERATION_REPLICATION_RESPONSE)) {
           transaction->pendingResponses--;
+          transaction->network_size += messagePiece.get_message_length();
         } else {
           messageHandlers[type](messagePiece,
                                 *messages[message->get_source_node_id()],

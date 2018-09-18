@@ -296,6 +296,7 @@ public:
     dec.read_n_bytes(readKey.get_value(), value_size);
     readKey.set_tid(tid);
     txn.pendingResponses--;
+    txn.network_size += inputPiece.get_message_length();
   }
 
   static void lock_request_handler(MessagePiece inputPiece,
@@ -396,6 +397,7 @@ public:
     }
 
     txn.pendingResponses--;
+    txn.network_size += inputPiece.get_message_length();
 
     if (!success || tid_changed) {
       txn.abort_lock = true;
@@ -482,6 +484,7 @@ public:
     SiloRWKey &readKey = txn.readSet[key_offset];
 
     txn.pendingResponses--;
+    txn.network_size += inputPiece.get_message_length();
 
     if (!success) {
       txn.abort_read_validation = true;
@@ -570,6 +573,7 @@ public:
      */
 
     txn.pendingResponses--;
+    txn.network_size += inputPiece.get_message_length();
   }
 
   static void replication_request_handler(MessagePiece inputPiece,
@@ -643,6 +647,7 @@ public:
      */
 
     txn.pendingResponses--;
+    txn.network_size += inputPiece.get_message_length();
   }
 
   static void release_lock_request_handler(MessagePiece inputPiece,

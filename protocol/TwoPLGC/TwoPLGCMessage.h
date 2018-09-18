@@ -293,6 +293,7 @@ public:
     }
 
     txn.pendingResponses--;
+    txn.network_size += inputPiece.get_message_length();
   }
 
   static void write_lock_request_handler(MessagePiece inputPiece,
@@ -406,6 +407,7 @@ public:
     }
 
     txn.pendingResponses--;
+    txn.network_size += inputPiece.get_message_length();
   }
 
   static void abort_request_handler(MessagePiece inputPiece,
