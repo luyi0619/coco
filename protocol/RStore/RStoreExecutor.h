@@ -172,7 +172,9 @@ public:
 
         auto result = transaction->execute();
         if (result == TransactionResult::READY_TO_COMMIT) {
-          if (protocol.commit(*transaction, messages)) {
+          bool commit = protocol.commit(*transaction, messages);
+          n_network_size.fetch_add(transaction->network_size);
+          if (commit) {
             n_commit.fetch_add(1);
             retry_transaction = false;
             auto latency =

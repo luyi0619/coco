@@ -162,6 +162,7 @@ public:
     setupHandlers(txn);
     txn.execution_phase = true;
     auto result = txn.execute();
+    n_network_size.fetch_add(txn.network_size);
     if (result == TransactionResult::READY_TO_COMMIT) {
       protocol.commit(txn);
       n_commit.fetch_add(1);

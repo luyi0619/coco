@@ -5,9 +5,9 @@
 #pragma once
 
 #include <glog/logging.h>
+#include <memory>
 #include <numeric>
 #include <string>
-#include <memory>
 
 namespace scar {
 
@@ -285,4 +285,4 @@ public:
   }
 };
 
-}// namespace scar
+} // namespace scar

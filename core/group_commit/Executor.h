@@ -97,52 +97,52 @@ public:
 
         process_request();
 
-        if (partitioner->is_backup()) {
+        if (!partitioner->is_backup()) {
           // backup node stands by for replication
-          continue;
-        }
+          last_seed = random.get_seed();
 
-        last_seed = random.get_seed();
-
-        if (retry_transaction) {
-          transaction->reset();
-        } else {
-
-          auto partition_num_per_node =
-              context.partition_num / context.coordinator_num;
-          auto partition_id =
-              random.uniform_dist(0, partition_num_per_node - 1) *
-                  context.coordinator_num +
-              coordinator_id;
-
-          transaction =
-              workload.next_transaction(context, partition_id, storage);
-          setupHandlers(*transaction);
-        }
-
-        auto result = transaction->execute();
-        if (result == TransactionResult::READY_TO_COMMIT) {
-          if (protocol.commit(*transaction, sync_messages, async_messages)) {
-            n_commit.fetch_add(1);
-            retry_transaction = false;
-            q.push(std::move(transaction));
+          if (retry_transaction) {
+            transaction->reset();
           } else {
-            if (transaction->abort_lock) {
-              n_abort_lock.fetch_add(1);
-            } else {
-              DCHECK(transaction->abort_read_validation);
-              n_abort_read_validation.fetch_add(1);
-            }
-            random.set_seed(last_seed);
-            retry_transaction = true;
-          }
-        } else {
-          n_abort_no_retry.fetch_add(1);
-        }
-        n_network_size.fetch_add(transaction->network_size);
 
-        if (count % context.batch_flush == 0) {
-          flush_async_messages();
+            auto partition_num_per_node =
+                context.partition_num / context.coordinator_num;
+            auto partition_id =
+                random.uniform_dist(0, partition_num_per_node - 1) *
+                    context.coordinator_num +
+                coordinator_id;
+
+            transaction =
+                workload.next_transaction(context, partition_id, storage);
+            setupHandlers(*transaction);
+          }
+
+          auto result = transaction->execute();
+          if (result == TransactionResult::READY_TO_COMMIT) {
+            bool commit =
+                protocol.commit(*transaction, sync_messages, async_messages);
+            n_network_size.fetch_add(transaction->network_size);
+            if (commit) {
+              n_commit.fetch_add(1);
+              retry_transaction = false;
+              q.push(std::move(transaction));
+            } else {
+              if (transaction->abort_lock) {
+                n_abort_lock.fetch_add(1);
+              } else {
+                DCHECK(transaction->abort_read_validation);
+                n_abort_read_validation.fetch_add(1);
+              }
+              random.set_seed(last_seed);
+              retry_transaction = true;
+            }
+          } else {
+            n_abort_no_retry.fetch_add(1);
+          }
+
+          if (count % context.batch_flush == 0) {
+            flush_async_messages();
+          }
         }
 
         status = static_cast<ExecutorStatus>(worker_status.load());
