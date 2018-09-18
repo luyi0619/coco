@@ -121,7 +121,7 @@ private:
    *
    */
 
-  uint64_t bitvec = 0;
+  uint32_t bitvec = 0;
   uint64_t tid = 0;
   const void *key = nullptr;
   void *value = nullptr;

@@ -30,7 +30,6 @@ public:
   using MessageHandlerType = typename ProtocolType::MessageHandlerType;
 
   using StorageType = typename WorkloadType::StorageType;
-  using OperationType = typename WorkloadType::OperationType;
 
   Executor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
            const ContextType &context, std::atomic<uint32_t> &worker_status,
@@ -59,7 +58,6 @@ public:
     LOG(INFO) << "Executor " << id << " starts.";
 
     StorageType storage;
-    OperationType operation;
     uint64_t last_seed = 0;
 
     ExecutorStatus status;
@@ -87,8 +85,7 @@ public:
                                 context.coordinator_num +
                             coordinator_id;
 
-        transaction = workload.next_transaction(context, partition_id, storage,
-                                                operation);
+        transaction = workload.next_transaction(context, partition_id, storage);
         setupHandlers(*transaction);
       }
 
@@ -176,9 +173,8 @@ public:
 
         if (type ==
             static_cast<uint32_t>(ControlMessage::OPERATION_REPLICATOIN)) {
-          OperationType operation;
-          operation.deserialize(messagePiece.stringPiece);
-          db.install_operation_replication(operation);
+          ControlMessageHandler::operation_replication_request_handler(
+              messagePiece, db);
         } else {
           messageHandlers[type](messagePiece,
                                 *messages[message->get_source_node_id()],

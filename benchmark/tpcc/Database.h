@@ -11,9 +11,9 @@
 #include <vector>
 
 #include "benchmark/tpcc/Context.h"
-#include "benchmark/tpcc/Operation.h"
 #include "benchmark/tpcc/Random.h"
 #include "benchmark/tpcc/Schema.h"
+#include "common/Operation.h"
 #include "common/Time.h"
 #include "core/Table.h"
 
@@ -28,7 +28,6 @@ public:
   using ContextType = Context;
   using RandomType = Random;
   using TableType = ITable<MetaDataType>;
-  using OperationType = Operation;
 
   TableType *find_table(std::size_t table_id, std::size_t partition_id) {
     DCHECK(table_id < tbl_vecs.size());
@@ -233,55 +232,93 @@ public:
                partitionNum, threadsNum);
   }
 
-  void install_operation_replication(OperationType &operation) {
+  void install_operation_replication(const Operation &operation) {
 
-    if (operation.QUERY_TYPE == 0) { // new order
-      auto partitionID = operation.D_W_ID - 1;
+    auto table_id = operation.get_table_id();
+    auto partition_id = operation.get_partition_id();
+    auto operation_type = operation.get_operation_type();
 
-      district::key district_key =
-          district::key(operation.D_W_ID, operation.D_ID);
-      district::value &district_value = *static_cast<district::value *>(
-          std::get<1>(tbl_district_vec[partitionID]->search(&district_key)));
-      district_value.D_NEXT_O_ID = operation.D_NEXT_O_ID;
+    Decoder dec(operation.data);
 
-      for (int i = 0; i < operation.O_OL_CNT; i++) {
-        stock::key stock_key =
-            stock::key(operation.S_W_ID[i], operation.S_I_ID[i]);
+    if (operation_type == 0) { // new order
+
+      auto districtTableID = district::tableID;
+      auto stockTableID = stock::tableID;
+
+      if (table_id == districtTableID) {
+
+        district::key district_key;
+        dec >> district_key.D_W_ID >> district_key.D_ID;
+
+        district::value &district_value = *static_cast<district::value *>(
+            std::get<1>(tbl_district_vec[partition_id]->search(&district_key)));
+
+        dec >> district_value.D_NEXT_O_ID;
+
+      } else if (table_id == stockTableID) {
+
+        stock::key stock_key;
+        dec >> stock_key.S_W_ID >> stock_key.S_I_ID;
+
         stock::value &stock_value = *static_cast<stock::value *>(
-            std::get<1>(tbl_stock_vec[partitionID]->search(&stock_key)));
-        stock_value.S_QUANTITY = operation.S_QUANTITY[i];
-        stock_value.S_YTD = operation.S_YTD[i];
-        stock_value.S_ORDER_CNT = operation.S_ORDER_CNT[i];
-        stock_value.S_REMOTE_CNT = operation.S_REMOTE_CNT[i];
+            std::get<1>(tbl_stock_vec[partition_id]->search(&stock_key)));
+
+        dec >> stock_value.S_QUANTITY >> stock_value.S_YTD >>
+            stock_value.S_ORDER_CNT >> stock_value.S_REMOTE_CNT;
+
+      } else {
+        CHECK(false);
       }
+
     } else { // payment
-      auto partitionID = operation.W_ID - 1;
-      warehouse::key warehouse_key = warehouse::key(operation.W_ID);
-      warehouse::value &warehouse_value = *static_cast<warehouse::value *>(
-          std::get<1>(tbl_warehouse_vec[partitionID]->search(&warehouse_key)));
-      warehouse_value.W_YTD = operation.W_YTD;
 
-      district::key district_key =
-          district::key(operation.D_W_ID, operation.D_ID);
-      district::value &district_value = *static_cast<district::value *>(
-          std::get<1>(tbl_district_vec[partitionID]->search(&district_key)));
-      district_value.D_YTD = operation.D_YTD;
+      auto warehouseTableID = warehouse::tableID;
+      auto districtTableID = district::tableID;
+      auto customerTableID = customer::tableID;
 
-      customer::key customer_key =
-          customer::key(operation.C_W_ID, operation.C_D_ID, operation.C_ID);
-      customer::value &customer_value = *static_cast<customer::value *>(
-          std::get<1>(tbl_customer_vec[partitionID]->search(&customer_key)));
+      if (table_id == warehouseTableID) {
+        warehouse::key warehouse_key;
+        dec >> warehouse_key.W_ID;
 
-      char C_DATA[501];
-      const char *old_C_DATA = customer_value.C_DATA.c_str();
-      int total_written = operation.C_DATA.size();
-      std::memcpy(C_DATA + total_written, old_C_DATA, 500 - total_written);
-      C_DATA[500] = 0;
+        warehouse::value &warehouse_value =
+            *static_cast<warehouse::value *>(std::get<1>(
+                tbl_warehouse_vec[partition_id]->search(&warehouse_key)));
 
-      customer_value.C_DATA.assign(C_DATA);
-      customer_value.C_BALANCE = operation.C_BALANCE;
-      customer_value.C_YTD_PAYMENT = operation.C_YTD_PAYMENT;
-      customer_value.C_PAYMENT_CNT = operation.C_PAYMENT_CNT;
+        dec >> warehouse_value.W_YTD;
+
+      } else if (table_id == districtTableID) {
+
+        district::key district_key;
+        dec >> district_key.D_W_ID >> district_key.D_ID;
+
+        district::value &district_value = *static_cast<district::value *>(
+            std::get<1>(tbl_district_vec[partition_id]->search(&district_key)));
+
+        dec >> district_value.D_YTD;
+
+      } else if (table_id == customerTableID) {
+
+        customer::key customer_key;
+        dec >> customer_key.C_W_ID >> customer_key.C_D_ID >> customer_key.C_ID;
+
+        customer::value &customer_value = *static_cast<customer::value *>(
+            std::get<1>(tbl_customer_vec[partition_id]->search(&customer_key)));
+
+        char C_DATA[501];
+        const char *old_C_DATA = customer_value.C_DATA.c_str();
+        uint32_t total_written;
+        dec >> total_written;
+        dec.read_n_bytes(C_DATA, total_written);
+        std::memcpy(C_DATA + total_written, old_C_DATA, 500 - total_written);
+        C_DATA[500] = 0;
+        customer_value.C_DATA.assign(C_DATA);
+
+        dec >> customer_value.C_BALANCE >> customer_value.C_YTD_PAYMENT >>
+            customer_value.C_PAYMENT_CNT;
+
+      } else {
+        CHECK(false);
+      }
     }
   }
 

@@ -142,7 +142,7 @@ private:
    * processed this key in execution phase
    */
 
-  uint64_t bitvec = 0;
+  uint32_t bitvec = 0;
   const void *key = nullptr;
   void *value = nullptr;
 

@@ -6,6 +6,8 @@
 
 #include "common/Encoder.h"
 #include "common/Message.h"
+#include "common/MessagePiece.h"
+#include "common/Operation.h"
 
 namespace scar {
 
@@ -43,5 +45,50 @@ public:
     encoder << message_piece_header;
     message.flush();
   }
+
+  static void new_operation_replication_message(Message &message,
+                                                const Operation &operation) {
+
+    /*
+     * The structure of an operation replication message: (bitvec, data)
+     */
+
+    auto message_size = MessagePiece::get_header_size() + sizeof(uint32_t) +
+                        operation.data.size();
+    auto message_piece_header = MessagePiece::construct_message_piece_header(
+        static_cast<uint32_t>(ControlMessage::OPERATION_REPLICATOIN),
+        message_size, operation.get_table_id(), operation.get_partition_id());
+
+    Encoder encoder(message.data);
+    encoder << message_piece_header;
+    encoder << operation.bitvec;
+    encoder.write_n_bytes(operation.data.c_str(), operation.data.size());
+    message.flush();
+  }
 };
+
+class ControlMessageHandler {
+
+public:
+  template <class DatabaseType>
+  static void operation_replication_request_handler(MessagePiece inputPiece,
+                                                    DatabaseType &db) {
+
+    DCHECK(inputPiece.get_message_type() ==
+           static_cast<uint32_t>(ControlMessage::OPERATION_REPLICATOIN));
+
+    auto message_size = inputPiece.get_message_length();
+    Decoder dec(inputPiece.stringPiece);
+    Operation operation;
+    dec >> operation.bitvec;
+
+    DCHECK(operation.get_table_id() == inputPiece.get_table_id());
+    DCHECK(operation.get_partition_id() == inputPiece.get_partition_id());
+    operation.data.resize(message_size);
+    dec.read_n_bytes(&operation.data[0], message_size);
+
+    db.install_operation_replication(operation);
+  }
+};
+
 } // namespace scar

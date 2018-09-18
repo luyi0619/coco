@@ -3,7 +3,6 @@
 //
 
 #include "benchmark/ycsb/Database.h"
-#include "benchmark/ycsb/Operation.h"
 #include "benchmark/ycsb/Transaction.h"
 #include "core/Partitioner.h"
 #include "protocol/Silo/Silo.h"
@@ -24,9 +23,8 @@ TEST(TestYCSBTransaction, TestBasic) {
   scar::Silo<decltype(db)> silo(db, partitioner);
 
   scar::ycsb::Storage storage;
-  scar::ycsb::Operation operation;
 
   scar::ycsb::ReadModifyWrite<scar::SiloTransaction> t(
-      0, 0, db, context, random, partitioner, storage, operation);
+      0, 0, db, context, random, partitioner, storage);
   EXPECT_EQ(true, true);
 }

@@ -11,6 +11,7 @@
 #include "core/Partitioner.h"
 #include "core/Table.h"
 #include "core/Worker.h"
+#include "core/ControlMessage.h"
 #include "protocol/RStore/RStoreManager.h"
 #include "protocol/RStore/RStoreMessage.h"
 #include "protocol/Silo/SiloHelper.h"
@@ -36,8 +37,8 @@ public:
       std::is_same<typename DatabaseType::TableType, TableType>::value,
       "The database table type is different from the one in protocol.");
 
-  RStore(DatabaseType &db, Partitioner &partitioner)
-      : db(db), partitioner(partitioner) {}
+  RStore(DatabaseType &db, const ContextType& context, Partitioner &partitioner)
+      : db(db), context(context), partitioner(partitioner) {}
 
   uint64_t search(std::size_t table_id, std::size_t partition_id,
                   const void *key, void *value) const {
@@ -250,15 +251,18 @@ private:
           continue;
         }
 
-        MessageFactoryType::new_replication_value_message(
-            *messages[k], *table, writeKey.get_key(), writeKey.get_value(),
-            commit_tid);
+        if (!context.operation_replication){
+          MessageFactoryType::new_replication_value_message(
+              *messages[k], *table, writeKey.get_key(), writeKey.get_value(),
+              commit_tid);
+        }
       }
     }
   }
 
 private:
   DatabaseType &db;
+  const ContextType& context;
   Partitioner &partitioner;
   uint64_t max_tid = 0;
 };
