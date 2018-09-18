@@ -81,12 +81,7 @@ public:
           transaction->reset();
         } else {
 
-          auto partition_num_per_node =
-              context.partition_num / context.coordinator_num;
-          auto partition_id =
-              random.uniform_dist(0, partition_num_per_node - 1) *
-                  context.coordinator_num +
-              coordinator_id;
+          auto partition_id = get_partition_id();
 
           transaction =
               workload.next_transaction(context, partition_id, storage);
@@ -114,7 +109,7 @@ public:
             }
             random.set_seed(last_seed);
             retry_transaction = true;
-            // std::this_thread::sleep_for(std::chrono::microseconds(100));
+            std::this_thread::sleep_for(std::chrono::microseconds(100));
           }
         } else {
           n_abort_no_retry.fetch_add(1);
@@ -143,11 +138,28 @@ public:
   void onExit() override {
     if (!partitioner->is_backup()) {
       LOG(INFO) << "Worker " << id << " latency: " << percentile.nth(50)
-                << "us (50%) " << percentile.nth(75) << "us (75%) "
-                << percentile.nth(99.9)
-                << "us (99.9%), size: " << percentile.size() * sizeof(int64_t)
+                << " us (50%) " << percentile.nth(75) << " us (75%) "
+                << percentile.nth(99)
+                << " us (99%), size: " << percentile.size() * sizeof(int64_t)
                 << " bytes.";
     }
+  }
+
+  std::size_t get_partition_id(){
+
+    std::size_t partition_id;
+
+    if (context.partitioner == "pb"){
+      partition_id = random.uniform_dist(0,  context.partition_num);
+    } else {
+      auto partition_num_per_node =
+          context.partition_num / context.coordinator_num;
+      partition_id = random.uniform_dist(0, partition_num_per_node - 1) *
+                     context.coordinator_num +
+                     coordinator_id;
+    }
+    DCHECK(partitioner->has_master_partition(partition_id));
+    return partition_id;
   }
 
   void push_message(Message *message) override { in_queue.push(message); }
