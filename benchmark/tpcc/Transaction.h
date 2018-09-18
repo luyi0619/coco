@@ -39,8 +39,6 @@ public:
 
   TransactionResult execute() override {
 
-    operations.clear();
-
     int32_t W_ID = this->partition_id + 1;
 
     // The input data (see Clause 2.4.3.2) are communicated to the SUT.
@@ -132,7 +130,7 @@ public:
       Encoder encoder(operation.data);
       encoder << storage.district_key.D_W_ID << storage.district_key.D_ID
               << storage.district_value.D_NEXT_O_ID;
-      operations.push_back(std::move(operation)); // move operation.data
+      this->operations.push_back(std::move(operation)); // move operation.data
     }
 
     float C_DISCOUNT = storage.customer_value.C_DISCOUNT;
@@ -197,7 +195,7 @@ public:
                 << storage.stock_values[i].S_YTD
                 << storage.stock_values[i].S_ORDER_CNT
                 << storage.stock_values[i].S_REMOTE_CNT;
-        operations.push_back(std::move(operation)); // move operation.data
+        this->operations.push_back(std::move(operation)); // move operation.data
       }
 
       float OL_AMOUNT = I_PRICE * OL_QUANTITY;
@@ -266,7 +264,6 @@ private:
   const ContextType &context;
   RandomType &random;
   Storage &storage;
-  std::vector<Operation> operations;
   NewOrderQuery query;
 };
 
@@ -289,8 +286,6 @@ public:
   virtual ~Payment() override = default;
 
   TransactionResult execute() override {
-
-    operations.clear();
 
     int32_t W_ID = this->partition_id + 1;
 
@@ -356,7 +351,7 @@ public:
       Operation operation(warehouseTableID, storage.warehouse_key.W_ID - 1, 1);
       Encoder encoder(operation.data);
       encoder << storage.warehouse_key.W_ID << storage.warehouse_value.W_YTD;
-      operations.push_back(std::move(operation)); // move operation.data
+      this->operations.push_back(std::move(operation)); // move operation.data
     }
 
     // the district's year-to-date balance, is increased by H_AMOUNT.
@@ -369,7 +364,7 @@ public:
       Encoder encoder(operation.data);
       encoder << storage.district_key.D_W_ID << storage.district_key.D_ID
               << storage.district_value.D_YTD;
-      operations.push_back(std::move(operation)); // move operation.data
+      this->operations.push_back(std::move(operation)); // move operation.data
     }
 
     char C_DATA[501];
@@ -421,7 +416,7 @@ public:
       encoder << storage.customer_value.C_BALANCE
               << storage.customer_value.C_YTD_PAYMENT
               << storage.customer_value.C_PAYMENT_CNT;
-      operations.push_back(std::move(operation)); // move operation.data
+      this->operations.push_back(std::move(operation)); // move operation.data
     }
 
     char H_DATA[25];
@@ -444,7 +439,6 @@ private:
   const ContextType &context;
   RandomType &random;
   Storage &storage;
-  std::vector<Operation> operations;
   PaymentQuery query;
 };
 

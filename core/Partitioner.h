@@ -20,6 +20,8 @@ public:
 
   std::size_t total_coordinators() const { return coordinator_num; }
 
+  virtual std::size_t replica_num() const = 0;
+
   virtual bool is_replicated() const = 0;
 
   virtual bool has_master_partition(std::size_t partition_id) const = 0;
@@ -51,6 +53,8 @@ public:
 
   ~HashReplicatedPartitioner() override = default;
 
+  std::size_t replica_num() const override { return N; }
+
   bool is_replicated() const override { return N > 1; }
 
   bool has_master_partition(std::size_t partition_id) const override {
@@ -76,6 +80,35 @@ public:
 };
 
 using HashPartitioner = HashReplicatedPartitioner<1>;
+
+class PrimaryBackupPartitioner : public Partitioner {
+public:
+  PrimaryBackupPartitioner(std::size_t coordinator_id,
+                           std::size_t coordinator_num)
+      : Partitioner(coordinator_id, coordinator_num) {
+    CHECK(coordinator_num == 2);
+  }
+
+  ~PrimaryBackupPartitioner() override = default;
+
+  std::size_t replica_num() const override { return 2; }
+
+  bool is_replicated() const override { return true; }
+
+  bool has_master_partition(std::size_t partition_id) const override {
+    return coordinator_id == 0;
+  }
+
+  std::size_t master_coordinator(std::size_t partition_id) const override {
+    return 0;
+  }
+
+  bool is_partition_replicated_on(std::size_t partition_id,
+                                  std::size_t coordinator_id) const override {
+    DCHECK(coordinator_id < coordinator_num);
+    return true;
+  }
+};
 
 /*
  * There are 2 replicas in the system with N coordinators.
@@ -103,6 +136,8 @@ public:
   }
 
   ~RStoreSPartitioner() override = default;
+
+  std::size_t replica_num() const override { return 2; }
 
   bool is_replicated() const override { return true; }
 
@@ -135,6 +170,8 @@ public:
   }
 
   ~RStoreCPartitioner() override = default;
+
+  std::size_t replica_num() const override { return 2; }
 
   bool is_replicated() const override { return true; }
 

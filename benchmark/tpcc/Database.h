@@ -232,7 +232,7 @@ public:
                partitionNum, threadsNum);
   }
 
-  void install_operation_replication(const Operation &operation) {
+  void apply_operation(const Operation &operation) {
 
     auto table_id = operation.get_table_id();
     auto partition_id = operation.get_partition_id();

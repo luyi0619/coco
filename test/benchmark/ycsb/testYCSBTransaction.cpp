@@ -20,7 +20,7 @@ TEST(TestYCSBTransaction, TestBasic) {
 
   scar::HashPartitioner partitioner(0, 1);
 
-  scar::Silo<decltype(db)> silo(db, partitioner);
+  scar::Silo<decltype(db)> silo(db, context, partitioner);
 
   scar::ycsb::Storage storage;
 

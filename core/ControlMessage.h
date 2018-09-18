@@ -11,7 +11,13 @@
 
 namespace scar {
 
-enum class ControlMessage { SIGNAL, ACK, OPERATION_REPLICATOIN, NFIELDS };
+enum class ControlMessage {
+  SIGNAL,
+  ACK,
+  OPERATION_REPLICATION_REQUEST,
+  OPERATION_REPLICATION_RESPONSE,
+  NFIELDS
+};
 
 class ControlMessageFactory {
 
@@ -56,7 +62,7 @@ public:
     auto message_size = MessagePiece::get_header_size() + sizeof(uint32_t) +
                         operation.data.size();
     auto message_piece_header = MessagePiece::construct_message_piece_header(
-        static_cast<uint32_t>(ControlMessage::OPERATION_REPLICATOIN),
+        static_cast<uint32_t>(ControlMessage::OPERATION_REPLICATION_REQUEST),
         message_size, operation.get_table_id(), operation.get_partition_id());
 
     Encoder encoder(message.data);
@@ -72,10 +78,13 @@ class ControlMessageHandler {
 public:
   template <class DatabaseType>
   static void operation_replication_request_handler(MessagePiece inputPiece,
-                                                    DatabaseType &db) {
+                                                    Message &responseMessage,
+                                                    DatabaseType &db,
+                                                    bool require_response) {
 
-    DCHECK(inputPiece.get_message_type() ==
-           static_cast<uint32_t>(ControlMessage::OPERATION_REPLICATOIN));
+    DCHECK(
+        inputPiece.get_message_type() ==
+        static_cast<uint32_t>(ControlMessage::OPERATION_REPLICATION_REQUEST));
 
     auto message_size = inputPiece.get_message_length();
     Decoder dec(inputPiece.stringPiece);
@@ -87,7 +96,19 @@ public:
     operation.data.resize(message_size);
     dec.read_n_bytes(&operation.data[0], message_size);
 
-    db.install_operation_replication(operation);
+    db.apply_operation(operation);
+
+    if (require_response) {
+      // prepare response message header
+      auto message_size = MessagePiece::get_header_size();
+      auto message_piece_header = MessagePiece::construct_message_piece_header(
+          static_cast<uint32_t>(ControlMessage::OPERATION_REPLICATION_RESPONSE),
+          message_size, operation.get_table_id(), operation.get_partition_id());
+
+      scar::Encoder encoder(responseMessage.data);
+      encoder << message_piece_header;
+      responseMessage.flush();
+    }
   }
 };
 

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "common/Operation.h"
 #include "core/Defs.h"
 #include "core/Table.h"
 #include "protocol/Calvin/CalvinPartitioner.h"
@@ -31,6 +32,7 @@ public:
     pendingResponses = 0;
     execution_phase = false;
     active_coordinators.clear();
+    operations.clear();
     readSet.clear();
     writeSet.clear();
   }
@@ -213,6 +215,7 @@ public:
 
   Partitioner &partitioner;
   std::vector<bool> active_coordinators;
+  std::vector<Operation> operations; // never used
   std::vector<CalvinRWKey> readSet, writeSet;
 };
 } // namespace scar

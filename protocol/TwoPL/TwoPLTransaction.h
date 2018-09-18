@@ -5,6 +5,7 @@
 #pragma once
 
 #include "common/Message.h"
+#include "common/Operation.h"
 #include "core/Defs.h"
 #include "core/Partitioner.h"
 #include "core/Table.h"
@@ -31,6 +32,7 @@ public:
   void reset() {
     pendingResponses = 0;
     abort_lock = false;
+    operations.clear();
     readSet.clear();
     writeSet.clear();
   }
@@ -198,6 +200,7 @@ public:
   std::function<void()> message_flusher;
 
   Partitioner &partitioner;
+  std::vector<Operation> operations;
   std::vector<TwoPLRWKey> readSet, writeSet;
 };
 } // namespace scar

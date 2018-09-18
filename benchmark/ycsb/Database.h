@@ -80,7 +80,7 @@ public:
                partitionNum, threadsNum);
   }
 
-  void install_operation_replication(const Operation &operation) {
+  void apply_operation(const Operation &operation) {
     CHECK(false); // not supported
   }
 

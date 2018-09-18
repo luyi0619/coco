@@ -33,8 +33,8 @@ public:
       std::is_same<typename DatabaseType::TableType, TableType>::value,
       "The database table type is different from the one in protocol.");
 
-  Silo(DatabaseType &db, Partitioner &partitioner)
-      : db(db), partitioner(partitioner) {}
+  Silo(DatabaseType &db, const ContextType &context, Partitioner &partitioner)
+      : db(db), context(context), partitioner(partitioner) {}
 
   uint64_t search(std::size_t table_id, std::size_t partition_id,
                   const void *key, void *value) const {
@@ -194,6 +194,7 @@ private:
           break;
         }
       } else {
+
         txn.pendingResponses++;
         auto coordinatorID = partitioner.master_coordinator(partitionId);
         MessageFactoryType::new_read_validation_message(
@@ -251,6 +252,7 @@ private:
 
     auto &readSet = txn.readSet;
     auto &writeSet = txn.writeSet;
+    auto &operations = txn.operations;
 
     for (auto i = 0u; i < writeSet.size(); i++) {
       auto &writeKey = writeSet[i];
@@ -271,7 +273,9 @@ private:
                                               writeKey.get_value());
       }
 
-      // replicate
+      // value replicate
+
+      std::size_t replicate_count = 0;
 
       for (auto k = 0u; k < partitioner.total_coordinators(); k++) {
 
@@ -285,6 +289,8 @@ private:
           continue;
         }
 
+        replicate_count++;
+
         // local replicate
         if (k == txn.coordinator_id) {
           auto key = writeKey.get_key();
@@ -297,11 +303,43 @@ private:
           SiloHelper::unlock(tid, commit_tid);
 
         } else {
+          if (!context.operation_replication) {
+            txn.pendingResponses++;
+            auto coordinatorID = k;
+            MessageFactoryType::new_replication_message(
+                *messages[coordinatorID], *table, writeKey.get_key(),
+                writeKey.get_value(), commit_tid);
+          }
+        }
+      }
+
+      DCHECK(replicate_count == partitioner.replica_num() - 1);
+    }
+
+    // operation replicate
+
+    if (context.operation_replication) {
+      for (auto i = 0u; i < operations.size(); i++) {
+        auto partitionId = operations[i].get_partition_id();
+        for (auto k = 0u; k < partitioner.total_coordinators(); k++) {
+          // k does not have this partition
+          if (!partitioner.is_partition_replicated_on(partitionId, k)) {
+            continue;
+          }
+
+          // already write
+          if (k == partitioner.master_coordinator(partitionId)) {
+            continue;
+          }
+
+          // local replicate
+          if (k == txn.coordinator_id) {
+            continue;
+          }
+
           txn.pendingResponses++;
-          auto coordinatorID = k;
-          MessageFactoryType::new_replication_message(
-              *messages[coordinatorID], *table, writeKey.get_key(),
-              writeKey.get_value(), commit_tid);
+          ControlMessageFactory::new_operation_replication_message(
+              *messages[k], operations[i]);
         }
       }
     }
@@ -349,6 +387,7 @@ private:
 
 private:
   DatabaseType &db;
+  const ContextType &context;
   Partitioner &partitioner;
   uint64_t max_tid = 0;
 };

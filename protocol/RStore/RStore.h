@@ -8,10 +8,10 @@
 #include <atomic>
 #include <thread>
 
+#include "core/ControlMessage.h"
 #include "core/Partitioner.h"
 #include "core/Table.h"
 #include "core/Worker.h"
-#include "core/ControlMessage.h"
 #include "protocol/RStore/RStoreManager.h"
 #include "protocol/RStore/RStoreMessage.h"
 #include "protocol/Silo/SiloHelper.h"
@@ -37,7 +37,7 @@ public:
       std::is_same<typename DatabaseType::TableType, TableType>::value,
       "The database table type is different from the one in protocol.");
 
-  RStore(DatabaseType &db, const ContextType& context, Partitioner &partitioner)
+  RStore(DatabaseType &db, const ContextType &context, Partitioner &partitioner)
       : db(db), context(context), partitioner(partitioner) {}
 
   uint64_t search(std::size_t table_id, std::size_t partition_id,
@@ -224,6 +224,7 @@ private:
 
     auto &readSet = txn.readSet;
     auto &writeSet = txn.writeSet;
+    auto &operations = txn.operations;
 
     for (auto i = 0u; i < writeSet.size(); i++) {
       auto &writeKey = writeSet[i];
@@ -238,7 +239,7 @@ private:
       table->update(key, value);
       SiloHelper::unlock(tid, commit_tid);
 
-      // replicate
+      // value replicate
       for (auto k = 0u; k < partitioner.total_coordinators(); k++) {
 
         // k does not have this partition
@@ -251,10 +252,30 @@ private:
           continue;
         }
 
-        if (!context.operation_replication){
+        if (!context.operation_replication) {
           MessageFactoryType::new_replication_value_message(
               *messages[k], *table, writeKey.get_key(), writeKey.get_value(),
               commit_tid);
+        }
+      }
+    }
+
+    // operation replicate
+
+    if (context.operation_replication) {
+      for (auto i = 0u; i < operations.size(); i++) {
+        auto partitionId = operations[i].get_partition_id();
+        for (auto k = 0u; k < partitioner.total_coordinators(); k++) {
+          // k does not have this partition
+          if (!partitioner.is_partition_replicated_on(partitionId, k)) {
+            continue;
+          }
+          // already write
+          if (k == txn.coordinator_id) {
+            continue;
+          }
+          ControlMessageFactory::new_operation_replication_message(
+              *messages[k], operations[i]);
         }
       }
     }
@@ -262,7 +283,7 @@ private:
 
 private:
   DatabaseType &db;
-  const ContextType& context;
+  const ContextType &context;
   Partitioner &partitioner;
   uint64_t max_tid = 0;
 };

@@ -40,7 +40,7 @@ public:
         n_started_workers(n_started_workers),
         partitioner(std::make_unique<HashReplicatedPartitioner<2>>(
             coordinator_id, context.coordinator_num)),
-        protocol(db, *partitioner),
+        protocol(db, context, *partitioner),
         workload(coordinator_id, db, random, *partitioner) {
 
     for (auto i = 0u; i < context.coordinator_num; i++) {
@@ -171,10 +171,14 @@ public:
         TableType *table = db.find_table(messagePiece.get_table_id(),
                                          messagePiece.get_partition_id());
 
-        if (type ==
-            static_cast<uint32_t>(ControlMessage::OPERATION_REPLICATOIN)) {
+        if (type == static_cast<uint32_t>(
+                        ControlMessage::OPERATION_REPLICATION_REQUEST)) {
           ControlMessageHandler::operation_replication_request_handler(
-              messagePiece, db);
+              messagePiece, *messages[message->get_source_node_id()], db, true);
+        } else if (type ==
+                   static_cast<uint32_t>(
+                       ControlMessage::OPERATION_REPLICATION_RESPONSE)) {
+          transaction->pendingResponses--;
         } else {
           messageHandlers[type](messagePiece,
                                 *messages[message->get_source_node_id()],

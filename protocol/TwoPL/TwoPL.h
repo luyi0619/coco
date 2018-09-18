@@ -33,8 +33,8 @@ public:
       std::is_same<typename DatabaseType::TableType, TableType>::value,
       "The database table type is different from the one in protocol.");
 
-  TwoPL(DatabaseType &db, Partitioner &partitioner)
-      : db(db), partitioner(partitioner) {}
+  TwoPL(DatabaseType &db, const ContextType &context, Partitioner &partitioner)
+      : db(db), context(context), partitioner(partitioner) {}
 
   uint64_t search(std::size_t table_id, std::size_t partition_id,
                   const void *key, void *value) const {
@@ -141,6 +141,7 @@ public:
 
     auto &readSet = txn.readSet;
     auto &writeSet = txn.writeSet;
+    auto &operations = txn.operations;
 
     for (auto i = 0u; i < writeSet.size(); i++) {
       auto &writeKey = writeSet[i];
@@ -161,7 +162,9 @@ public:
                                               writeKey.get_value());
       }
 
-      // replicate
+      // value replicate
+
+      std::size_t replicate_count = 0;
 
       for (auto k = 0u; k < partitioner.total_coordinators(); k++) {
 
@@ -175,17 +178,52 @@ public:
           continue;
         }
 
+        replicate_count++;
+
         // local replicate
         if (k == txn.coordinator_id) {
           auto key = writeKey.get_key();
           auto value = writeKey.get_value();
           table->update(key, value);
         } else {
+
+          if (!context.operation_replication) {
+            txn.pendingResponses++;
+            auto coordinatorID = k;
+            MessageFactoryType::new_replication_message(
+                *messages[coordinatorID], *table, writeKey.get_key(),
+                writeKey.get_value(), commit_tid);
+          }
+        }
+      }
+
+      DCHECK(replicate_count == partitioner.replica_num() - 1);
+    }
+
+    // operation replicate
+
+    if (context.operation_replication) {
+      for (auto i = 0u; i < operations.size(); i++) {
+        auto partitionId = operations[i].get_partition_id();
+        for (auto k = 0u; k < partitioner.total_coordinators(); k++) {
+          // k does not have this partition
+          if (!partitioner.is_partition_replicated_on(partitionId, k)) {
+            continue;
+          }
+
+          // already write
+          if (k == partitioner.master_coordinator(partitionId)) {
+            continue;
+          }
+
+          // local replicate
+          if (k == txn.coordinator_id) {
+            continue;
+          }
+
           txn.pendingResponses++;
-          auto coordinatorID = k;
-          MessageFactoryType::new_replication_message(
-              *messages[coordinatorID], *table, writeKey.get_key(),
-              writeKey.get_value(), commit_tid);
+          ControlMessageFactory::new_operation_replication_message(
+              *messages[k], operations[i]);
         }
       }
     }
@@ -255,6 +293,7 @@ public:
 
 private:
   DatabaseType &db;
+  const ContextType &context;
   Partitioner &partitioner;
   uint64_t max_tid = 0;
 };

@@ -241,10 +241,11 @@ private:
         TableType *table = db.find_table(messagePiece.get_table_id(),
                                          messagePiece.get_partition_id());
 
-        if (type ==
-            static_cast<uint32_t>(ControlMessage::OPERATION_REPLICATOIN)) {
+        if (type == static_cast<uint32_t>(
+                        ControlMessage::OPERATION_REPLICATION_REQUEST)) {
           ControlMessageHandler::operation_replication_request_handler(
-              messagePiece, db);
+              messagePiece, *messages[message->get_source_node_id()], db,
+              false);
         } else {
           messageHandlers[type](
               messagePiece, *messages[message->get_source_node_id()], *table);

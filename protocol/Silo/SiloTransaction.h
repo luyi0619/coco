@@ -5,6 +5,7 @@
 #pragma once
 
 #include "common/Message.h"
+#include "common/Operation.h"
 #include "core/Defs.h"
 #include "core/Partitioner.h"
 #include "core/Table.h"
@@ -32,6 +33,7 @@ public:
     pendingResponses = 0;
     abort_lock = false;
     abort_read_validation = false;
+    operations.clear();
     readSet.clear();
     writeSet.clear();
   }
@@ -177,6 +179,7 @@ public:
   std::function<void()> message_flusher;
 
   Partitioner &partitioner;
+  std::vector<Operation> operations;
   std::vector<SiloRWKey> readSet, writeSet;
 };
 

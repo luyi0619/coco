@@ -33,8 +33,9 @@ public:
       std::is_same<typename DatabaseType::TableType, TableType>::value,
       "The database table type is different from the one in protocol.");
 
-  TwoPLGC(DatabaseType &db, Partitioner &partitioner)
-      : db(db), partitioner(partitioner) {}
+  TwoPLGC(DatabaseType &db, const ContextType &context,
+          Partitioner &partitioner)
+      : db(db), context(context), partitioner(partitioner) {}
 
   uint64_t search(std::size_t table_id, std::size_t partition_id,
                   const void *key, void *value) const {
@@ -165,7 +166,9 @@ public:
                                               writeKey.get_value(), commit_tid);
       }
 
-      // replicate
+      // value replicate
+
+      std::size_t replicate_count = 0;
 
       for (auto k = 0u; k < partitioner.total_coordinators(); k++) {
 
@@ -178,6 +181,8 @@ public:
         if (k == partitioner.master_coordinator(partitionId)) {
           continue;
         }
+
+        replicate_count++;
 
         // local replicate
         if (k == txn.coordinator_id) {
@@ -198,6 +203,8 @@ public:
               writeKey.get_value(), commit_tid);
         }
       }
+
+      DCHECK(replicate_count == partitioner.replica_num() - 1);
     }
 
     sync_messages(txn, false);
@@ -242,6 +249,7 @@ public:
 
 private:
   DatabaseType &db;
+  const ContextType &context;
   Partitioner &partitioner;
   uint64_t max_tid = 0;
 };
