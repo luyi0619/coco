@@ -92,7 +92,7 @@ public:
           TwoPLHelper::read_lock_release(tid);
         } else {
           auto coordinatorID = partitioner.master_coordinator(partitionId);
-          MessageFactoryType::new_abort_message(
+          txn.network_size += MessageFactoryType::new_abort_message(
               *messages[coordinatorID], *table, readKey.get_key(), false);
         }
       }
@@ -105,7 +105,7 @@ public:
           TwoPLHelper::write_lock_release(tid);
         } else {
           auto coordinatorID = partitioner.master_coordinator(partitionId);
-          MessageFactoryType::new_abort_message(
+          txn.network_size += MessageFactoryType::new_abort_message(
               *messages[coordinatorID], *table, readKey.get_key(), true);
         }
       }
@@ -157,9 +157,9 @@ public:
       } else {
         txn.pendingResponses++;
         auto coordinatorID = partitioner.master_coordinator(partitionId);
-        MessageFactoryType::new_write_message(*messages[coordinatorID], *table,
-                                              writeKey.get_key(),
-                                              writeKey.get_value());
+        txn.network_size += MessageFactoryType::new_write_message(
+            *messages[coordinatorID], *table, writeKey.get_key(),
+            writeKey.get_value());
       }
 
       // value replicate
@@ -190,7 +190,7 @@ public:
           if (!context.operation_replication) {
             txn.pendingResponses++;
             auto coordinatorID = k;
-            MessageFactoryType::new_replication_message(
+            txn.network_size += MessageFactoryType::new_replication_message(
                 *messages[coordinatorID], *table, writeKey.get_key(),
                 writeKey.get_value(), commit_tid);
           }
@@ -251,7 +251,7 @@ public:
         } else {
           txn.pendingResponses++;
           auto coordinatorID = partitioner.master_coordinator(partitionId);
-          MessageFactoryType::new_release_read_lock_message(
+          txn.network_size += MessageFactoryType::new_release_read_lock_message(
               *messages[coordinatorID], *table, readKey.get_key());
         }
       }
@@ -274,7 +274,7 @@ public:
       } else {
         txn.pendingResponses++;
         auto coordinatorID = partitioner.master_coordinator(partitionId);
-        MessageFactoryType::new_release_write_lock_message(
+        txn.network_size += MessageFactoryType::new_release_write_lock_message(
             *messages[coordinatorID], *table, writeKey.get_key(), commit_tid);
       }
     }

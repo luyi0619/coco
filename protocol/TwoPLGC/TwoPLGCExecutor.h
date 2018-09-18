@@ -42,10 +42,10 @@ public:
 
   void setupHandlers(TransactionType &txn) override {
     txn.lock_request_handler =
-        [this](std::size_t table_id, std::size_t partition_id,
-               uint32_t key_offset, const void *key, void *value,
-               bool local_index_read, bool write_lock, bool &success,
-               bool &remote) -> uint64_t {
+        [this, &txn](std::size_t table_id, std::size_t partition_id,
+                     uint32_t key_offset, const void *key, void *value,
+                     bool local_index_read, bool write_lock, bool &success,
+                     bool &remote) -> uint64_t {
       if (local_index_read) {
         remote = false;
         return this->protocol.search(table_id, partition_id, key, value);
@@ -79,10 +79,10 @@ public:
             this->partitioner->master_coordinator(partition_id);
 
         if (write_lock) {
-          MessageFactoryType::new_write_lock_message(
+          txn.network_size += MessageFactoryType::new_write_lock_message(
               *(this->sync_messages[coordinatorID]), *table, key, key_offset);
         } else {
-          MessageFactoryType::new_read_lock_message(
+          txn.network_size += MessageFactoryType::new_read_lock_message(
               *(this->sync_messages[coordinatorID]), *table, key, key_offset);
         }
         return 0;

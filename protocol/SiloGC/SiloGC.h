@@ -66,8 +66,8 @@ public:
         SiloHelper::unlock(tid);
       } else {
         auto coordinatorID = partitioner.master_coordinator(partitionId);
-        MessageFactoryType::new_abort_message(*messages[coordinatorID], *table,
-                                              writeKey.get_key());
+        txn.network_size += MessageFactoryType::new_abort_message(
+            *messages[coordinatorID], *table, writeKey.get_key());
       }
     }
 
@@ -139,8 +139,8 @@ private:
       } else {
         txn.pendingResponses++;
         auto coordinatorID = partitioner.master_coordinator(partitionId);
-        MessageFactoryType::new_lock_message(*messages[coordinatorID], *table,
-                                             writeKey.get_key(), i);
+        txn.network_size += MessageFactoryType::new_lock_message(
+            *messages[coordinatorID], *table, writeKey.get_key(), i);
       }
     }
 
@@ -194,7 +194,7 @@ private:
       } else {
         txn.pendingResponses++;
         auto coordinatorID = partitioner.master_coordinator(partitionId);
-        MessageFactoryType::new_read_validation_message(
+        txn.network_size += MessageFactoryType::new_read_validation_message(
             *messages[coordinatorID], *table, readKey.get_key(), i,
             readKey.get_tid());
       }
@@ -267,9 +267,9 @@ private:
         SiloHelper::unlock(tid, commit_tid);
       } else {
         auto coordinatorID = partitioner.master_coordinator(partitionId);
-        MessageFactoryType::new_write_message(*syncMessages[coordinatorID],
-                                              *table, writeKey.get_key(),
-                                              writeKey.get_value(), commit_tid);
+        txn.network_size += MessageFactoryType::new_write_message(
+            *syncMessages[coordinatorID], *table, writeKey.get_key(),
+            writeKey.get_value(), commit_tid);
       }
 
       // value replicate
@@ -307,7 +307,7 @@ private:
 
         } else {
           auto coordinatorID = k;
-          MessageFactoryType::new_replication_message(
+          txn.network_size += MessageFactoryType::new_replication_message(
               *asyncMessages[coordinatorID], *table, writeKey.get_key(),
               writeKey.get_value(), commit_tid);
         }

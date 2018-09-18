@@ -37,8 +37,8 @@ class SiloMessageFactory {
   using Table = ITable<std::atomic<uint64_t>>;
 
 public:
-  static void new_search_message(Message &message, Table &table,
-                                 const void *key, uint32_t key_offset) {
+  static std::size_t new_search_message(Message &message, Table &table,
+                                        const void *key, uint32_t key_offset) {
 
     /*
      * The structure of a search request: (primary key, read key offset)
@@ -57,10 +57,11 @@ public:
     encoder.write_n_bytes(key, key_size);
     encoder << key_offset;
     message.flush();
+    return message_size;
   }
 
-  static void new_lock_message(Message &message, Table &table, const void *key,
-                               uint32_t key_offset) {
+  static std::size_t new_lock_message(Message &message, Table &table,
+                                      const void *key, uint32_t key_offset) {
 
     /*
      * The structure of a lock request: (primary key, write key offset)
@@ -79,11 +80,13 @@ public:
     encoder.write_n_bytes(key, key_size);
     encoder << key_offset;
     message.flush();
+    return message_size;
   }
 
-  static void new_read_validation_message(Message &message, Table &table,
-                                          const void *key, uint32_t key_offset,
-                                          uint64_t tid) {
+  static std::size_t new_read_validation_message(Message &message, Table &table,
+                                                 const void *key,
+                                                 uint32_t key_offset,
+                                                 uint64_t tid) {
 
     /*
      * The structure of a read validation request: (primary key, read key
@@ -103,10 +106,11 @@ public:
     encoder.write_n_bytes(key, key_size);
     encoder << key_offset << tid;
     message.flush();
+    return message_size;
   }
 
-  static void new_abort_message(Message &message, Table &table,
-                                const void *key) {
+  static std::size_t new_abort_message(Message &message, Table &table,
+                                       const void *key) {
 
     /*
      * The structure of an abort request: (primary key)
@@ -123,10 +127,11 @@ public:
     encoder << message_piece_header;
     encoder.write_n_bytes(key, key_size);
     message.flush();
+    return message_size;
   }
 
-  static void new_write_message(Message &message, Table &table, const void *key,
-                                const void *value) {
+  static std::size_t new_write_message(Message &message, Table &table,
+                                       const void *key, const void *value) {
 
     /*
      * The structure of a write request: (primary key, field value)
@@ -145,11 +150,12 @@ public:
     encoder.write_n_bytes(key, key_size);
     table.serialize_value(encoder, value);
     message.flush();
+    return message_size;
   }
 
-  static void new_replication_message(Message &message, Table &table,
-                                      const void *key, const void *value,
-                                      uint64_t commit_tid) {
+  static std::size_t new_replication_message(Message &message, Table &table,
+                                             const void *key, const void *value,
+                                             uint64_t commit_tid) {
 
     /*
      * The structure of a replication request: (primary key, field value,
@@ -171,10 +177,12 @@ public:
     table.serialize_value(encoder, value);
     encoder << commit_tid;
     message.flush();
+    return message_size;
   }
 
-  static void new_release_lock_message(Message &message, Table &table,
-                                       const void *key, uint64_t commit_tid) {
+  static std::size_t new_release_lock_message(Message &message, Table &table,
+                                              const void *key,
+                                              uint64_t commit_tid) {
     /*
      * The structure of a replication request: (primary key, commit tid)
      */
@@ -192,6 +200,7 @@ public:
     encoder.write_n_bytes(key, key_size);
     encoder << commit_tid;
     message.flush();
+    return message_size;
   }
 };
 

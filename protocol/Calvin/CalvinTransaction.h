@@ -31,6 +31,7 @@ public:
   void reset() {
     pendingResponses = 0;
     execution_phase = false;
+    network_size = 0;
     active_coordinators.clear();
     operations.clear();
     readSet.clear();
@@ -193,6 +194,7 @@ public:
   std::size_t coordinator_id, partition_id, id;
   std::chrono::steady_clock::time_point startTime;
   int32_t pendingResponses; // could be negative
+  std::size_t network_size;
 
   bool abort_lock, abort_read_validation;
   bool execution_phase;

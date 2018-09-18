@@ -187,8 +187,8 @@ public:
           if (i == coordinator_id || !active_coordinators[i])
             continue;
 
-          MessageFactoryType::new_read_message(*messages[i], *table, id,
-                                               key_offset, value);
+          txn.network_size += MessageFactoryType::new_read_message(
+              *messages[i], *table, id, key_offset, value);
         }
       } else {
         txn.pendingResponses++;

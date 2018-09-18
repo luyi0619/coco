@@ -7,6 +7,7 @@
 #include <glog/logging.h>
 #include <numeric>
 #include <string>
+#include <memory>
 
 namespace scar {
 
@@ -284,4 +285,4 @@ public:
   }
 };
 
-}; // namespace scar
+}// namespace scar

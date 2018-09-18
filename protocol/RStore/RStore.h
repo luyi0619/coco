@@ -253,7 +253,7 @@ private:
         }
 
         if (!context.operation_replication) {
-          MessageFactoryType::new_replication_value_message(
+          txn.network_size += MessageFactoryType::new_replication_value_message(
               *messages[k], *table, writeKey.get_key(), writeKey.get_value(),
               commit_tid);
         }
@@ -274,8 +274,9 @@ private:
           if (k == txn.coordinator_id) {
             continue;
           }
-          ControlMessageFactory::new_operation_replication_message(
-              *messages[k], operations[i]);
+          txn.network_size +=
+              ControlMessageFactory::new_operation_replication_message(
+                  *messages[k], operations[i]);
         }
       }
     }

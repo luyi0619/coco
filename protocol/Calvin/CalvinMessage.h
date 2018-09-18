@@ -23,8 +23,9 @@ class CalvinMessageFactory {
   using Table = ITable<std::atomic<uint64_t>>;
 
 public:
-  static void new_read_message(Message &message, Table &table, uint32_t tid,
-                               uint32_t key_offset, const void *value) {
+  static std::size_t new_read_message(Message &message, Table &table,
+                                      uint32_t tid, uint32_t key_offset,
+                                      const void *value) {
 
     /*
      * The structure of a read request: (tid, key offset, value)
@@ -44,6 +45,7 @@ public:
     encoder << tid << key_offset;
     encoder.write_n_bytes(value, value_size);
     message.flush();
+    return message_size;
   }
 };
 

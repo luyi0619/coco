@@ -93,7 +93,7 @@ public:
           TwoPLHelper::read_lock_release(tid);
         } else {
           auto coordinatorID = partitioner.master_coordinator(partitionId);
-          MessageFactoryType::new_abort_message(
+          txn.network_size += MessageFactoryType::new_abort_message(
               *messages[coordinatorID], *table, readKey.get_key(), false);
         }
       }
@@ -106,7 +106,7 @@ public:
           TwoPLHelper::write_lock_release(tid);
         } else {
           auto coordinatorID = partitioner.master_coordinator(partitionId);
-          MessageFactoryType::new_abort_message(
+          txn.network_size += MessageFactoryType::new_abort_message(
               *messages[coordinatorID], *table, readKey.get_key(), true);
         }
       }
@@ -161,9 +161,9 @@ public:
         TwoPLHelper::write_lock_release(tid, commit_tid);
       } else {
         auto coordinatorID = partitioner.master_coordinator(partitionId);
-        MessageFactoryType::new_write_message(*syncMessages[coordinatorID],
-                                              *table, writeKey.get_key(),
-                                              writeKey.get_value(), commit_tid);
+        txn.network_size += MessageFactoryType::new_write_message(
+            *syncMessages[coordinatorID], *table, writeKey.get_key(),
+            writeKey.get_value(), commit_tid);
       }
 
       // value replicate
@@ -198,7 +198,7 @@ public:
           }
         } else {
           auto coordinatorID = k;
-          MessageFactoryType::new_replication_message(
+          txn.network_size += MessageFactoryType::new_replication_message(
               *asyncMessages[coordinatorID], *table, writeKey.get_key(),
               writeKey.get_value(), commit_tid);
         }
@@ -229,7 +229,7 @@ public:
           TwoPLHelper::read_lock_release(tid);
         } else {
           auto coordinatorID = partitioner.master_coordinator(partitionId);
-          MessageFactoryType::new_release_read_lock_message(
+          txn.network_size += MessageFactoryType::new_release_read_lock_message(
               *messages[coordinatorID], *table, readKey.get_key());
         }
       }

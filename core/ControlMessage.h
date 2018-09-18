@@ -22,7 +22,7 @@ enum class ControlMessage {
 class ControlMessageFactory {
 
 public:
-  static void new_signal_message(Message &message, uint32_t value) {
+  static std::size_t new_signal_message(Message &message, uint32_t value) {
 
     /*
      * The structure of a signal message: (signal value : uint32_t)
@@ -37,9 +37,10 @@ public:
     encoder << message_piece_header;
     encoder << value;
     message.flush();
+    return message_size;
   }
 
-  static void new_ack_message(Message &message) {
+  static std::size_t new_ack_message(Message &message) {
     /*
      * The structure of an ack message: ()
      */
@@ -50,10 +51,12 @@ public:
     Encoder encoder(message.data);
     encoder << message_piece_header;
     message.flush();
+    return message_size;
   }
 
-  static void new_operation_replication_message(Message &message,
-                                                const Operation &operation) {
+  static std::size_t
+  new_operation_replication_message(Message &message,
+                                    const Operation &operation) {
 
     /*
      * The structure of an operation replication message: (bitvec, data)
@@ -70,6 +73,7 @@ public:
     encoder << operation.bitvec;
     encoder.write_n_bytes(operation.data.c_str(), operation.data.size());
     message.flush();
+    return message_size;
   }
 };
 

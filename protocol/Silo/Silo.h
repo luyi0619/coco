@@ -66,8 +66,8 @@ public:
         SiloHelper::unlock(tid);
       } else {
         auto coordinatorID = partitioner.master_coordinator(partitionId);
-        MessageFactoryType::new_abort_message(*messages[coordinatorID], *table,
-                                              writeKey.get_key());
+        txn.network_size += MessageFactoryType::new_abort_message(
+            *messages[coordinatorID], *table, writeKey.get_key());
       }
     }
 
@@ -141,8 +141,8 @@ private:
       } else {
         txn.pendingResponses++;
         auto coordinatorID = partitioner.master_coordinator(partitionId);
-        MessageFactoryType::new_lock_message(*messages[coordinatorID], *table,
-                                             writeKey.get_key(), i);
+        txn.network_size += MessageFactoryType::new_lock_message(
+            *messages[coordinatorID], *table, writeKey.get_key(), i);
       }
     }
 
@@ -197,7 +197,7 @@ private:
 
         txn.pendingResponses++;
         auto coordinatorID = partitioner.master_coordinator(partitionId);
-        MessageFactoryType::new_read_validation_message(
+        txn.network_size += MessageFactoryType::new_read_validation_message(
             *messages[coordinatorID], *table, readKey.get_key(), i,
             readKey.get_tid());
       }
@@ -268,9 +268,9 @@ private:
       } else {
         txn.pendingResponses++;
         auto coordinatorID = partitioner.master_coordinator(partitionId);
-        MessageFactoryType::new_write_message(*messages[coordinatorID], *table,
-                                              writeKey.get_key(),
-                                              writeKey.get_value());
+        txn.network_size += MessageFactoryType::new_write_message(
+            *messages[coordinatorID], *table, writeKey.get_key(),
+            writeKey.get_value());
       }
 
       // value replicate
@@ -306,7 +306,7 @@ private:
           if (!context.operation_replication) {
             txn.pendingResponses++;
             auto coordinatorID = k;
-            MessageFactoryType::new_replication_message(
+            txn.network_size += MessageFactoryType::new_replication_message(
                 *messages[coordinatorID], *table, writeKey.get_key(),
                 writeKey.get_value(), commit_tid);
           }
@@ -338,8 +338,9 @@ private:
           }
 
           txn.pendingResponses++;
-          ControlMessageFactory::new_operation_replication_message(
-              *messages[k], operations[i]);
+          txn.network_size +=
+              ControlMessageFactory::new_operation_replication_message(
+                  *messages[k], operations[i]);
         }
       }
     }
@@ -368,7 +369,7 @@ private:
         SiloHelper::unlock(tid, commit_tid);
       } else {
         auto coordinatorID = partitioner.master_coordinator(partitionId);
-        MessageFactoryType::new_release_lock_message(
+        txn.network_size += MessageFactoryType::new_release_lock_message(
             *messages[coordinatorID], *table, writeKey.get_key(), commit_tid);
       }
     }

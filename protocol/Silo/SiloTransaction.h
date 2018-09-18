@@ -31,6 +31,7 @@ public:
 
   void reset() {
     pendingResponses = 0;
+    network_size = 0;
     abort_lock = false;
     abort_read_validation = false;
     operations.clear();
@@ -166,7 +167,7 @@ public:
   std::size_t coordinator_id, partition_id;
   std::chrono::steady_clock::time_point startTime;
   std::size_t pendingResponses;
-
+  std::size_t network_size;
   bool abort_lock, abort_read_validation;
 
   // table id, partition id, key, value

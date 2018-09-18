@@ -97,7 +97,7 @@ public:
 
         process_request();
 
-        if(partitioner->is_backup()){
+        if (partitioner->is_backup()) {
           // backup node stands by for replication
           continue;
         }
@@ -139,6 +139,7 @@ public:
         } else {
           n_abort_no_retry.fetch_add(1);
         }
+        n_network_size.fetch_add(transaction->network_size);
 
         if (count % context.batch_flush == 0) {
           flush_async_messages();
@@ -165,7 +166,7 @@ public:
   }
 
   void onExit() override {
-    if (!partitioner->is_backup()){
+    if (!partitioner->is_backup()) {
       LOG(INFO) << "Worker " << id << " latency: " << percentile.nth(50)
                 << "us (50%) " << percentile.nth(75) << "us (75%) "
                 << percentile.nth(99.9)

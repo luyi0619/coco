@@ -23,9 +23,9 @@ class RStoreMessageFactory {
   using Table = ITable<std::atomic<uint64_t>>;
 
 public:
-  static void new_replication_value_message(Message &message, Table &table,
-                                            const void *key, const void *value,
-                                            uint64_t commit_tid) {
+  static std::size_t
+  new_replication_value_message(Message &message, Table &table, const void *key,
+                                const void *value, uint64_t commit_tid) {
 
     /*
      * The structure of a replication request: (primary key, field value,
@@ -47,6 +47,7 @@ public:
     table.serialize_value(encoder, value);
     encoder << commit_tid;
     message.flush();
+    return message_size;
   }
 };
 
