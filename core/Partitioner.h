@@ -5,6 +5,8 @@
 #pragma once
 
 #include <glog/logging.h>
+#include <numeric>
+#include <string>
 
 namespace scar {
 
@@ -30,6 +32,8 @@ public:
 
   virtual bool is_partition_replicated_on(std::size_t partition_id,
                                           std::size_t coordinator_id) const = 0;
+
+  virtual bool is_backup() const = 0;
 
 protected:
   std::size_t coordinator_id;
@@ -77,6 +81,8 @@ public:
       return coordinator_id >= first_replica || coordinator_id <= last_replica;
     }
   }
+
+  bool is_backup() const override { return false; }
 };
 
 using HashPartitioner = HashReplicatedPartitioner<1>;
@@ -108,6 +114,8 @@ public:
     DCHECK(coordinator_id < coordinator_num);
     return true;
   }
+
+  bool is_backup() const override { return coordinator_id == 1; }
 };
 
 /*
@@ -160,6 +168,8 @@ public:
     }
     return coordinator_id == master_id || coordinator_id == secondary_id;
   }
+
+  bool is_backup() const override { return false; }
 };
 
 class RStoreCPartitioner : public Partitioner {
@@ -192,6 +202,86 @@ public:
 
     return coordinator_id == (partition_id % (coordinator_num - 1)) + 1;
   }
+
+  bool is_backup() const override { return coordinator_id != 0; }
 };
 
-} // namespace scar
+class CalvinPartitioner : public Partitioner {
+
+public:
+  CalvinPartitioner(std::size_t coordinator_id, std::size_t coordinator_num,
+                    std::vector<std::size_t> replica_group_sizes)
+      : Partitioner(coordinator_id, coordinator_num) {
+
+    std::size_t size = 0;
+    for (auto i = 0u; i < replica_group_sizes.size(); i++) {
+      DCHECK(replica_group_sizes[i] > 0);
+      size += replica_group_sizes[i];
+
+      if (coordinator_id < size) {
+        coordinator_start_id = size - replica_group_sizes[i];
+        replica_group_id = i;
+        replica_group_size = replica_group_sizes[i];
+        break;
+      }
+    }
+    DCHECK(std::accumulate(replica_group_sizes.begin(),
+                           replica_group_sizes.end(), 0u) == coordinator_num);
+  }
+
+  ~CalvinPartitioner() override = default;
+
+  std::size_t replica_num() const override { return replica_group_size; }
+
+  bool is_replicated() const override {
+    // replica group in calvin is independent
+    return false;
+  }
+
+  bool has_master_partition(std::size_t partition_id) const override {
+    return master_coordinator(partition_id) == coordinator_id;
+  }
+
+  std::size_t master_coordinator(std::size_t partition_id) const override {
+    return partition_id % replica_group_size + coordinator_start_id;
+  }
+
+  bool is_partition_replicated_on(std::size_t partition_id,
+                                  std::size_t coordinator_id) const override {
+    // replica group in calvin is independent
+    return false;
+  }
+
+  bool is_backup() const override { return false; }
+
+public:
+  std::size_t replica_group_id;
+  std::size_t replica_group_size;
+
+private:
+  // the first coordinator in this replica group
+  std::size_t coordinator_start_id;
+};
+
+class PartitionerFactory {
+public:
+  static std::unique_ptr<Partitioner>
+  create_partitioner(const std::string &part, std::size_t coordinator_id,
+                     std::size_t coordinator_num) {
+
+    if (part == "hash") {
+      return std::make_unique<HashPartitioner>(coordinator_id, coordinator_num);
+    } else if (part == "hash2") {
+      return std::make_unique<HashReplicatedPartitioner<2>>(coordinator_id,
+                                                            coordinator_num);
+    } else if (part == "pb") {
+      return std::make_unique<PrimaryBackupPartitioner>(coordinator_id,
+                                                        coordinator_num);
+    } else {
+      CHECK(false);
+      return nullptr;
+    }
+  }
+};
+
+}; // namespace scar

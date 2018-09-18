@@ -38,8 +38,8 @@ public:
       : Worker(coordinator_id, id), db(db), context(context),
         worker_status(worker_status), n_complete_workers(n_complete_workers),
         n_started_workers(n_started_workers),
-        partitioner(std::make_unique<HashReplicatedPartitioner<2>>(
-            coordinator_id, context.coordinator_num)),
+        partitioner(PartitionerFactory::create_partitioner(
+            context.partitioner, coordinator_id, context.coordinator_num)),
         protocol(db, context, *partitioner),
         workload(coordinator_id, db, random, *partitioner) {
 
@@ -73,6 +73,11 @@ public:
     do {
       process_request();
 
+      if(partitioner->is_backup()){
+        // backup node stands by for replication
+        continue;
+      }
+
       last_seed = random.get_seed();
 
       if (retry_transaction) {
@@ -95,7 +100,7 @@ public:
           n_commit.fetch_add(1);
           retry_transaction = false;
           auto latency =
-              std::chrono::duration_cast<std::chrono::milliseconds>(
+              std::chrono::duration_cast<std::chrono::microseconds>(
                   std::chrono::steady_clock::now() - transaction->startTime)
                   .count();
           percentile.add(latency);
@@ -134,11 +139,13 @@ public:
   }
 
   void onExit() override {
-    LOG(INFO) << "Worker " << id << " latency: " << percentile.nth(50)
-              << "ms (50%) " << percentile.nth(75) << "ms (75%) "
-              << percentile.nth(99.9)
-              << "ms (99.9%), size: " << percentile.size() * sizeof(int64_t)
-              << " bytes.";
+    if (!partitioner->is_backup()){
+      LOG(INFO) << "Worker " << id << " latency: " << percentile.nth(50)
+                << "us (50%) " << percentile.nth(75) << "us (75%) "
+                << percentile.nth(99.9)
+                << "us (99.9%), size: " << percentile.size() * sizeof(int64_t)
+                << " bytes.";
+    }
   }
 
   void push_message(Message *message) override { in_queue.push(message); }

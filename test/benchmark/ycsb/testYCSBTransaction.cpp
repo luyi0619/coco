@@ -16,6 +16,8 @@ TEST(TestYCSBTransaction, TestBasic) {
 
   DatabaseType db;
   scar::ycsb::Context context;
+  context.partition_num = 1;
+
   scar::ycsb::Random random;
 
   scar::HashPartitioner partitioner(0, 1);

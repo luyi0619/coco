@@ -23,6 +23,7 @@ TEST(TestExecutor, TestTPCC) {
   context.coordinator_num = 2;
   context.partition_num = 4;
   context.worker_num = 4;
+  context.partitioner = "hash";
   scar::tpcc::Random random;
 
   scar::tpcc::Database<MetaDataType> db;
@@ -46,6 +47,7 @@ TEST(TestWorker, TestYCSB) {
   context.coordinator_num = 2;
   context.partition_num = 4;
   context.worker_num = 4;
+  context.partitioner = "hash";
   scar::ycsb::Random random;
 
   scar::ycsb::Database<MetaDataType> db;

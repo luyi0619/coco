@@ -15,6 +15,7 @@ DEFINE_string(servers, "127.0.0.1:10010",
               "semicolon-separated list of servers");
 DEFINE_string(protocol, "RStore", "transaction protocol");
 DEFINE_string(replica_group, "1,3", "calvin replica group");
+DEFINE_string(partitioner, "hash", "database partitioner (hash, hash2, pb)");
 DEFINE_bool(operation_replication, false, "use operation replication");
 
 // ./main --logtostderr=1 --id=1 --servers="127.0.0.1:10010;127.0.0.1:10011"
@@ -38,6 +39,7 @@ int main(int argc, char *argv[]) {
   context.worker_num = n;
   context.replica_group = FLAGS_replica_group;
   context.operation_replication = FLAGS_operation_replication;
+  context.partitioner = FLAGS_partitioner;
 
   // only create coordinator for tpc-c
   std::unordered_set<std::string> protocols = {"Silo",  "SiloGC",  "RStore",
