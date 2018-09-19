@@ -191,6 +191,16 @@ public:
     }
   }
 
+  void send_stop(std::size_t node_id) {
+
+    DCHECK(node_id != coordinator_id);
+
+    ControlMessageFactory::new_signal_message(
+        *messages[node_id], static_cast<uint32_t>(ExecutorStatus::STOP));
+
+    flush_messages();
+  }
+
   void broadcast_stop() {
 
     std::size_t n_coordinators = context.coordinator_num;

@@ -155,7 +155,7 @@ public:
   }
 
   std::size_t master_coordinator(std::size_t partition_id) const override {
-    return partition_id % coordinator_num;
+    return partition_id % (coordinator_num - 1) + 1;
   }
 
   bool is_partition_replicated_on(std::size_t partition_id,
@@ -163,14 +163,11 @@ public:
     DCHECK(coordinator_id < coordinator_num);
 
     auto master_id = master_coordinator(partition_id);
-    auto secondary_id = 0u; // case 1
-    if (master_id == 0) {
-      secondary_id = partition_id % (coordinator_num - 1) + 1; // case 2
-    }
-    return coordinator_id == master_id || coordinator_id == secondary_id;
+
+    return master_id == coordinator_id || coordinator_id == 0;
   }
 
-  bool is_backup() const override { return false; }
+  bool is_backup() const override { return coordinator_id == 0; }
 };
 
 class RStoreCPartitioner : public Partitioner {

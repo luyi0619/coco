@@ -131,7 +131,7 @@ public:
               }
               random.set_seed(last_seed);
               retry_transaction = true;
-              //std::this_thread::sleep_for(std::chrono::microseconds(100));
+              // std::this_thread::sleep_for(std::chrono::microseconds(100));
             }
           } else {
             n_abort_no_retry.fetch_add(1);
@@ -178,7 +178,8 @@ public:
       CHECK(context.partition_num % context.worker_num == 0);
       auto partition_num_per_thread =
           context.partition_num / context.worker_num;
-      partition_id = id * partition_num_per_thread + random.uniform_dist(0, partition_num_per_thread - 1);
+      partition_id = id * partition_num_per_thread +
+                     random.uniform_dist(0, partition_num_per_thread - 1);
     } else {
       auto partition_num_per_node =
           context.partition_num / context.coordinator_num;

@@ -40,7 +40,6 @@ public:
         n_started_workers(n_started_workers),
         partitioner(PartitionerFactory::create_partitioner(
             context.partitioner, coordinator_id, context.coordinator_num)),
-        random(reinterpret_cast<uint64_t>(this)),
         protocol(db, context, *partitioner),
         workload(coordinator_id, db, random, *partitioner) {
 
@@ -137,10 +136,13 @@ public:
   }
 
   void onExit() override {
-    LOG(INFO) << "Worker " << id << " latency: " << percentile.nth(50)
-              << " us (50%) " << percentile.nth(75) << " us (75%) "
-              << percentile.nth(95) << " us (95%) " << percentile.nth(99)
-              << " us (99%).";
+    if (percentile.size() > 0) {
+      LOG(INFO) << "Worker " << id << " latency: " << percentile.nth(50)
+                << " us (50%) " << percentile.nth(75) << " us (75%) "
+                << percentile.nth(99)
+                << " us (99%), size: " << percentile.size() * sizeof(int64_t)
+                << " bytes.";
+    }
   }
 
   std::size_t get_partition_id() {
@@ -148,7 +150,7 @@ public:
     std::size_t partition_id;
 
     if (context.partitioner == "pb") {
-      partition_id = random.uniform_dist(0, context.partition_num - 1);
+      partition_id = random.uniform_dist(0, context.partition_num);
     } else {
       auto partition_num_per_node =
           context.partition_num / context.coordinator_num;

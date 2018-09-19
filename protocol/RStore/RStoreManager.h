@@ -4,9 +4,6 @@
 
 #pragma once
 
-#include <chrono>
-
-#include "common/Percentile.h"
 #include "core/Manager.h"
 
 namespace scar {
@@ -24,11 +21,8 @@ public:
     std::size_t n_workers = context.worker_num;
     std::size_t n_coordinators = context.coordinator_num;
 
-    Percentile<int64_t> all_percentile, c_percentile, s_percentile;
-
     while (!stopFlag.load()) {
 
-      auto c_start = std::chrono::steady_clock::now();
       // start c-phase
 
       // LOG(INFO) << "start C-Phase";
@@ -42,11 +36,6 @@ public:
       broadcast_stop();
       wait4_ack();
 
-      c_percentile.add(std::chrono::duration_cast<std::chrono::microseconds>(
-                           std::chrono::steady_clock::now() - c_start)
-                           .count());
-
-      auto s_start = std::chrono::steady_clock::now();
       // start s-phase
 
       // LOG(INFO) << "start S-Phase";
@@ -55,32 +44,13 @@ public:
       n_started_workers.store(0);
       signal_worker(ExecutorStatus::S_PHASE);
       wait_all_workers_start();
-      wait_all_workers_finish();
-      broadcast_stop();
       wait4_stop(n_coordinators - 1);
-      // process replication
-      n_completed_workers.store(0);
       set_worker_status(ExecutorStatus::STOP);
       wait_all_workers_finish();
       wait4_ack();
-
-      auto now = std::chrono::steady_clock::now();
-
-      s_percentile.add(
-          std::chrono::duration_cast<std::chrono::microseconds>(now - s_start)
-              .count());
-
-      all_percentile.add(
-          std::chrono::duration_cast<std::chrono::microseconds>(now - c_start)
-              .count());
     }
 
     signal_worker(ExecutorStatus::EXIT);
-
-    LOG(INFO) << "Average phase switch length " << all_percentile.nth(50)
-              << " us, average c phase length " << c_percentile.nth(50)
-              << " us, average s phase length " << s_percentile.nth(50)
-              << " us.";
   }
 
   void non_coordinator_start() override {
@@ -121,12 +91,8 @@ public:
       set_worker_status(ExecutorStatus::S_PHASE);
       wait_all_workers_start();
       wait_all_workers_finish();
-      broadcast_stop();
-      wait4_stop(n_coordinators - 1);
-      // process replication
-      n_completed_workers.store(0);
       set_worker_status(ExecutorStatus::STOP);
-      wait_all_workers_finish();
+      send_stop(0);
       send_ack();
     }
   }

@@ -13,7 +13,6 @@
 #include "protocol/RStore/RStore.h"
 
 #include <chrono>
-#include <queue>
 
 namespace scar {
 
@@ -34,8 +33,7 @@ public:
   using MessageHandlerType = RStoreMessageHandler;
 
   RStoreExecutor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
-                 const ContextType &context,
-                 std::atomic<uint32_t> &worker_status,
+                 ContextType &context, std::atomic<uint32_t> &worker_status,
                  std::atomic<uint32_t> &n_complete_workers,
                  std::atomic<uint32_t> &n_started_workers)
       : Worker(coordinator_id, id), db(db), context(context),
@@ -43,8 +41,7 @@ public:
             coordinator_id, context.coordinator_num)),
         c_partitioner(std::make_unique<RStoreCPartitioner>(
             coordinator_id, context.coordinator_num)),
-        random(reinterpret_cast<uint64_t>(this)), worker_status(worker_status),
-        n_complete_workers(n_complete_workers),
+        worker_status(worker_status), n_complete_workers(n_complete_workers),
         n_started_workers(n_started_workers) {
 
     for (auto i = 0u; i < context.coordinator_num; i++) {
@@ -64,20 +61,14 @@ public:
     for (;;) {
 
       ExecutorStatus status;
-
       do {
         status = static_cast<ExecutorStatus>(worker_status.load());
 
         if (status == ExecutorStatus::EXIT) {
-          // commit transaction in s_phase;
-          commit_transactions();
           LOG(INFO) << "Executor " << id << " exits.";
           return;
         }
       } while (status != ExecutorStatus::C_PHASE);
-
-      // commit transaction in s_phase;
-      commit_transactions();
 
       // c_phase
 
@@ -107,39 +98,26 @@ public:
         std::this_thread::yield();
       }
 
-      // commit transaction in c_phase;
-      commit_transactions();
-
       // s_phase
 
-      n_started_workers.fetch_add(1);
+      if (coordinator_id == 0) {
+        n_started_workers.fetch_add(1);
 
-      run_transaction(ExecutorStatus::S_PHASE);
+        while (static_cast<ExecutorStatus>(worker_status.load()) !=
+               ExecutorStatus::STOP) {
+          process_request();
+        }
 
-      n_complete_workers.fetch_add(1);
+        // process replication request after all workers stop.
+        process_request();
+        n_complete_workers.fetch_add(1);
+      } else {
+        n_started_workers.fetch_add(1);
 
-      // once all workers are stop, we need to process the replication
-      // requests
+        run_transaction(ExecutorStatus::S_PHASE);
 
-      while (static_cast<ExecutorStatus>(worker_status.load()) !=
-             ExecutorStatus::STOP) {
-        std::this_thread::yield();
+        n_complete_workers.fetch_add(1);
       }
-
-      // n_complete_workers has been cleared
-      process_request();
-      n_complete_workers.fetch_add(1);
-    }
-  }
-
-  void commit_transactions() {
-    while (!q.empty()) {
-      auto &ptr = q.front();
-      auto latency = std::chrono::duration_cast<std::chrono::microseconds>(
-                         std::chrono::steady_clock::now() - ptr->startTime)
-                         .count();
-      percentile.add(latency);
-      q.pop();
     }
   }
 
@@ -153,15 +131,12 @@ public:
 
     if (status == ExecutorStatus::C_PHASE) {
       CHECK(coordinator_id == 0);
-      CHECK(context.partition_num % context.worker_num == 0);
-      auto partition_num_per_thread =
-          context.partition_num / context.worker_num;
-      partition_id = id * partition_num_per_thread + random.uniform_dist(0, partition_num_per_thread - 1);
+      partition_id = random.uniform_dist(0, context.partition_num - 1);
       partitioner = c_partitioner.get();
       query_num = context.get_c_phase_query_num();
       phase_context = this->context.get_cross_partition_context();
     } else if (status == ExecutorStatus::S_PHASE) {
-      partition_id = id * context.coordinator_num + coordinator_id;
+      partition_id = id * (context.coordinator_num - 1) + coordinator_id - 1;
       partitioner = s_partitioner.get();
       query_num = context.get_s_phase_query_num();
       phase_context = this->context.get_single_partition_context();
@@ -203,7 +178,11 @@ public:
           if (commit) {
             n_commit.fetch_add(1);
             retry_transaction = false;
-            q.push(std::move(transaction));
+            auto latency =
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - transaction->startTime)
+                    .count();
+            percentile.add(latency);
           } else {
             if (transaction->abort_lock) {
               n_abort_lock.fetch_add(1);
@@ -227,10 +206,13 @@ public:
   }
 
   void onExit() override {
-    LOG(INFO) << "Worker " << id << " latency: " << percentile.nth(50)
-              << " us (50%) " << percentile.nth(75) << " us (75%) "
-              << percentile.nth(95) << " us (95%) " << percentile.nth(99)
-              << " us (99%).";
+    if (percentile.size() > 0) {
+      LOG(INFO) << "Worker " << id << " latency: " << percentile.nth(50)
+                << "ms (50%) " << percentile.nth(75) << "ms (75%) "
+                << percentile.nth(99.9)
+                << "ms (99.9%), size: " << percentile.size() * sizeof(int64_t)
+                << " bytes.";
+    }
   }
 
   void push_message(Message *message) override { in_queue.push(message); }
@@ -316,14 +298,12 @@ private:
 
 private:
   DatabaseType &db;
-  const ContextType &context;
+  ContextType &context;
   std::unique_ptr<Partitioner> s_partitioner, c_partitioner;
-  RandomType random;
   std::atomic<uint32_t> &worker_status;
   std::atomic<uint32_t> &n_complete_workers, &n_started_workers;
+  RandomType random;
   Percentile<int64_t> percentile;
-  // transaction only commit in a single group
-  std::queue<std::unique_ptr<TransactionType>> q;
   std::vector<std::unique_ptr<Message>> messages;
   std::vector<std::function<void(MessagePiece, Message &, TableType &)>>
       messageHandlers;

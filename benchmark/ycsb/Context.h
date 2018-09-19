@@ -36,13 +36,13 @@ public:
     }
   }
 
-  Context get_single_partition_context() const {
+  Context get_single_partition_context() {
     Context c = *this;
     c.crossPartitionProbability = 0;
     return c;
   }
 
-  Context get_cross_partition_context() const {
+  Context get_cross_partition_context() {
     Context c = *this;
     c.crossPartitionProbability = 100;
     return c;
@@ -50,8 +50,9 @@ public:
 
   std::size_t get_s_phase_query_num() const override {
     auto total_query = batch_size * partition_num;
+    auto total_worker = worker_num * (coordinator_num - 1);
     auto s_phase_query = batch_size * (100 - crossPartitionProbability) / 100.0;
-    return s_phase_query / partition_num;
+    return s_phase_query / total_worker;
   }
   std::size_t get_c_phase_query_num() const override {
     auto total_query = batch_size * partition_num;

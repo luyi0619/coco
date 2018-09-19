@@ -15,38 +15,37 @@ class Context : public scar::Context {
 public:
   TPCCWorkloadType workloadType = TPCCWorkloadType::NEW_ORDER_ONLY;
 
-  Context get_single_partition_context() const {
+  Context get_single_partition_context() {
     Context c = *this;
     c.newOrderCrossPartitionProbability = 0;
     c.paymentCrossPartitionProbability = 0;
-    c.operation_replication = this->operation_replication;
     return c;
   }
 
-  Context get_cross_partition_context() const {
+  Context get_cross_partition_context() {
     Context c = *this;
     c.newOrderCrossPartitionProbability = 100;
     c.paymentCrossPartitionProbability = 100;
-    c.operation_replication = false;
     return c;
   }
 
   std::size_t get_s_phase_query_num() const override {
     auto total_query = batch_size * partition_num;
+    auto total_worker = worker_num * (coordinator_num - 1);
     if (workloadType == TPCCWorkloadType::NEW_ORDER_ONLY) {
       auto s_phase_new_order =
           total_query * (100 - newOrderCrossPartitionProbability) / 100.0;
-      return s_phase_new_order / partition_num;
+      return s_phase_new_order / total_worker;
     } else if (workloadType == TPCCWorkloadType::PAYMENT_ONLY) {
       auto s_phase_payment =
           total_query * (100 - paymentCrossPartitionProbability) / 100.0;
-      return s_phase_payment / partition_num;
+      return s_phase_payment / total_worker;
     } else {
       auto s_phase_new_order =
           total_query / 2 * (100 - newOrderCrossPartitionProbability) / 100.0;
       auto s_phase_payment =
           total_query / 2 * (100 - paymentCrossPartitionProbability) / 100.0;
-      return (s_phase_new_order + s_phase_payment) / partition_num;
+      return (s_phase_new_order + s_phase_payment) / total_worker;
     }
   }
   std::size_t get_c_phase_query_num() const override {

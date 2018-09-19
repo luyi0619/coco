@@ -68,11 +68,13 @@ public:
               std::vector<std::unique_ptr<Message>> &messages) {
     // lock write set
     if (lock_write_set(txn)) {
+      txn.abort_lock = true;
       abort(txn);
       return false;
     }
     // commit phase 2, read validation
     if (!validate_read_set(txn)) {
+      txn.abort_read_validation = true;
       abort(txn);
       return false;
     }
@@ -92,38 +94,54 @@ private:
     auto &readSet = txn.readSet;
     auto &writeSet = txn.writeSet;
 
+    auto getReadKey = [&readSet](const void *key) -> SiloRWKey * {
+      for (auto &readKey : readSet) {
+        if (readKey.get_key() == key) {
+          return &readKey;
+        }
+      }
+      return nullptr;
+    };
+
+    bool tidChanged = false;
+
+    // set sort key
     for (auto i = 0u; i < writeSet.size(); i++) {
       auto &writeKey = writeSet[i];
+      auto tableId = writeKey.get_table_id();
+      auto partitionId = writeKey.get_partition_id();
+      auto table = db.find_table(tableId, partitionId);
+      MetaDataType &metaData = table->search_metadata(writeKey.get_key());
+      writeKey.set_sort_key(&metaData);
+    }
+
+    std::sort(writeSet.begin(), writeSet.end(),
+              [](const SiloRWKey &k1, const SiloRWKey &k2) {
+                return k1.get_sort_key() < k2.get_sort_key();
+              });
+
+    for (auto &writeKey : writeSet) {
       auto tableId = writeKey.get_table_id();
       auto partitionId = writeKey.get_partition_id();
       auto table = db.find_table(tableId, partitionId);
 
       auto key = writeKey.get_key();
       std::atomic<uint64_t> &tid = table->search_metadata(key);
-
-      bool success;
-      uint64_t latestTid = SiloHelper::lock(tid, success);
-
-      if (!success) {
-        txn.abort_lock = true;
-        break;
-      }
-
-      writeKey.set_write_lock_bit();
-
-      auto readKeyPtr = txn.get_read_key(key);
+      uint64_t latestTid = SiloHelper::lock(tid);
+      auto readKeyPtr = getReadKey(key);
       // assume no blind write
       DCHECK(readKeyPtr != nullptr);
       uint64_t tidOnRead = readKeyPtr->get_tid();
+
       if (latestTid != tidOnRead) {
-        txn.abort_lock = true;
-        break;
+        tidChanged = true;
       }
 
       writeKey.set_tid(latestTid);
+      writeKey.set_write_lock_bit();
     }
 
-    return txn.abort_lock;
+    return tidChanged;
   }
 
   bool validate_read_set(TransactionType &txn) {
@@ -152,12 +170,10 @@ private:
       uint64_t tid = table->search_metadata(key).load();
 
       if (SiloHelper::remove_lock_bit(tid) != readKey.get_tid()) {
-        txn.abort_read_validation = true;
         return false;
       }
 
       if (SiloHelper::is_locked(tid)) { // must be locked by others
-        txn.abort_read_validation = true;
         return false;
       }
     }
@@ -237,7 +253,6 @@ private:
         }
 
         if (!context.operation_replication) {
-
           txn.network_size += MessageFactoryType::new_replication_value_message(
               *messages[k], *table, writeKey.get_key(), writeKey.get_value(),
               commit_tid);
