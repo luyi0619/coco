@@ -119,50 +119,50 @@ public:
       auto warehouseTableID = warehouse::tableID;
       tbl_warehouse_vec.push_back(
           std::make_unique<
-              Table<127, warehouse::key, warehouse::value, MetaDataType>>(
+              Table<997, warehouse::key, warehouse::value, MetaDataType>>(
               warehouseTableID, partitionID));
       auto districtTableID = district::tableID;
       tbl_district_vec.push_back(
           std::make_unique<
-              Table<127, district::key, district::value, MetaDataType>>(
+              Table<997, district::key, district::value, MetaDataType>>(
               districtTableID, partitionID));
       auto customerTableID = customer::tableID;
       tbl_customer_vec.push_back(
           std::make_unique<
-              Table<127, customer::key, customer::value, MetaDataType>>(
+              Table<997, customer::key, customer::value, MetaDataType>>(
               customerTableID, partitionID));
       auto customerNameIdxTableID = customer_name_idx::tableID;
       tbl_customer_name_idx_vec.push_back(
-          std::make_unique<Table<127, customer_name_idx::key,
+          std::make_unique<Table<997, customer_name_idx::key,
                                  customer_name_idx::value, MetaDataType>>(
               customerNameIdxTableID, partitionID));
       auto historyTableID = history::tableID;
       tbl_history_vec.push_back(
           std::make_unique<
-              Table<127, history::key, history::value, MetaDataType>>(
+              Table<997, history::key, history::value, MetaDataType>>(
               historyTableID, partitionID));
       auto newOrderTableID = new_order::tableID;
       tbl_new_order_vec.push_back(
           std::make_unique<
-              Table<127, new_order::key, new_order::value, MetaDataType>>(
+              Table<997, new_order::key, new_order::value, MetaDataType>>(
               newOrderTableID, partitionID));
       auto orderTableID = order::tableID;
       tbl_order_vec.push_back(
-          std::make_unique<Table<127, order::key, order::value, MetaDataType>>(
+          std::make_unique<Table<997, order::key, order::value, MetaDataType>>(
               orderTableID, partitionID));
       auto orderLineTableID = order_line::tableID;
       tbl_order_line_vec.push_back(
           std::make_unique<
-              Table<127, order_line::key, order_line::value, MetaDataType>>(
+              Table<997, order_line::key, order_line::value, MetaDataType>>(
               orderLineTableID, partitionID));
       auto stockTableID = stock::tableID;
       tbl_stock_vec.push_back(
-          std::make_unique<Table<127, stock::key, stock::value, MetaDataType>>(
+          std::make_unique<Table<997, stock::key, stock::value, MetaDataType>>(
               stockTableID, partitionID));
     }
     auto itemTableID = item::tableID;
     tbl_item_vec.push_back(
-        std::make_unique<Table<127, item::key, item::value, MetaDataType>>(
+        std::make_unique<Table<997, item::key, item::value, MetaDataType>>(
             itemTableID, 0));
 
     // there are 10 tables in tpcc
