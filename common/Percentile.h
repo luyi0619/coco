@@ -36,6 +36,9 @@ public:
   auto size() { return data_.size(); }
 
   element_type nth(double n) {
+    if (data_.size() == 0) {
+      return 0;
+    }
     checkSort();
     DCHECK(n > 0 && n <= 100);
     auto sz = size();

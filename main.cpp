@@ -24,7 +24,6 @@ DEFINE_string(query, "neworder", "tpcc query, mixed, neworder, payment");
 DEFINE_int32(neworder_dist, 10, "new order distributed.");
 DEFINE_int32(payment_dist, 15, "payment distributed.");
 
-
 // ./main --logtostderr=1 --id=1 --servers="127.0.0.1:10010;127.0.0.1:10011"
 // cmake -DCMAKE_BUILD_TYPE=Release
 

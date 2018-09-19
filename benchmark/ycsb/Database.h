@@ -47,11 +47,11 @@ public:
     for (auto &t : v) {
       t.join();
     }
-    DLOG(INFO) << name << " initialization finished in "
-               << std::chrono::duration_cast<std::chrono::milliseconds>(
-                      std::chrono::steady_clock::now() - now)
-                      .count()
-               << " milliseconds.";
+    LOG(INFO) << name << " initialization finished in "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(
+                     std::chrono::steady_clock::now() - now)
+                     .count()
+              << " milliseconds.";
   }
 
   void initialize(const Context &context, std::size_t partitionNum,

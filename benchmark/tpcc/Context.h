@@ -15,17 +15,19 @@ class Context : public scar::Context {
 public:
   TPCCWorkloadType workloadType = TPCCWorkloadType::NEW_ORDER_ONLY;
 
-  Context get_single_partition_context() {
+  Context get_single_partition_context() const {
     Context c = *this;
     c.newOrderCrossPartitionProbability = 0;
     c.paymentCrossPartitionProbability = 0;
+    c.operation_replication = this->operation_replication;
     return c;
   }
 
-  Context get_cross_partition_context() {
+  Context get_cross_partition_context() const {
     Context c = *this;
     c.newOrderCrossPartitionProbability = 100;
     c.paymentCrossPartitionProbability = 100;
+    c.operation_replication = false;
     return c;
   }
 

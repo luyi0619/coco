@@ -101,11 +101,11 @@ public:
     for (auto &t : v) {
       t.join();
     }
-    DLOG(INFO) << name << " initialization finished in "
-               << std::chrono::duration_cast<std::chrono::milliseconds>(
-                      std::chrono::steady_clock::now() - now)
-                      .count()
-               << " milliseconds.";
+    LOG(INFO) << name << " initialization finished in "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(
+                     std::chrono::steady_clock::now() - now)
+                     .count()
+              << " milliseconds.";
   }
 
   void initialize(const Context &context, std::size_t partitionNum,
@@ -113,7 +113,7 @@ public:
 
     auto now = std::chrono::steady_clock::now();
 
-    DLOG(INFO) << "creating hash tables for database...";
+    LOG(INFO) << "creating hash tables for database...";
 
     for (auto partitionID = 0u; partitionID < partitionNum; partitionID++) {
       auto warehouseTableID = warehouse::tableID;
