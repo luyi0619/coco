@@ -136,7 +136,7 @@ public:
   }
 
   void onExit() override {
-    if (!partitioner->is_backup()) {
+    if (percentile.size() > 0) {
       LOG(INFO) << "Worker " << id << " latency: " << percentile.nth(50)
                 << " us (50%) " << percentile.nth(75) << " us (75%) "
                 << percentile.nth(99)
@@ -150,7 +150,7 @@ public:
     std::size_t partition_id;
 
     if (context.partitioner == "pb"){
-      partition_id = random.uniform_dist(0,  context.partition_num);
+      partition_id = random.uniform_dist(0,  context.partition_num - 1);
     } else {
       auto partition_num_per_node =
           context.partition_num / context.coordinator_num;

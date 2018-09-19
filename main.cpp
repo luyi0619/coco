@@ -13,6 +13,7 @@ DEFINE_int32(threads, 1, "the number of threads");
 DEFINE_int32(partition_num, 1, "the number of partitions");
 DEFINE_int32(batch_size, 240, "rstore or calvin batch size");
 DEFINE_int32(group_time, 10, "group commit frequency");
+DEFINE_int32(batch_flush, 10, "batch flush");
 DEFINE_string(servers, "127.0.0.1:10010",
               "semicolon-separated list of servers");
 DEFINE_string(protocol, "RStore", "transaction protocol");
@@ -22,6 +23,7 @@ DEFINE_bool(operation_replication, false, "use operation replication");
 DEFINE_string(query, "neworder", "tpcc query, mixed, neworder, payment");
 DEFINE_int32(neworder_dist, 10, "new order distributed.");
 DEFINE_int32(payment_dist, 15, "payment distributed.");
+
 
 // ./main --logtostderr=1 --id=1 --servers="127.0.0.1:10010;127.0.0.1:10011"
 // cmake -DCMAKE_BUILD_TYPE=Release
@@ -40,6 +42,7 @@ int main(int argc, char *argv[]) {
   context.protocol = FLAGS_protocol;
   context.coordinator_num = peers.size();
   context.batch_size = FLAGS_batch_size;
+  context.batch_flush = FLAGS_batch_flush;
   context.group_time = FLAGS_group_time;
   context.worker_num = n;
   context.partition_num = FLAGS_partition_num;

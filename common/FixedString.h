@@ -63,7 +63,7 @@ public:
     std::copy(str.begin(), str.end(), data_.begin());
     DCHECK(data_.begin() + length <= data_.end() - 1);
     std::fill(data_.begin() + length, data_.end() - 1, ' ');
-    data_[N + 1] = 0;
+    data_[N] = 0;
     return *this;
   }
 
