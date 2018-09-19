@@ -153,7 +153,10 @@ public:
 
     if (status == ExecutorStatus::C_PHASE) {
       CHECK(coordinator_id == 0);
-      partition_id = random.uniform_dist(0, context.partition_num - 1);
+      CHECK(context.partition_num % context.worker_num == 0);
+      auto partition_num_per_thread =
+          context.partition_num / context.worker_num;
+      partition_id = id * partition_num_per_thread + random.uniform_dist(0, partition_num_per_thread - 1);
       partitioner = c_partitioner.get();
       query_num = context.get_c_phase_query_num();
       phase_context = this->context.get_cross_partition_context();

@@ -31,7 +31,6 @@ public:
      * The structure of a replication request: (primary key, field value,
      * commit_tid)
      */
-
     auto key_size = table.key_size();
     auto field_size = table.field_size();
 
