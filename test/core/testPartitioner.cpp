@@ -56,17 +56,17 @@ TEST(TestPartitioner, TestBasic) {
 TEST(TestPartitioner, TestRStoreS) {
 
   std::vector<std::vector<bool>> masterPartitions = {
-      {true, false, false, false}, {false, true, false, false},
+      {false, true, false, false}, {false, false, true, false},
+      {false, false, false, true}, {false, true, false, false},
       {false, false, true, false}, {false, false, false, true},
-      {true, false, false, false}, {false, true, false, false},
-      {false, false, true, false}, {false, false, false, true},
-      {true, false, false, false}, {false, true, false, false}};
+      {false, true, false, false}, {false, false, true, false},
+      {false, false, false, true}, {false, true, false, false}};
 
   std::vector<std::vector<bool>> replicationPartitions = {
-      {true, true, false, false}, {true, true, false, false},
+      {true, true, false, false}, {true, false, true, false},
+      {true, false, false, true}, {true, true, false, false},
       {true, false, true, false}, {true, false, false, true},
-      {true, false, true, false}, {true, true, false, false},
-      {true, false, true, false}, {true, false, false, true},
+      {true, true, false, false}, {true, false, true, false},
       {true, false, false, true}, {true, true, false, false}};
 
   std::size_t total_coordinator = 4, total_partitions = 10;

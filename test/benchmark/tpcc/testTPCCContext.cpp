@@ -10,22 +10,22 @@ TEST(TestTPCCContext, TestBasic) {
   scar::tpcc::Context context;
   context.batch_size = 1000;
   context.coordinator_num = 4;
-  context.worker_num = 1;
-  context.partition_num = 4;
+  context.worker_num = 3;
+  context.partition_num = 9;
   context.workloadType = scar::tpcc::TPCCWorkloadType::MIXED;
   context.newOrderCrossPartitionProbability = 10;
   context.paymentCrossPartitionProbability = 15;
 
   EXPECT_EQ(context.get_s_phase_query_num(), 875);
-  EXPECT_EQ(context.get_c_phase_query_num(), 500);
+  EXPECT_EQ(context.get_c_phase_query_num(), 375);
 
   context.workloadType = scar::tpcc::TPCCWorkloadType::NEW_ORDER_ONLY;
 
   EXPECT_EQ(context.get_s_phase_query_num(), 900);
-  EXPECT_EQ(context.get_c_phase_query_num(), 400);
+  EXPECT_EQ(context.get_c_phase_query_num(), 300);
 
   context.workloadType = scar::tpcc::TPCCWorkloadType::PAYMENT_ONLY;
 
   EXPECT_EQ(context.get_s_phase_query_num(), 850);
-  EXPECT_EQ(context.get_c_phase_query_num(), 600);
+  EXPECT_EQ(context.get_c_phase_query_num(), 450);
 }
