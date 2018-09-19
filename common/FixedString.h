@@ -60,7 +60,7 @@ public:
   FixedString &assign(const std::string &str, size_type length) {
     DCHECK(length <= str.length());
     DCHECK(length <= N);
-    std::copy(str.begin(), str.end(), data_.begin());
+    std::copy(str.begin(), str.begin() + length, data_.begin());
     DCHECK(data_.begin() + length <= data_.end() - 1);
     std::fill(data_.begin() + length, data_.end() - 1, ' ');
     data_[N] = 0;
