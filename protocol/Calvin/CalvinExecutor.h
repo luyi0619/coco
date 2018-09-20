@@ -41,7 +41,7 @@ public:
   using MessageHandlerType = CalvinMessageHandler;
 
   CalvinExecutor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
-                 ContextType &context,
+                 const ContextType &context,
                  std::vector<std::unique_ptr<TransactionType>> &transactions,
                  std::atomic<uint32_t> &complete_transaction_num,
                  std::atomic<uint32_t> &worker_status,
@@ -229,7 +229,7 @@ public:
 
 private:
   DatabaseType &db;
-  ContextType &context;
+  const ContextType &context;
   std::vector<std::unique_ptr<TransactionType>> &transactions;
   std::atomic<uint32_t> &complete_transaction_num, &worker_status;
   std::atomic<uint32_t> &n_completed_workers;

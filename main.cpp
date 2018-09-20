@@ -70,68 +70,12 @@ int main(int argc, char *argv[]) {
   std::unordered_set<std::string> scar_protocols = {"Scar"};
   std::unordered_set<std::string> twopl_protocols = {"TwoPL", "TwoPLGC"};
 
-  CHECK(protocols.count(context.protocol) == 1);
+  using MetaDataType = std::atomic<uint64_t>;
+  scar::tpcc::Database<MetaDataType> db;
+  db.initialize(context, context.partition_num, n);
 
-  if (silo_protocols.count(context.protocol)) {
-    // only create cooridnator for silo-like protocols
-    using MetaDataType = std::atomic<uint64_t>;
-    using TransactionType = scar::SiloTransaction;
-    using WorkloadType = scar::tpcc::Workload<TransactionType>;
-
-    scar::tpcc::Database<MetaDataType> db;
-
-    db.initialize(context, context.partition_num, n);
-
-    auto c = std::make_unique<scar::Coordinator<WorkloadType>>(FLAGS_id, peers,
-                                                               db, context);
-
-    c->connectToPeers();
-    c->start();
-  } else if (scar_protocols.count(context.protocol)) {
-    using MetaDataType = std::atomic<uint64_t>;
-    using TransactionType = scar::ScarTransaction;
-    using WorkloadType = scar::tpcc::Workload<TransactionType>;
-
-    scar::tpcc::Database<MetaDataType> db;
-
-    db.initialize(context, context.partition_num, n);
-
-    auto c = std::make_unique<scar::Coordinator<WorkloadType>>(FLAGS_id, peers,
-                                                               db, context);
-
-    c->connectToPeers();
-    c->start();
-  }
-
-  else if (twopl_protocols.count(context.protocol)) {
-    using MetaDataType = std::atomic<uint64_t>;
-    using TransactionType = scar::TwoPLTransaction;
-    using WorkloadType = scar::tpcc::Workload<TransactionType>;
-
-    scar::tpcc::Database<MetaDataType> db;
-
-    db.initialize(context, context.partition_num, n);
-
-    auto c = std::make_unique<scar::Coordinator<WorkloadType>>(FLAGS_id, peers,
-                                                               db, context);
-
-    c->connectToPeers();
-    c->start();
-  } else if (context.protocol == "Calvin") {
-    using MetaDataType = std::atomic<uint64_t>;
-    using TransactionType = scar::CalvinTransaction;
-    using WorkloadType = scar::tpcc::Workload<TransactionType>;
-
-    scar::tpcc::Database<MetaDataType> db;
-
-    db.initialize(context, context.partition_num, n);
-
-    auto c = std::make_unique<scar::Coordinator<WorkloadType>>(FLAGS_id, peers,
-                                                               db, context);
-
-    c->connectToPeers();
-    c->start();
-  }
-
+  auto c = std::make_unique<scar::Coordinator>(FLAGS_id, peers, db, context);
+  c->connectToPeers();
+  c->start();
   return 0;
 }

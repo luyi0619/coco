@@ -33,7 +33,8 @@ public:
   using MessageHandlerType = RStoreMessageHandler;
 
   RStoreExecutor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
-                 ContextType &context, std::atomic<uint32_t> &worker_status,
+                 const ContextType &context,
+                 std::atomic<uint32_t> &worker_status,
                  std::atomic<uint32_t> &n_complete_workers,
                  std::atomic<uint32_t> &n_started_workers)
       : Worker(coordinator_id, id), db(db), context(context),
@@ -298,7 +299,7 @@ private:
 
 private:
   DatabaseType &db;
-  ContextType &context;
+  const ContextType &context;
   std::unique_ptr<Partitioner> s_partitioner, c_partitioner;
   std::atomic<uint32_t> &worker_status;
   std::atomic<uint32_t> &n_complete_workers, &n_started_workers;

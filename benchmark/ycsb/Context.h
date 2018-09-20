@@ -36,13 +36,13 @@ public:
     }
   }
 
-  Context get_single_partition_context() {
+  Context get_single_partition_context() const {
     Context c = *this;
     c.crossPartitionProbability = 0;
     return c;
   }
 
-  Context get_cross_partition_context() {
+  Context get_cross_partition_context() const {
     Context c = *this;
     c.crossPartitionProbability = 100;
     return c;

@@ -16,28 +16,22 @@
 
 namespace scar {
 
-template <class Workload> class Coordinator {
+class Coordinator {
 public:
-  using WorkloadType = Workload;
-  using DatabaseType = typename WorkloadType::DatabaseType;
-  using ContextType = typename DatabaseType::ContextType;
-  using RandomType = typename DatabaseType::RandomType;
-
+  template <class Database, class Context>
   Coordinator(std::size_t id, const std::vector<std::string> &peers,
-              DatabaseType &db, ContextType &context)
-      : id(id), peers(peers), db(db), context(context) {
+              Database &db, const Context &context)
+      : id(id), peers(peers) {
     workerStopFlag.store(false);
     ioStopFlag.store(false);
+    LOG(INFO) << "Coordinator initializes " << context.worker_num
+              << " workers.";
+    workers = WorkerFactory::create_workers(id, db, context, workerStopFlag);
   }
 
   ~Coordinator() = default;
 
   void start() {
-
-    LOG(INFO) << "Coordinator initializes " << context.worker_num
-              << " workers.";
-
-    workers = WorkerFactory::create_workers(id, db, context, workerStopFlag);
 
     // start dispatcher threads
     iDispatcher = std::make_unique<IncomingDispatcher>(id, inSockets, workers,
@@ -218,8 +212,6 @@ private:
   std::vector<std::string> peers;
   std::vector<Socket> inSockets, outSockets;
   std::atomic<bool> workerStopFlag, ioStopFlag;
-  DatabaseType &db;
-  ContextType &context;
   std::vector<std::shared_ptr<Worker>> workers;
   std::unique_ptr<IncomingDispatcher> iDispatcher;
   std::unique_ptr<OutgoingDispatcher> oDispatcher;

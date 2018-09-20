@@ -111,6 +111,7 @@ public:
             manager->n_completed_workers, manager->n_started_workers));
       }
       workers.push_back(manager);
+
     } else if (context.protocol == "TwoPL") {
 
       using TransactionType = scar::TwoPLTransaction;
