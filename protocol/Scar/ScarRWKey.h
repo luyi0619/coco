@@ -12,7 +12,7 @@
 
 namespace scar {
 
-class SiloRWKey {
+class ScarRWKey {
 public:
   // local index read bit
 
