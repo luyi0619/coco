@@ -102,12 +102,6 @@ public:
 
   void *get_value() const { return value; }
 
-  // sort_key
-
-  void set_sort_key(const void *sort_key) { this->sort_key = sort_key; }
-
-  const void *get_sort_key() const { return sort_key; }
-
 private:
   /*
    * A bitvec is a 32-bit word.
@@ -125,7 +119,6 @@ private:
   uint64_t tid = 0;
   const void *key = nullptr;
   void *value = nullptr;
-  const void *sort_key = nullptr;
 
 public:
   static constexpr uint32_t TABLE_ID_MASK = 0x1f;

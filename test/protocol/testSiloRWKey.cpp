@@ -11,7 +11,6 @@ TEST(TestSiloRWKey, TestBasic) {
 
   EXPECT_EQ(key.get_key(), nullptr);
   EXPECT_EQ(key.get_value(), nullptr);
-  EXPECT_EQ(key.get_sort_key(), nullptr);
   EXPECT_EQ(key.get_tid(), 0);
   EXPECT_EQ(key.get_table_id(), 0);
   EXPECT_EQ(key.get_partition_id(), 0);
