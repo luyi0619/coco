@@ -2,6 +2,7 @@
 #include "benchmark/tpcc/Workload.h"
 #include "core/Coordinator.h"
 #include "protocol/Calvin/CalvinTransaction.h"
+#include "protocol/Scar/ScarTransaction.h"
 #include "protocol/Silo/SiloTransaction.h"
 #include "protocol/TwoPL/TwoPLTransaction.h"
 #include <boost/algorithm/string.hpp>
@@ -63,9 +64,10 @@ int main(int argc, char *argv[]) {
   context.paymentCrossPartitionProbability = FLAGS_payment_dist;
 
   // only create coordinator for tpc-c
-  std::unordered_set<std::string> protocols = {"Silo",  "SiloGC",  "RStore",
-                                               "TwoPL", "TwoPLGC", "Calvin"};
+  std::unordered_set<std::string> protocols = {
+      "Silo", "SiloGC", "Scar", "RStore", "TwoPL", "TwoPLGC", "Calvin"};
   std::unordered_set<std::string> silo_protocols = {"Silo", "SiloGC", "RStore"};
+  std::unordered_set<std::string> scar_protocols = {"Scar"};
   std::unordered_set<std::string> twopl_protocols = {"TwoPL", "TwoPLGC"};
 
   CHECK(protocols.count(context.protocol) == 1);
@@ -85,7 +87,23 @@ int main(int argc, char *argv[]) {
 
     c->connectToPeers();
     c->start();
-  } else if (twopl_protocols.count(context.protocol)) {
+  } else if (scar_protocols.count(context.protocol)) {
+    using MetaDataType = std::atomic<uint64_t>;
+    using TransactionType = scar::ScarTransaction;
+    using WorkloadType = scar::tpcc::Workload<TransactionType>;
+
+    scar::tpcc::Database<MetaDataType> db;
+
+    db.initialize(context, context.partition_num, n);
+
+    auto c = std::make_unique<scar::Coordinator<WorkloadType>>(FLAGS_id, peers,
+                                                               db, context);
+
+    c->connectToPeers();
+    c->start();
+  }
+
+  else if (twopl_protocols.count(context.protocol)) {
     using MetaDataType = std::atomic<uint64_t>;
     using TransactionType = scar::TwoPLTransaction;
     using WorkloadType = scar::tpcc::Workload<TransactionType>;
