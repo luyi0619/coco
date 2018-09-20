@@ -15,7 +15,7 @@ find_package(gflags REQUIRED)
 # additional target to perform clang-format run, requires clang-format
 
 # get all project files
-file(GLOB_RECURSE ALL_SOURCE_FILES benchmark/*.h common/*.h core/*.h protocol/*.h test/*.cpp main.cpp)
+file(GLOB_RECURSE ALL_SOURCE_FILES benchmark/*.h common/*.h core/*.h protocol/*.h test/*.cpp bench_tpcc.cpp)
 
 add_custom_target(
         format
@@ -46,5 +46,8 @@ foreach(_test_file ${TEST_SRC_FILES})
     add_test(NAME "${_test_name}" COMMAND ${_test_name})
 endforeach()
 
-add_executable(main main.cpp)
-target_link_libraries(main common)
+add_executable(bench_tpcc bench_tpcc.cpp)
+target_link_libraries(bench_tpcc common)
+
+add_executable(bench_ycsb bench_ycsb.cpp)
+target_link_libraries(bench_ycsb common)
