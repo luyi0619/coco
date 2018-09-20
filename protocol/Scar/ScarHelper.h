@@ -32,6 +32,48 @@ public:
     return remove_lock_bit(tid_);
   }
 
+  static bool validate_read_key(std::atomic<uint64_t> &latest_tid, uint64_t tid,
+                                uint64_t commit_ts, uint64_t &written_ts) {
+
+    uint64_t rts = get_rts(tid);
+
+    if (rts >= commit_ts) {
+      return true;
+    }
+
+    bool success;
+
+    do {
+      success = true;
+
+      uint64_t v1 = latest_tid.load();
+
+      if (get_wts(tid) != get_wts(v1)) {
+        return false;
+      }
+
+      // must be locked by others
+
+      if (get_rts(v1) < commit_ts && is_locked(v1)) {
+        return false;
+      }
+
+      // extend the rts of the tuple
+
+      if (get_rts(v1) < commit_ts) {
+        uint64_t v2 = set_rts(v1, commit_ts); // old_ts, new_ts
+        success = latest_tid.compare_exchange_weak(v1, v2);
+        if (success) {
+          written_ts = remove_lock_bit(v2);
+        }
+      }
+    } while (!success);
+
+    DCHECK(is_locked(written_ts) == false);
+
+    return success;
+  }
+
   static bool is_locked(uint64_t value) {
     return (value >> LOCK_BIT_OFFSET) & LOCK_BIT_MASK;
   }

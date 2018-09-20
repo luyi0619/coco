@@ -9,5 +9,4 @@ TEST(TestScar, TestBasic) {
 
   scar::ScarMessageFactory f;
   scar::ScarMessageHandler h;
-
 }
