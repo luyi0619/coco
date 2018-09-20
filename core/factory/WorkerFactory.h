@@ -4,10 +4,13 @@
 
 #pragma once
 
-#include "benchmark/tpcc/Workload.h"
-
+#include "core/Defs.h"
 #include "core/Executor.h"
 #include "core/Manager.h"
+
+#include "benchmark/tpcc/Workload.h"
+#include "benchmark/ycsb/Workload.h"
+
 #include "protocol/Scar/Scar.h"
 #include "protocol/Scar/ScarExecutor.h"
 #include "protocol/Silo/Silo.h"
@@ -36,13 +39,27 @@
 
 namespace scar {
 
+template <class Context> class InferType {};
+
+template <> class InferType<scar::tpcc::Context> {
+public:
+  template <class Transaction>
+  using WorkloadType = scar::tpcc::Workload<Transaction>;
+};
+
+template <> class InferType<scar::ycsb::Context> {
+public:
+  template <class Transaction>
+  using WorkloadType = scar::ycsb::Workload<Transaction>;
+};
+
 class WorkerFactory {
 
 public:
   template <class Database, class Context>
   static std::vector<std::shared_ptr<Worker>>
-  create_workers(std::size_t coordinator_id, Database &db, Context &context,
-                 std::atomic<bool> &stop_flag) {
+  create_workers(std::size_t coordinator_id, Database &db,
+                 const Context &context, std::atomic<bool> &stop_flag) {
 
     std::unordered_set<std::string> protocols = {
         "Silo", "SiloGC", "Scar", "RStore", "TwoPL", "TwoPLGC", "Calvin"};
@@ -53,7 +70,8 @@ public:
     if (context.protocol == "Silo") {
 
       using TransactionType = scar::SiloTransaction;
-      using WorkloadType = scar::tpcc::Workload<TransactionType>;
+      using WorkloadType =
+          typename InferType<Context>::template WorkloadType<TransactionType>;
 
       auto manager = std::make_shared<Manager>(
           coordinator_id, context.worker_num, context, stop_flag);
@@ -69,7 +87,8 @@ public:
     } else if (context.protocol == "SiloGC") {
 
       using TransactionType = scar::SiloTransaction;
-      using WorkloadType = scar::tpcc::Workload<TransactionType>;
+      using WorkloadType =
+          typename InferType<Context>::template WorkloadType<TransactionType>;
 
       auto manager = std::make_shared<group_commit::Manager>(
           coordinator_id, context.worker_num, context, stop_flag);
@@ -84,7 +103,8 @@ public:
     } else if (context.protocol == "Scar") {
 
       using TransactionType = scar::ScarTransaction;
-      using WorkloadType = scar::tpcc::Workload<TransactionType>;
+      using WorkloadType =
+          typename InferType<Context>::template WorkloadType<TransactionType>;
 
       auto manager = std::make_shared<Manager>(
           coordinator_id, context.worker_num, context, stop_flag);
@@ -100,7 +120,8 @@ public:
     } else if (context.protocol == "RStore") {
 
       using TransactionType = scar::SiloTransaction;
-      using WorkloadType = scar::tpcc::Workload<TransactionType>;
+      using WorkloadType =
+          typename InferType<Context>::template WorkloadType<TransactionType>;
 
       auto manager = std::make_shared<RStoreManager>(
           coordinator_id, context.worker_num, context, stop_flag);
@@ -115,7 +136,8 @@ public:
     } else if (context.protocol == "TwoPL") {
 
       using TransactionType = scar::TwoPLTransaction;
-      using WorkloadType = scar::tpcc::Workload<TransactionType>;
+      using WorkloadType =
+          typename InferType<Context>::template WorkloadType<TransactionType>;
 
       auto manager = std::make_shared<Manager>(
           coordinator_id, context.worker_num, context, stop_flag);
@@ -130,7 +152,8 @@ public:
     } else if (context.protocol == "TwoPLGC") {
 
       using TransactionType = scar::TwoPLTransaction;
-      using WorkloadType = scar::tpcc::Workload<TransactionType>;
+      using WorkloadType =
+          typename InferType<Context>::template WorkloadType<TransactionType>;
 
       auto manager = std::make_shared<group_commit::Manager>(
           coordinator_id, context.worker_num, context, stop_flag);
@@ -145,7 +168,8 @@ public:
     } else if (context.protocol == "Calvin") {
 
       using TransactionType = scar::CalvinTransaction;
-      using WorkloadType = scar::tpcc::Workload<TransactionType>;
+      using WorkloadType =
+          typename InferType<Context>::template WorkloadType<TransactionType>;
 
       // create manager
 
