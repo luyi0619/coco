@@ -1,5 +1,5 @@
 //
-// Created by Yi Lu on 7/22/18.
+// Created by Yi Lu on 9/19/18.
 //
 
 #pragma once
@@ -9,25 +9,25 @@
 #include "core/Defs.h"
 #include "core/Partitioner.h"
 #include "core/Table.h"
-#include "protocol/Silo/SiloRWKey.h"
+#include "protocol/Scar/ScarRWKey.h"
 #include <chrono>
 #include <glog/logging.h>
 #include <vector>
 
 namespace scar {
 
-class SiloTransaction {
+class ScarTransaction {
 public:
   using MetaDataType = std::atomic<uint64_t>;
 
-  SiloTransaction(std::size_t coordinator_id, std::size_t partition_id,
+  ScarTransaction(std::size_t coordinator_id, std::size_t partition_id,
                   Partitioner &partitioner)
       : coordinator_id(coordinator_id), partition_id(partition_id),
         startTime(std::chrono::steady_clock::now()), partitioner(partitioner) {
     reset();
   }
 
-  virtual ~SiloTransaction() = default;
+  virtual ~ScarTransaction() = default;
 
   void reset() {
     pendingResponses = 0;
@@ -44,7 +44,7 @@ public:
   template <class KeyType, class ValueType>
   void search_local_index(std::size_t table_id, std::size_t partition_id,
                           const KeyType &key, ValueType &value) {
-    SiloRWKey readKey;
+    ScarRWKey readKey;
 
     readKey.set_table_id(table_id);
     readKey.set_partition_id(partition_id);
@@ -66,7 +66,7 @@ public:
       pendingResponses++;
     }
 
-    SiloRWKey readKey;
+    ScarRWKey readKey;
 
     readKey.set_table_id(table_id);
     readKey.set_partition_id(partition_id);
@@ -87,7 +87,7 @@ public:
       pendingResponses++;
     }
 
-    SiloRWKey readKey;
+    ScarRWKey readKey;
 
     readKey.set_table_id(table_id);
     readKey.set_partition_id(partition_id);
@@ -103,7 +103,7 @@ public:
   template <class KeyType, class ValueType>
   void update(std::size_t table_id, std::size_t partition_id,
               const KeyType &key, const ValueType &value) {
-    SiloRWKey writeKey;
+    ScarRWKey writeKey;
 
     writeKey.set_table_id(table_id);
     writeKey.set_partition_id(partition_id);
@@ -124,7 +124,7 @@ public:
         break;
       }
 
-      const SiloRWKey &readKey = readSet[i];
+      const ScarRWKey &readKey = readSet[i];
       auto tid =
           readRequestHandler(readKey.get_table_id(), readKey.get_partition_id(),
                              i, readKey.get_key(), readKey.get_value(),
@@ -142,7 +142,7 @@ public:
     return false;
   }
 
-  SiloRWKey *get_read_key(const void *key) {
+  ScarRWKey *get_read_key(const void *key) {
 
     for (auto i = 0u; i < readSet.size(); i++) {
       if (readSet[i].get_key() == key) {
@@ -153,12 +153,12 @@ public:
     return nullptr;
   }
 
-  std::size_t add_to_read_set(const SiloRWKey &key) {
+  std::size_t add_to_read_set(const ScarRWKey &key) {
     readSet.push_back(key);
     return readSet.size() - 1;
   }
 
-  std::size_t add_to_write_set(const SiloRWKey &key) {
+  std::size_t add_to_write_set(const ScarRWKey &key) {
     writeSet.push_back(key);
     return writeSet.size() - 1;
   }
@@ -181,7 +181,7 @@ public:
 
   Partitioner &partitioner;
   std::vector<Operation> operations;
-  std::vector<SiloRWKey> readSet, writeSet;
+  std::vector<ScarRWKey> readSet, writeSet;
 };
 
 } // namespace scar

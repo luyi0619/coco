@@ -2,7 +2,6 @@
 // Created by Yi Lu on 9/19/18.
 //
 
-
 #include "protocol/Scar/ScarHelper.h"
 #include <atomic>
 #include <gtest/gtest.h>
@@ -27,7 +26,6 @@ TEST(TestTwoPLHelper, TestBasic) {
   EXPECT_EQ(new_rts, ScarHelper::get_rts(v3));
 }
 
-
 TEST(TestTwoPLHelper, TestOverflow) {
 
   using scar::ScarHelper;
@@ -45,11 +43,12 @@ TEST(TestTwoPLHelper, TestOverflow) {
   uint64_t rts2 = wts + (1ull << 15);
   uint64_t v3 = ScarHelper::set_rts(v1, rts2);
   EXPECT_EQ(ScarHelper::get_rts(v3), rts2);
-  EXPECT_EQ(ScarHelper::get_rts(v3) , ScarHelper::get_wts(v3) + ScarHelper::get_delta(v3));
-
+  EXPECT_EQ(ScarHelper::get_rts(v3),
+            ScarHelper::get_wts(v3) + ScarHelper::get_delta(v3));
 
   uint64_t rts3 = wts + 0x12345678;
   uint64_t v4 = ScarHelper::set_rts(v1, rts3);
   EXPECT_EQ(ScarHelper::get_rts(v4), rts3);
-  EXPECT_EQ(ScarHelper::get_rts(v4) , ScarHelper::get_wts(v4) + ScarHelper::get_delta(v4));
+  EXPECT_EQ(ScarHelper::get_rts(v4),
+            ScarHelper::get_wts(v4) + ScarHelper::get_delta(v4));
 }

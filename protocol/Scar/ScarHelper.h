@@ -98,7 +98,6 @@ public:
     return (value & (~(DELTA_MASK << DELTA_OFFSET))) | (delta << DELTA_OFFSET);
   }
 
-
   static uint64_t get_rts(uint64_t value) {
     return get_wts(value) + get_delta(value);
   }

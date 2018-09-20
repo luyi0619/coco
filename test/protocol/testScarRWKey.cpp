@@ -51,5 +51,4 @@ TEST(TestScarRWKey, TestBasic) {
   EXPECT_EQ(key.get_read_request_bit(), false);
   EXPECT_EQ(key.get_read_validation_success_bit(), false);
   EXPECT_EQ(key.get_wts_change_in_read_validation_bit(), false);
-
 }
