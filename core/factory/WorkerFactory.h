@@ -8,6 +8,8 @@
 
 #include "core/Executor.h"
 #include "core/Manager.h"
+#include "protocol/Scar/Scar.h"
+#include "protocol/Scar/ScarExecutor.h"
 #include "protocol/Silo/Silo.h"
 #include "protocol/Silo/SiloExecutor.h"
 #include "protocol/TwoPL/TwoPL.h"
@@ -42,8 +44,8 @@ public:
   create_workers(std::size_t coordinator_id, Database &db, Context &context,
                  std::atomic<bool> &stop_flag) {
 
-    std::unordered_set<std::string> protocols = {"Silo",  "SiloGC",  "RStore",
-                                                 "TwoPL", "TwoPLGC", "Calvin"};
+    std::unordered_set<std::string> protocols = {
+        "Silo", "SiloGC", "Scar", "RStore", "TwoPL", "TwoPLGC", "Calvin"};
     CHECK(protocols.count(context.protocol) == 1);
 
     std::vector<std::shared_ptr<Worker>> workers;
@@ -77,6 +79,22 @@ public:
             coordinator_id, i, db, context, manager->worker_status,
             manager->n_completed_workers, manager->n_started_workers));
       }
+      workers.push_back(manager);
+
+    } else if (context.protocol == "Scar") {
+
+      using TransactionType = scar::ScarTransaction;
+      using WorkloadType = scar::tpcc::Workload<TransactionType>;
+
+      auto manager = std::make_shared<Manager>(
+          coordinator_id, context.worker_num, context, stop_flag);
+
+      for (auto i = 0u; i < context.worker_num; i++) {
+        workers.push_back(std::make_shared<ScarExecutor<WorkloadType>>(
+            coordinator_id, i, db, context, manager->worker_status,
+            manager->n_completed_workers, manager->n_started_workers));
+      }
+
       workers.push_back(manager);
 
     } else if (context.protocol == "RStore") {
