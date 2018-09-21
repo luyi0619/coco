@@ -199,11 +199,7 @@ public:
           if (commit) {
             n_commit.fetch_add(1);
             retry_transaction = false;
-            auto latency =
-                std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::steady_clock::now() - transaction->startTime)
-                    .count();
-            percentile.add(latency);
+            q.push(std::move(transaction));
           } else {
             if (transaction->abort_lock) {
               n_abort_lock.fetch_add(1);
