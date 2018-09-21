@@ -405,8 +405,6 @@ public:
 
     ScarRWKey &writeKey = txn.writeSet[key_offset];
 
-    bool tid_changed = false;
-
     if (success) {
 
       ScarRWKey *readKey = txn.get_read_key(writeKey.get_key());
@@ -416,19 +414,17 @@ public:
       uint64_t tid_on_read = readKey->get_tid();
 
       if (ScarHelper::get_wts(latest_tid) != ScarHelper::get_wts(tid_on_read)) {
-        tid_changed = true;
+        txn.abort_lock = true;
       }
 
       writeKey.set_tid(latest_tid);
       writeKey.set_write_lock_bit();
+    } else {
+      txn.abort_lock = true;
     }
 
     txn.pendingResponses--;
     txn.network_size += inputPiece.get_message_length();
-
-    if (!success || tid_changed) {
-      txn.abort_lock = true;
-    }
   }
 
   static void read_validation_request_handler(MessagePiece inputPiece,

@@ -168,6 +168,7 @@ public:
   std::chrono::steady_clock::time_point startTime;
   std::size_t pendingResponses;
   std::size_t network_size;
+  uint64_t commit_rts, commit_wts;
   bool abort_lock, abort_read_validation;
 
   // table id, partition id, key, value, local index read?

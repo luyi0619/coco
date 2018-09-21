@@ -127,6 +127,7 @@ private:
         }
 
         writeKey.set_write_lock_bit();
+        writeKey.set_tid(latestTid);
 
         auto readKeyPtr = txn.get_read_key(key);
         // assume no blind write
@@ -137,7 +138,6 @@ private:
           break;
         }
 
-        writeKey.set_tid(latestTid);
       } else {
         txn.pendingResponses++;
         auto coordinatorID = partitioner.master_coordinator(partitionId);
@@ -181,15 +181,17 @@ private:
       auto tableId = readKey.get_table_id();
       auto partitionId = readKey.get_partition_id();
       auto table = db.find_table(tableId, partitionId);
+      auto key = readKey.get_key();
+      auto tid = readKey.get_tid();
 
       if (partitioner.has_master_partition(partitionId)) {
-        auto key = readKey.get_key();
-        uint64_t tid = table->search_metadata(key).load();
-        if (SiloHelper::remove_lock_bit(tid) != readKey.get_tid()) {
+
+        uint64_t latest_tid = table->search_metadata(key).load();
+        if (SiloHelper::remove_lock_bit(latest_tid) != tid) {
           txn.abort_read_validation = true;
           break;
         }
-        if (SiloHelper::is_locked(tid)) { // must be locked by others
+        if (SiloHelper::is_locked(latest_tid)) { // must be locked by others
           txn.abort_read_validation = true;
           break;
         }
@@ -198,8 +200,7 @@ private:
         txn.pendingResponses++;
         auto coordinatorID = partitioner.master_coordinator(partitionId);
         txn.network_size += MessageFactoryType::new_read_validation_message(
-            *messages[coordinatorID], *table, readKey.get_key(), i,
-            readKey.get_tid());
+            *messages[coordinatorID], *table, key, i, tid);
       }
     }
 
