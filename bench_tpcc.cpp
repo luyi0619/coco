@@ -58,13 +58,6 @@ int main(int argc, char *argv[]) {
   context.newOrderCrossPartitionProbability = FLAGS_neworder_dist;
   context.paymentCrossPartitionProbability = FLAGS_payment_dist;
 
-  // only create coordinator for tpc-c
-  std::unordered_set<std::string> protocols = {
-      "Silo", "SiloGC", "Scar", "RStore", "TwoPL", "TwoPLGC", "Calvin"};
-  std::unordered_set<std::string> silo_protocols = {"Silo", "SiloGC", "RStore"};
-  std::unordered_set<std::string> scar_protocols = {"Scar"};
-  std::unordered_set<std::string> twopl_protocols = {"TwoPL", "TwoPLGC"};
-
   using MetaDataType = std::atomic<uint64_t>;
   scar::tpcc::Database<MetaDataType> db;
   db.initialize(context, context.partition_num, n);

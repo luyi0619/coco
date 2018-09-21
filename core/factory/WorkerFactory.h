@@ -28,6 +28,8 @@
 #include "protocol/RStore/RStore.h"
 #include "protocol/RStore/RStoreExecutor.h"
 #include "protocol/RStore/RStoreManager.h"
+#include "protocol/RStoreNC/RStoreNCExecutor.h"
+#include "protocol/RStoreNC/RStoreNCManager.h"
 
 #include "protocol/Calvin/Calvin.h"
 #include "protocol/Calvin/CalvinExecutor.h"
@@ -61,8 +63,9 @@ public:
   create_workers(std::size_t coordinator_id, Database &db,
                  const Context &context, std::atomic<bool> &stop_flag) {
 
-    std::unordered_set<std::string> protocols = {
-        "Silo", "SiloGC", "Scar", "RStore", "TwoPL", "TwoPLGC", "Calvin"};
+    std::unordered_set<std::string> protocols = {"Silo",    "SiloGC",   "Scar",
+                                                 "RStore",  "RStoreNC", "TwoPL",
+                                                 "TwoPLGC", "Calvin"};
     CHECK(protocols.count(context.protocol) == 1);
 
     std::vector<std::shared_ptr<Worker>> workers;
@@ -128,6 +131,22 @@ public:
 
       for (auto i = 0u; i < context.worker_num; i++) {
         workers.push_back(std::make_shared<RStoreExecutor<WorkloadType>>(
+            coordinator_id, i, db, context, manager->worker_status,
+            manager->n_completed_workers, manager->n_started_workers));
+      }
+      workers.push_back(manager);
+
+    } else if (context.protocol == "RStoreNC") {
+
+      using TransactionType = scar::SiloTransaction;
+      using WorkloadType =
+          typename InferType<Context>::template WorkloadType<TransactionType>;
+
+      auto manager = std::make_shared<RStoreNCManager>(
+          coordinator_id, context.worker_num, context, stop_flag);
+
+      for (auto i = 0u; i < context.worker_num; i++) {
+        workers.push_back(std::make_shared<RStoreNCExecutor<WorkloadType>>(
             coordinator_id, i, db, context, manager->worker_status,
             manager->n_completed_workers, manager->n_started_workers));
       }

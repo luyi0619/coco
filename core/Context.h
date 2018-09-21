@@ -21,8 +21,5 @@ public:
   std::string partitioner;
 
   bool operation_replication;
-
-  virtual std::size_t get_s_phase_query_num() const = 0;
-  virtual std::size_t get_c_phase_query_num() const = 0;
 };
 } // namespace scar

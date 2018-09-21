@@ -4,19 +4,17 @@
 
 #pragma once
 
-#include <chrono>
-
 #include "common/Percentile.h"
 #include "core/Manager.h"
 
 namespace scar {
 
-class RStoreManager : public scar::Manager {
+class RStoreNCManager : public scar::Manager {
 public:
   using base_type = scar::Manager;
 
-  RStoreManager(std::size_t coordinator_id, std::size_t id,
-                const Context &context, std::atomic<bool> &stopFlag)
+  RStoreNCManager(std::size_t coordinator_id, std::size_t id,
+                  const Context &context, std::atomic<bool> &stopFlag)
       : base_type(coordinator_id, id, context, stopFlag) {}
 
   void coordinator_start() override {
@@ -55,11 +53,7 @@ public:
       n_started_workers.store(0);
       signal_worker(ExecutorStatus::S_PHASE);
       wait_all_workers_start();
-      wait_all_workers_finish();
-      broadcast_stop();
       wait4_stop(n_coordinators - 1);
-      // process replication
-      n_completed_workers.store(0);
       set_worker_status(ExecutorStatus::STOP);
       wait_all_workers_finish();
       wait4_ack();
@@ -121,12 +115,8 @@ public:
       set_worker_status(ExecutorStatus::S_PHASE);
       wait_all_workers_start();
       wait_all_workers_finish();
-      broadcast_stop();
-      wait4_stop(n_coordinators - 1);
-      // process replication
-      n_completed_workers.store(0);
       set_worker_status(ExecutorStatus::STOP);
-      wait_all_workers_finish();
+      send_stop(0);
       send_ack();
     }
   }
