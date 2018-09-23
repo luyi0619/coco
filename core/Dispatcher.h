@@ -8,6 +8,7 @@
 #include "common/LockfreeQueue.h"
 #include "common/Message.h"
 #include "common/Socket.h"
+#include "core/ControlMessage.h"
 #include "core/Worker.h"
 #include <atomic>
 #include <glog/logging.h>
@@ -19,8 +20,10 @@ class IncomingDispatcher {
 public:
   IncomingDispatcher(std::size_t id, std::vector<Socket> &sockets,
                      const std::vector<std::shared_ptr<Worker>> &workers,
+                     LockfreeQueue<Message *> &coordinator_queue,
                      std::atomic<bool> &stopFlag)
-      : id(id), network_size(0), workers(workers), stopFlag(stopFlag) {
+      : id(id), network_size(0), workers(workers),
+        coordinator_queue(coordinator_queue), stopFlag(stopFlag) {
 
     for (auto i = 0u; i < sockets.size(); i++) {
       buffered_readers.emplace_back(sockets[i]);
@@ -51,7 +54,15 @@ public:
         if (message == nullptr) {
           continue;
         }
+
         network_size += message->get_message_length();
+
+        // check coordinator message
+        if (is_coordinator_message(message.get())) {
+          coordinator_queue.push(message.release());
+          continue;
+        }
+
         auto workerId = message->get_worker_id();
         // release the unique ptr
         workers[workerId]->push_message(message.release());
@@ -62,6 +73,11 @@ public:
     LOG(INFO) << "Incoming Dispatcher exits, network size: " << network_size;
   }
 
+  bool is_coordinator_message(Message *message) {
+    return (*(message->begin())).get_message_type() ==
+           static_cast<uint32_t>(ControlMessage::STATISTICS);
+  }
+
   std::unique_ptr<Message> fetchMessage(Socket &socket) { return nullptr; }
 
 private:
@@ -69,6 +85,7 @@ private:
   std::size_t network_size;
   std::vector<BufferedReader> buffered_readers;
   std::vector<std::shared_ptr<Worker>> workers;
+  LockfreeQueue<Message *> &coordinator_queue;
   std::atomic<bool> &stopFlag;
 };
 
@@ -76,9 +93,10 @@ class OutgoingDispatcher {
 public:
   OutgoingDispatcher(std::size_t id, std::vector<Socket> &sockets,
                      const std::vector<std::shared_ptr<Worker>> &workers,
+                     LockfreeQueue<Message *> &coordinator_queue,
                      std::atomic<bool> &stopFlag)
       : id(id), network_size(0), sockets(sockets), workers(workers),
-        stopFlag(stopFlag) {}
+        coordinator_queue(coordinator_queue), stopFlag(stopFlag) {}
 
   void start() {
 
@@ -94,6 +112,15 @@ public:
 
     while (!stopFlag.load()) {
 
+      // check coordinator
+
+      if (!coordinator_queue.empty()) {
+        std::unique_ptr<Message> message(coordinator_queue.front());
+        bool ok = coordinator_queue.pop();
+        CHECK(ok);
+        sendMessage(message.get());
+      }
+
       for (auto i = 0u; i < numWorkers; i++) {
         dispatchMessage(workers[i]);
       }
@@ -102,15 +129,7 @@ public:
     LOG(INFO) << "Outgoing Dispatcher exits, network size: " << network_size;
   }
 
-  void dispatchMessage(const std::shared_ptr<Worker> &worker) {
-
-    Message *raw_message = worker->pop_message();
-    if (raw_message == nullptr) {
-      return;
-    }
-    // wrap the message with a unique pointer.
-    std::unique_ptr<Message> message(raw_message);
-    // send the message
+  void sendMessage(Message *message) {
     auto dest_node_id = message->get_dest_node_id();
     DCHECK(dest_node_id >= 0 && dest_node_id < sockets.size() &&
            dest_node_id != id);
@@ -122,11 +141,24 @@ public:
     network_size += message->get_message_length();
   }
 
+  void dispatchMessage(const std::shared_ptr<Worker> &worker) {
+
+    Message *raw_message = worker->pop_message();
+    if (raw_message == nullptr) {
+      return;
+    }
+    // wrap the message with a unique pointer.
+    std::unique_ptr<Message> message(raw_message);
+    // send the message
+    sendMessage(message.get());
+  }
+
 private:
   std::size_t id;
   std::size_t network_size;
   std::vector<Socket> &sockets;
   std::vector<std::shared_ptr<Worker>> workers;
+  LockfreeQueue<Message *> &coordinator_queue;
   std::atomic<bool> &stopFlag;
 };
 

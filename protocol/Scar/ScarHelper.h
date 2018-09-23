@@ -5,6 +5,8 @@
 #pragma once
 
 #include <atomic>
+#include <cstring>
+#include <tuple>
 
 #include "glog/logging.h"
 

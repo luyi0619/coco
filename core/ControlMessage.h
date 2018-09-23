@@ -12,6 +12,7 @@
 namespace scar {
 
 enum class ControlMessage {
+  STATISTICS,
   SIGNAL,
   ACK,
   OPERATION_REPLICATION_REQUEST,
@@ -22,6 +23,24 @@ enum class ControlMessage {
 class ControlMessageFactory {
 
 public:
+  static std::size_t new_statistics_message(Message &message, double value) {
+    /*
+     * The structure of a statistics message: (statistics value : double)
+     *
+     */
+
+    // the message is not associated with a table or a partition, use 0.
+    auto message_size = MessagePiece::get_header_size() + sizeof(double);
+    auto message_piece_header = MessagePiece::construct_message_piece_header(
+        static_cast<uint32_t>(ControlMessage::STATISTICS), message_size, 0, 0);
+
+    Encoder encoder(message.data);
+    encoder << message_piece_header;
+    encoder << value;
+    message.flush();
+    return message_size;
+  }
+
   static std::size_t new_signal_message(Message &message, uint32_t value) {
 
     /*

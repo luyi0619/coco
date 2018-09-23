@@ -4,7 +4,10 @@
 
 #pragma once
 
+#include "common/LockfreeQueue.h"
+#include "common/Message.h"
 #include "common/Socket.h"
+#include "core/ControlMessage.h"
 #include "core/Dispatcher.h"
 #include "core/Executor.h"
 #include "core/Worker.h"
@@ -21,7 +24,7 @@ public:
   template <class Database, class Context>
   Coordinator(std::size_t id, const std::vector<std::string> &peers,
               Database &db, const Context &context)
-      : id(id), peers(peers) {
+      : id(id), coordinator_num(peers.size()), peers(peers) {
     workerStopFlag.store(false);
     ioStopFlag.store(false);
     LOG(INFO) << "Coordinator initializes " << context.worker_num
@@ -35,9 +38,9 @@ public:
 
     // start dispatcher threads
     iDispatcher = std::make_unique<IncomingDispatcher>(id, inSockets, workers,
-                                                       ioStopFlag);
+                                                       in_queue, ioStopFlag);
     oDispatcher = std::make_unique<OutgoingDispatcher>(id, outSockets, workers,
-                                                       ioStopFlag);
+                                                       out_queue, ioStopFlag);
 
     std::thread iDispatcherThread(&IncomingDispatcher::start,
                                   iDispatcher.get());
@@ -124,6 +127,15 @@ public:
       threads[i].join();
     }
 
+    // gather throughput
+    double sum_commit = gather(1.0 * total_commit / count);
+    if (id == 0) {
+      LOG(INFO) << "total commit: " << sum_commit;
+    }
+
+    // make sure all messages are sent
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
     ioStopFlag.store(true);
     iDispatcherThread.join();
     oDispatcherThread.join();
@@ -207,13 +219,55 @@ public:
     LOG(INFO) << "Coordinator " << id << " connected to all peers.";
   }
 
+  double gather(double value) {
+
+    auto init_message = [](Message *message, std::size_t coordinator_id,
+                           std::size_t dest_node_id) {
+      message->set_source_node_id(coordinator_id);
+      message->set_dest_node_id(dest_node_id);
+      message->set_worker_id(0);
+    };
+
+    double sum = value;
+
+    if (id == 0) {
+      for (std::size_t i = 0; i < coordinator_num - 1; i++) {
+
+        in_queue.wait_till_non_empty();
+        std::unique_ptr<Message> message(in_queue.front());
+        bool ok = in_queue.pop();
+        CHECK(ok);
+        CHECK(message->get_message_count() == 1);
+
+        MessagePiece messagePiece = *(message->begin());
+
+        CHECK(messagePiece.get_message_type() ==
+              static_cast<uint32_t>(ControlMessage::STATISTICS));
+        CHECK(messagePiece.get_message_length() ==
+              MessagePiece::get_header_size() + sizeof(double));
+        Decoder dec(messagePiece.toStringPiece());
+        double v;
+        dec >> v;
+        sum += v;
+      }
+
+    } else {
+      auto message = std::make_unique<Message>();
+      init_message(message.get(), id, 0);
+      ControlMessageFactory::new_statistics_message(*message, value);
+      out_queue.push(message.release());
+    }
+    return sum;
+  }
+
 private:
-  std::size_t id;
+  std::size_t id, coordinator_num;
   std::vector<std::string> peers;
   std::vector<Socket> inSockets, outSockets;
   std::atomic<bool> workerStopFlag, ioStopFlag;
   std::vector<std::shared_ptr<Worker>> workers;
   std::unique_ptr<IncomingDispatcher> iDispatcher;
   std::unique_ptr<OutgoingDispatcher> oDispatcher;
+  LockfreeQueue<Message *> in_queue, out_queue;
 };
 } // namespace scar
