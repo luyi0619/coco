@@ -78,11 +78,11 @@ public:
                                     const Operation &operation) {
 
     /*
-     * The structure of an operation replication message: (bitvec, data)
+     * The structure of an operation replication message: (bitvec, tid, data)
      */
 
     auto message_size = MessagePiece::get_header_size() + sizeof(uint32_t) +
-                        operation.data.size();
+                        sizeof(uint64_t) + operation.data.size();
     auto message_piece_header = MessagePiece::construct_message_piece_header(
         static_cast<uint32_t>(ControlMessage::OPERATION_REPLICATION_REQUEST),
         message_size, operation.get_table_id(), operation.get_partition_id());
@@ -90,6 +90,7 @@ public:
     Encoder encoder(message.data);
     encoder << message_piece_header;
     encoder << operation.bitvec;
+    encoder << operation.tid;
     encoder.write_n_bytes(operation.data.c_str(), operation.data.size());
     message.flush();
     return message_size;
@@ -113,9 +114,10 @@ public:
     Decoder dec(inputPiece.toStringPiece());
     Operation operation;
     dec >> operation.bitvec;
+    dec >> operation.tid;
 
-    auto data_size =
-        message_size - MessagePiece::get_header_size() - sizeof(uint32_t);
+    auto data_size = message_size - MessagePiece::get_header_size() -
+                     sizeof(uint32_t) - sizeof(uint64_t);
     DCHECK(data_size > 0);
 
     operation.data.resize(data_size);

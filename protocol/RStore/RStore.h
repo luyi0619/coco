@@ -249,6 +249,7 @@ private:
 
     if (context.operation_replication) {
       for (auto i = 0u; i < operations.size(); i++) {
+        operations[i].set_tid(commit_tid);
         auto partitionId = operations[i].get_partition_id();
         for (auto k = 0u; k < partitioner.total_coordinators(); k++) {
           // k does not have this partition

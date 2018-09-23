@@ -28,14 +28,15 @@ public:
   using TableType = ITable<MetaDataType>;
   using StorageType = Storage;
 
+  static constexpr std::size_t keys_num = 4;
+
   ReadModifyWrite(std::size_t coordinator_id, std::size_t partition_id,
                   DatabaseType &db, const ContextType &context,
                   RandomType &random, Partitioner &partitioner,
                   Storage &storage)
       : Transaction(coordinator_id, partition_id, partitioner), db(db),
         context(context), random(random), storage(storage),
-        query(makeYCSBQuery<YCSB_FIELD_SIZE>()(context, partition_id, random)) {
-  }
+        query(makeYCSBQuery<keys_num>()(context, partition_id, random)) {}
 
   virtual ~ReadModifyWrite() override = default;
 
@@ -45,11 +46,11 @@ public:
 
     RandomType random;
 
-    DCHECK(context.keysPerTransaction == YCSB_FIELD_SIZE);
+    DCHECK(context.keysPerTransaction == keys_num);
 
     int ycsbTableID = ycsb::tableID;
 
-    for (auto i = 0; i < YCSB_FIELD_SIZE; i++) {
+    for (auto i = 0u; i < keys_num; i++) {
       auto key = query.Y_KEY[i];
       storage.ycsb_keys[i].Y_KEY = key;
       this->search_for_update(ycsbTableID, context.getPartitionID(key),
@@ -60,7 +61,7 @@ public:
       return TransactionResult::ABORT;
     }
 
-    for (auto i = 0; i < YCSB_FIELD_SIZE; i++) {
+    for (auto i = 0u; i < keys_num; i++) {
       auto key = query.Y_KEY[i];
       if (query.UPDATE[i]) {
         storage.ycsb_values[i].Y_F01.assign(
@@ -97,7 +98,7 @@ private:
   RandomType &random;
   Storage &storage;
   std::vector<Operation> operations;
-  YCSBQuery<YCSB_FIELD_SIZE> query;
+  YCSBQuery<keys_num> query;
 };
 } // namespace ycsb
 

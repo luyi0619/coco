@@ -20,6 +20,6 @@ public:
   std::size_t group_time = 40; // ms
   std::string partitioner;
 
-  bool operation_replication;
+  bool operation_replication = false;
 };
 } // namespace scar

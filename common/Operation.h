@@ -65,6 +65,10 @@ public:
     return (bitvec >> OPERATION_TYPE_OFFSET) & OPERATION_TYPE_MASK;
   }
 
+  void set_tid(uint64_t id) { tid = id; }
+
+  uint64_t get_tid() const { return tid; }
+
 public:
   /*
    * A bitvec is a 32-bit word.
@@ -74,6 +78,7 @@ public:
    */
 
   uint32_t bitvec;
+  uint64_t tid;
   std::string data;
 
   static constexpr uint32_t TABLE_ID_MASK = 0x1f;
