@@ -18,6 +18,7 @@ public:
   std::size_t batch_size = 240; // rstore or calvin batch size
   std::size_t batch_flush = 10;
   std::size_t group_time = 40; // ms
+  std::size_t sleep_time = 50; // us
   std::string partitioner;
 
   bool operation_replication = false;
