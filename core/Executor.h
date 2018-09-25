@@ -116,6 +116,8 @@ public:
         } else {
           protocol.abort(*transaction, messages);
           n_abort_no_retry.fetch_add(1);
+          std::this_thread::sleep_for(
+              std::chrono::microseconds(context.sleep_time));
         }
       }
 

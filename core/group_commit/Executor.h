@@ -137,6 +137,8 @@ public:
           } else {
             protocol.abort(*transaction, sync_messages);
             n_abort_no_retry.fetch_add(1);
+            std::this_thread::sleep_for(
+                std::chrono::microseconds(context.sleep_time));
           }
 
           if (count % context.batch_flush == 0) {
