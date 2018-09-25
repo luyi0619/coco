@@ -159,7 +159,7 @@ public:
         remote_request_handler();
       }
     }
-    return abort_lock;
+    return false;
   }
 
   TwoPLRWKey *get_read_key(const void *key) {

@@ -135,6 +135,7 @@ public:
                   std::chrono::microseconds(context.sleep_time));
             }
           } else {
+            protocol.abort(*transaction, sync_messages);
             n_abort_no_retry.fetch_add(1);
           }
 

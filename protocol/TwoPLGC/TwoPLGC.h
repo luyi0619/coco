@@ -129,19 +129,20 @@ public:
     // generate tid
     uint64_t commit_tid = generate_tid(txn);
 
-    // release locks
-    release_read_lock(txn, commit_tid, syncMessages);
-
     // write and replicate
-    write_and_replicate(txn, commit_tid, syncMessages, asyncMessages);
+    write(txn, commit_tid, syncMessages);
+
+    // release locks
+    release_lock(txn, commit_tid, syncMessages);
+
+    // replicate
+    replicate(txn, commit_tid, asyncMessages);
 
     return true;
   }
 
-  void
-  write_and_replicate(TransactionType &txn, uint64_t commit_tid,
-                      std::vector<std::unique_ptr<Message>> &syncMessages,
-                      std::vector<std::unique_ptr<Message>> &asyncMessages) {
+  void write(TransactionType &txn, uint64_t commit_tid,
+             std::vector<std::unique_ptr<Message>> &messages) {
 
     auto &readSet = txn.readSet;
     auto &writeSet = txn.writeSet;
@@ -156,15 +157,79 @@ public:
       if (partitioner.has_master_partition(partitionId)) {
         auto key = writeKey.get_key();
         auto value = writeKey.get_value();
+        table->update(key, value);
+      } else {
+        txn.pendingResponses++;
+        auto coordinatorID = partitioner.master_coordinator(partitionId);
+        txn.network_size += MessageFactoryType::new_write_message(
+            *messages[coordinatorID], *table, writeKey.get_key(),
+            writeKey.get_value());
+      }
+    }
+
+    sync_messages(txn);
+  }
+
+  void release_lock(TransactionType &txn, uint64_t commit_tid,
+                    std::vector<std::unique_ptr<Message>> &messages) {
+
+    // release read locks
+    auto &readSet = txn.readSet;
+
+    for (auto i = 0u; i < readSet.size(); i++) {
+      auto &readKey = readSet[i];
+      auto tableId = readKey.get_table_id();
+      auto partitionId = readKey.get_partition_id();
+      auto table = db.find_table(tableId, partitionId);
+      if (readKey.get_read_lock_bit()) {
+        if (partitioner.has_master_partition(partitionId)) {
+          auto key = readKey.get_key();
+          auto value = readKey.get_value();
+          std::atomic<uint64_t> &tid = table->search_metadata(key);
+          TwoPLHelper::read_lock_release(tid);
+        } else {
+          auto coordinatorID = partitioner.master_coordinator(partitionId);
+          txn.network_size += MessageFactoryType::new_release_read_lock_message(
+              *messages[coordinatorID], *table, readKey.get_key());
+        }
+      }
+    }
+
+    // release write lock
+    auto &writeSet = txn.writeSet;
+    for (auto i = 0u; i < writeSet.size(); i++) {
+      auto &writeKey = writeSet[i];
+      auto tableId = writeKey.get_table_id();
+      auto partitionId = writeKey.get_partition_id();
+      auto table = db.find_table(tableId, partitionId);
+      // write
+      if (partitioner.has_master_partition(partitionId)) {
+        auto key = writeKey.get_key();
+        auto value = writeKey.get_value();
         std::atomic<uint64_t> &tid = table->search_metadata(key);
         table->update(key, value);
         TwoPLHelper::write_lock_release(tid, commit_tid);
       } else {
         auto coordinatorID = partitioner.master_coordinator(partitionId);
-        txn.network_size += MessageFactoryType::new_write_message(
-            *syncMessages[coordinatorID], *table, writeKey.get_key(),
-            writeKey.get_value(), commit_tid);
+        txn.network_size += MessageFactoryType::new_release_write_lock_message(
+            *messages[coordinatorID], *table, writeKey.get_key(), commit_tid);
       }
+    }
+
+    sync_messages(txn, false);
+  }
+
+  void replicate(TransactionType &txn, uint64_t commit_tid,
+                 std::vector<std::unique_ptr<Message>> &messages) {
+
+    auto &readSet = txn.readSet;
+    auto &writeSet = txn.writeSet;
+
+    for (auto i = 0u; i < writeSet.size(); i++) {
+      auto &writeKey = writeSet[i];
+      auto tableId = writeKey.get_table_id();
+      auto partitionId = writeKey.get_partition_id();
+      auto table = db.find_table(tableId, partitionId);
 
       // value replicate
 
@@ -188,51 +253,18 @@ public:
         if (k == txn.coordinator_id) {
           auto key = writeKey.get_key();
           auto value = writeKey.get_value();
-          std::atomic<uint64_t> &tid = table->search_metadata(key);
-          uint64_t last_tid = TwoPLHelper::write_lock(tid);
-          if (commit_tid > last_tid) {
-            table->update(key, value);
-            TwoPLHelper::write_lock_release(tid, commit_tid);
-          } else {
-            TwoPLHelper::write_lock_release(tid);
-          }
+          table->update(key, value);
         } else {
+
+          txn.pendingResponses++;
           auto coordinatorID = k;
           txn.network_size += MessageFactoryType::new_replication_message(
-              *asyncMessages[coordinatorID], *table, writeKey.get_key(),
+              *messages[coordinatorID], *table, writeKey.get_key(),
               writeKey.get_value(), commit_tid);
         }
       }
 
       DCHECK(replicate_count == partitioner.replica_num() - 1);
-    }
-
-    sync_messages(txn, false);
-  }
-
-  void release_read_lock(TransactionType &txn, uint64_t commit_tid,
-                         std::vector<std::unique_ptr<Message>> &messages) {
-
-    // release read locks
-    auto &readSet = txn.readSet;
-
-    for (auto i = 0u; i < readSet.size(); i++) {
-      auto &readKey = readSet[i];
-      auto tableId = readKey.get_table_id();
-      auto partitionId = readKey.get_partition_id();
-      auto table = db.find_table(tableId, partitionId);
-      if (readKey.get_read_lock_bit()) {
-        if (partitioner.has_master_partition(partitionId)) {
-          auto key = readKey.get_key();
-          auto value = readKey.get_value();
-          std::atomic<uint64_t> &tid = table->search_metadata(key);
-          TwoPLHelper::read_lock_release(tid);
-        } else {
-          auto coordinatorID = partitioner.master_coordinator(partitionId);
-          txn.network_size += MessageFactoryType::new_release_read_lock_message(
-              *messages[coordinatorID], *table, readKey.get_key());
-        }
-      }
     }
 
     sync_messages(txn, false);

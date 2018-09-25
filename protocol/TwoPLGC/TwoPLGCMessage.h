@@ -23,8 +23,10 @@ enum class TwoPLGCMessage {
   WRITE_LOCK_RESPONSE,
   ABORT_REQUEST,
   WRITE_REQUEST,
+  WRITE_RESPONSE,
   REPLICATION_REQUEST,
   RELEASE_READ_LOCK_REQUEST,
+  RELEASE_WRITE_LOCK_REQUEST,
   NFIELDS
 };
 
@@ -104,18 +106,16 @@ public:
   }
 
   static std::size_t new_write_message(Message &message, Table &table,
-                                       const void *key, const void *value,
-                                       uint64_t commit_tid) {
+                                       const void *key, const void *value) {
 
     /*
-     * The structure of a write request: (primary key, field value, commit_tid)
+     * The structure of a write request: (primary key, field value)
      */
 
     auto key_size = table.key_size();
     auto field_size = table.field_size();
 
-    auto message_size = MessagePiece::get_header_size() + key_size +
-                        field_size + sizeof(uint64_t);
+    auto message_size = MessagePiece::get_header_size() + key_size + field_size;
     auto message_piece_header = MessagePiece::construct_message_piece_header(
         static_cast<uint32_t>(TwoPLGCMessage::WRITE_REQUEST), message_size,
         table.tableID(), table.partitionID());
@@ -124,7 +124,6 @@ public:
     encoder << message_piece_header;
     encoder.write_n_bytes(key, key_size);
     table.serialize_value(encoder, value);
-    encoder << commit_tid;
     message.flush();
     return message_size;
   }
@@ -173,6 +172,31 @@ public:
     Encoder encoder(message.data);
     encoder << message_piece_header;
     encoder.write_n_bytes(key, key_size);
+    message.flush();
+    return message_size;
+  }
+
+  static std::size_t new_release_write_lock_message(Message &message,
+                                                    Table &table,
+                                                    const void *key,
+                                                    uint64_t commit_tid) {
+
+    /*
+     * The structure of a release write lock request: (primary key, commit tid)
+     */
+
+    auto key_size = table.key_size();
+
+    auto message_size =
+        MessagePiece::get_header_size() + key_size + sizeof(commit_tid);
+    auto message_piece_header = MessagePiece::construct_message_piece_header(
+        static_cast<uint32_t>(TwoPLGCMessage::RELEASE_WRITE_LOCK_REQUEST),
+        message_size, table.tableID(), table.partitionID());
+
+    Encoder encoder(message.data);
+    encoder << message_piece_header;
+    encoder.write_n_bytes(key, key_size);
+    encoder << commit_tid;
     message.flush();
     return message_size;
   }
@@ -462,28 +486,49 @@ public:
     auto field_size = table.field_size();
 
     /*
-     * The structure of a write request: (primary key, field value, commit_tid)
+     * The structure of a write request: (primary key, field value)
      * The structure of a write response: ()
      */
 
-    DCHECK(inputPiece.get_message_length() == MessagePiece::get_header_size() +
-                                                  key_size + field_size +
-                                                  sizeof(uint64_t));
+    DCHECK(inputPiece.get_message_length() ==
+           MessagePiece::get_header_size() + key_size + field_size);
 
     auto stringPiece = inputPiece.toStringPiece();
 
     const void *key = stringPiece.data();
     stringPiece.remove_prefix(key_size);
+
     table.deserialize_value(key, stringPiece);
-    stringPiece.remove_prefix(field_size);
 
-    uint64_t commit_tid;
-    Decoder dec(stringPiece);
-    dec >> commit_tid;
-    DCHECK(dec.size() == 0);
+    // prepare response message header
+    auto message_size = MessagePiece::get_header_size();
+    auto message_piece_header = MessagePiece::construct_message_piece_header(
+        static_cast<uint32_t>(TwoPLGCMessage::WRITE_RESPONSE), message_size,
+        table_id, partition_id);
 
-    std::atomic<uint64_t> &tid = table.search_metadata(key);
-    TwoPLHelper::write_lock_release(tid, commit_tid);
+    scar::Encoder encoder(responseMessage.data);
+    encoder << message_piece_header;
+    responseMessage.flush();
+  }
+
+  static void write_response_handler(MessagePiece inputPiece,
+                                     Message &responseMessage, Table &table,
+                                     Transaction &txn) {
+
+    DCHECK(inputPiece.get_message_type() ==
+           static_cast<uint32_t>(TwoPLGCMessage::WRITE_RESPONSE));
+    auto table_id = inputPiece.get_table_id();
+    auto partition_id = inputPiece.get_partition_id();
+    DCHECK(table_id == table.tableID());
+    DCHECK(partition_id == table.partitionID());
+    auto key_size = table.key_size();
+
+    /*
+     * The structure of a write response: ()
+     */
+
+    txn.pendingResponses--;
+    txn.network_size += inputPiece.get_message_length();
   }
 
   static void replication_request_handler(MessagePiece inputPiece,
@@ -556,6 +601,39 @@ public:
     TwoPLHelper::read_lock_release(tid);
   }
 
+  static void release_write_lock_request_handler(MessagePiece inputPiece,
+                                                 Message &responseMessage,
+                                                 Table &table,
+                                                 Transaction &txn) {
+
+    DCHECK(inputPiece.get_message_type() ==
+           static_cast<uint32_t>(TwoPLGCMessage::RELEASE_WRITE_LOCK_REQUEST));
+    auto table_id = inputPiece.get_table_id();
+    auto partition_id = inputPiece.get_partition_id();
+    DCHECK(table_id == table.tableID());
+    DCHECK(partition_id == table.partitionID());
+    auto key_size = table.key_size();
+    /*
+     * The structure of a release write lock request: (primary key, commit tid)
+     * The structure of a release write lock response: null
+     */
+
+    DCHECK(inputPiece.get_message_length() ==
+           MessagePiece::get_header_size() + key_size + sizeof(uint64_t));
+
+    auto stringPiece = inputPiece.toStringPiece();
+
+    const void *key = stringPiece.data();
+    stringPiece.remove_prefix(key_size);
+
+    uint64_t commit_tid;
+    Decoder dec(stringPiece);
+    dec >> commit_tid;
+
+    std::atomic<uint64_t> &tid = table.search_metadata(key);
+    TwoPLHelper::write_lock_release(tid, commit_tid);
+  }
+
 public:
   static std::vector<
       std::function<void(MessagePiece, Message &, Table &, Transaction &)>>
@@ -570,8 +648,10 @@ public:
     v.push_back(write_lock_response_handler);
     v.push_back(abort_request_handler);
     v.push_back(write_request_handler);
+    v.push_back(write_response_handler);
     v.push_back(replication_request_handler);
     v.push_back(release_read_lock_request_handler);
+    v.push_back(release_write_lock_request_handler);
     return v;
   }
 };
