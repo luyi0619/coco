@@ -108,8 +108,8 @@ public:
               DCHECK(transaction->abort_read_validation);
               n_abort_read_validation.fetch_add(1);
             }
-            std::this_thread::sleep_for(
-                std::chrono::microseconds(random.uniform_dist(0, context.sleep_time)));
+            std::this_thread::sleep_for(std::chrono::microseconds(
+                random.uniform_dist(0, context.sleep_time)));
             random.set_seed(last_seed);
             retry_transaction = true;
           }
