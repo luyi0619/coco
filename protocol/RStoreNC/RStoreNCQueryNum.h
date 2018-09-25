@@ -12,10 +12,8 @@ template <class Context> class RStoreNCQueryNum {};
 
 template <> class RStoreNCQueryNum<scar::tpcc::Context> {
 public:
-  static std::size_t
-  get_s_phase_query_num(const scar::tpcc::Context &context) {
-    if (context.workloadType ==
-        scar::tpcc::TPCCWorkloadType::NEW_ORDER_ONLY) {
+  static std::size_t get_s_phase_query_num(const scar::tpcc::Context &context) {
+    if (context.workloadType == scar::tpcc::TPCCWorkloadType::NEW_ORDER_ONLY) {
       return context.batch_size *
              (100 - context.newOrderCrossPartitionProbability) / 100;
     } else if (context.workloadType ==
@@ -24,41 +22,41 @@ public:
              (100 - context.paymentCrossPartitionProbability) / 100;
     } else {
       return (context.batch_size *
-              (100 - context.newOrderCrossPartitionProbability) / 100 +
+                  (100 - context.newOrderCrossPartitionProbability) / 100 +
               context.batch_size *
-              (100 - context.paymentCrossPartitionProbability) / 100) / 2;
+                  (100 - context.paymentCrossPartitionProbability) / 100) /
+             2;
     }
   }
 
-  static std::size_t
-  get_c_phase_query_num(const scar::tpcc::Context &context) {
-    if (context.workloadType ==
-        scar::tpcc::TPCCWorkloadType::NEW_ORDER_ONLY) {
-      return (context.coordinator_num -1) * context.batch_size *
+  static std::size_t get_c_phase_query_num(const scar::tpcc::Context &context) {
+    if (context.workloadType == scar::tpcc::TPCCWorkloadType::NEW_ORDER_ONLY) {
+      return (context.coordinator_num - 1) * context.batch_size *
              context.newOrderCrossPartitionProbability / 100;
     } else if (context.workloadType ==
                scar::tpcc::TPCCWorkloadType::PAYMENT_ONLY) {
-      return (context.coordinator_num -1) *  context.batch_size *
-             context.paymentCrossPartitionProbability/ 100;
+      return (context.coordinator_num - 1) * context.batch_size *
+             context.paymentCrossPartitionProbability / 100;
     } else {
-      return (context.coordinator_num -1) *  (context.batch_size *
-                                         context.newOrderCrossPartitionProbability / 100 +
-                                         context.batch_size *
-                                         context.paymentCrossPartitionProbability/ 100) / 2;
+      return (context.coordinator_num - 1) *
+             (context.batch_size * context.newOrderCrossPartitionProbability /
+                  100 +
+              context.batch_size * context.paymentCrossPartitionProbability /
+                  100) /
+             2;
     }
   }
 };
 
 template <> class RStoreNCQueryNum<scar::ycsb::Context> {
 public:
-  static std::size_t
-  get_s_phase_query_num(const scar::ycsb::Context &context) {
+  static std::size_t get_s_phase_query_num(const scar::ycsb::Context &context) {
     return context.batch_size * (100 - context.crossPartitionProbability) / 100;
   }
 
-  static std::size_t
-  get_c_phase_query_num(const scar::ycsb::Context &context) {
-    return (context.coordinator_num -1) * context.batch_size *  context.crossPartitionProbability / 100;
+  static std::size_t get_c_phase_query_num(const scar::ycsb::Context &context) {
+    return (context.coordinator_num - 1) * context.batch_size *
+           context.crossPartitionProbability / 100;
   }
 };
 } // namespace scar

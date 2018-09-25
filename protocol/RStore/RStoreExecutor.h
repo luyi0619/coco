@@ -91,8 +91,8 @@ public:
       } else {
         n_started_workers.fetch_add(1);
 
-        while (static_cast<ExecutorStatus>(worker_status.load()) !=
-               ExecutorStatus::STOP) {
+        while (static_cast<ExecutorStatus>(worker_status.load()) ==
+               ExecutorStatus::C_PHASE) {
           process_request();
         }
 
@@ -113,29 +113,23 @@ public:
 
       // s_phase
 
-      if (coordinator_id == 0) {
-        n_started_workers.fetch_add(1);
+      n_started_workers.fetch_add(1);
 
-        run_transaction(ExecutorStatus::S_PHASE);
+      run_transaction(ExecutorStatus::S_PHASE);
 
-        n_complete_workers.fetch_add(1);
+      n_complete_workers.fetch_add(1);
 
+      // once all workers are stop, we need to process the replication
+      // requests
 
-        while (static_cast<ExecutorStatus>(worker_status.load()) !=
-               ExecutorStatus::STOP) {
-          process_request();
-        }
-
-        // process replication request after all workers stop.
+      while (static_cast<ExecutorStatus>(worker_status.load()) ==
+             ExecutorStatus::S_PHASE) {
         process_request();
-        n_complete_workers.fetch_add(1);
-      } else {
-        n_started_workers.fetch_add(1);
-
-        run_transaction(ExecutorStatus::S_PHASE);
-
-        n_complete_workers.fetch_add(1);
       }
+
+      // n_complete_workers has been cleared
+      process_request();
+      n_complete_workers.fetch_add(1);
     }
   }
 
