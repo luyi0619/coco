@@ -53,8 +53,13 @@ public:
     for (auto i = 0u; i < keys_num; i++) {
       auto key = query.Y_KEY[i];
       storage.ycsb_keys[i].Y_KEY = key;
-      this->search_for_update(ycsbTableID, context.getPartitionID(key),
-                              storage.ycsb_keys[i], storage.ycsb_values[i]);
+      if(query.UPDATE[i]){
+        this->search_for_update(ycsbTableID, context.getPartitionID(key),
+                                storage.ycsb_keys[i], storage.ycsb_values[i]);
+      } else {
+        this->search_for_read(ycsbTableID, context.getPartitionID(key),
+                                storage.ycsb_keys[i], storage.ycsb_values[i]);
+      }
     }
 
     if (this->process_requests()) {

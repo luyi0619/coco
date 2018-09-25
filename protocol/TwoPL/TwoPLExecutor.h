@@ -44,6 +44,7 @@ public:
                      bool local_index_read, bool write_lock, bool &success,
                      bool &remote) -> uint64_t {
       if (local_index_read) {
+        success = true;
         remote = false;
         return this->protocol.search(table_id, partition_id, key, value);
       }

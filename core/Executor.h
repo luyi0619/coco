@@ -108,16 +108,14 @@ public:
               DCHECK(transaction->abort_read_validation);
               n_abort_read_validation.fetch_add(1);
             }
+            std::this_thread::sleep_for(
+                std::chrono::microseconds(random.uniform_dist(0, context.sleep_time)));
             random.set_seed(last_seed);
             retry_transaction = true;
-            std::this_thread::sleep_for(
-                std::chrono::microseconds(context.sleep_time));
           }
         } else {
           protocol.abort(*transaction, messages);
           n_abort_no_retry.fetch_add(1);
-          std::this_thread::sleep_for(
-              std::chrono::microseconds(context.sleep_time));
         }
       }
 
@@ -155,7 +153,7 @@ public:
     std::size_t partition_id;
 
     if (context.partitioner == "pb") {
-      partition_id = random.uniform_dist(0, context.partition_num);
+      partition_id = random.uniform_dist(0, context.partition_num - 1);
     } else {
       auto partition_num_per_node =
           context.partition_num / context.coordinator_num;
@@ -163,7 +161,7 @@ public:
                          context.coordinator_num +
                      coordinator_id;
     }
-    DCHECK(partitioner->has_master_partition(partition_id));
+    CHECK(partitioner->has_master_partition(partition_id));
     return partition_id;
   }
 

@@ -10,7 +10,7 @@ DEFINE_int32(partition_num, 1, "the number of partitions");
 DEFINE_int32(batch_size, 240, "rstore or calvin batch size");
 DEFINE_int32(group_time, 10, "group commit frequency");
 DEFINE_int32(batch_flush, 10, "batch flush");
-DEFINE_int32(sleep_time, 50, "retry sleep time");
+DEFINE_int32(sleep_time, 1000, "retry sleep time");
 DEFINE_string(servers, "127.0.0.1:10010",
               "semicolon-separated list of servers");
 DEFINE_string(protocol, "RStore", "transaction protocol");
