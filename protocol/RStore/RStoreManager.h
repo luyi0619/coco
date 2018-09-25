@@ -55,10 +55,7 @@ public:
       n_started_workers.store(0);
       signal_worker(ExecutorStatus::S_PHASE);
       wait_all_workers_start();
-      wait_all_workers_finish();
-      broadcast_stop();
       wait4_stop(n_coordinators - 1);
-      // process replication
       n_completed_workers.store(0);
       set_worker_status(ExecutorStatus::STOP);
       wait_all_workers_finish();
@@ -121,12 +118,8 @@ public:
       set_worker_status(ExecutorStatus::S_PHASE);
       wait_all_workers_start();
       wait_all_workers_finish();
-      broadcast_stop();
-      wait4_stop(n_coordinators - 1);
-      // process replication
-      n_completed_workers.store(0);
       set_worker_status(ExecutorStatus::STOP);
-      wait_all_workers_finish();
+      send_stop(0);
       send_ack();
     }
   }

@@ -113,23 +113,29 @@ public:
 
       // s_phase
 
-      n_started_workers.fetch_add(1);
+      if (coordinator_id == 0) {
+        n_started_workers.fetch_add(1);
 
-      run_transaction(ExecutorStatus::S_PHASE);
+        run_transaction(ExecutorStatus::S_PHASE);
 
-      n_complete_workers.fetch_add(1);
+        n_complete_workers.fetch_add(1);
 
-      // once all workers are stop, we need to process the replication
-      // requests
 
-      while (static_cast<ExecutorStatus>(worker_status.load()) !=
-             ExecutorStatus::STOP) {
-        std::this_thread::yield();
+        while (static_cast<ExecutorStatus>(worker_status.load()) !=
+               ExecutorStatus::STOP) {
+          process_request();
+        }
+
+        // process replication request after all workers stop.
+        process_request();
+        n_complete_workers.fetch_add(1);
+      } else {
+        n_started_workers.fetch_add(1);
+
+        run_transaction(ExecutorStatus::S_PHASE);
+
+        n_complete_workers.fetch_add(1);
       }
-
-      // n_complete_workers has been cleared
-      process_request();
-      n_complete_workers.fetch_add(1);
     }
   }
 

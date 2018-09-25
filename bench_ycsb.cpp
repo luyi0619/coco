@@ -7,7 +7,7 @@
 DEFINE_int32(id, 0, "coordinator id");
 DEFINE_int32(threads, 1, "the number of threads");
 DEFINE_int32(partition_num, 1, "the number of partitions");
-DEFINE_int32(batch_size, 240, "rstore or calvin batch size");
+DEFINE_int32(batch_size, 100, "rstore or calvin batch size");
 DEFINE_int32(group_time, 10, "group commit frequency");
 DEFINE_int32(batch_flush, 10, "batch flush");
 DEFINE_int32(sleep_time, 1000, "retry sleep time");
