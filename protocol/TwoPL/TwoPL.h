@@ -222,8 +222,9 @@ public:
           }
 
           txn.pendingResponses++;
-          ControlMessageFactory::new_operation_replication_message(
-              *messages[k], operations[i]);
+          txn.network_size +=
+              ControlMessageFactory::new_operation_replication_message(
+                  *messages[k], operations[i]);
         }
       }
     }
