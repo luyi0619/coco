@@ -19,6 +19,7 @@ public:
     Context c = *this;
     c.newOrderCrossPartitionProbability = 0;
     c.paymentCrossPartitionProbability = 0;
+    c.operation_replication = this->operation_replication;
     return c;
   }
 
@@ -26,6 +27,7 @@ public:
     Context c = *this;
     c.newOrderCrossPartitionProbability = 100;
     c.paymentCrossPartitionProbability = 100;
+    c.operation_replication = false;
     return c;
   }
 

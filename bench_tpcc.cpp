@@ -17,6 +17,7 @@ DEFINE_string(protocol, "RStore", "transaction protocol");
 DEFINE_string(replica_group, "1,3", "calvin replica group");
 DEFINE_string(partitioner, "hash", "database partitioner (hash, hash2, pb)");
 DEFINE_bool(operation_replication, false, "use operation replication");
+DEFINE_bool(sleep_on_retry, true, "sleep when retry aborted transactions");
 DEFINE_string(query, "neworder", "tpcc query, mixed, neworder, payment");
 DEFINE_int32(neworder_dist, 10, "new order distributed.");
 DEFINE_int32(payment_dist, 15, "payment distributed.");
@@ -45,6 +46,7 @@ int main(int argc, char *argv[]) {
   context.partition_num = FLAGS_partition_num;
   context.replica_group = FLAGS_replica_group;
   context.operation_replication = FLAGS_operation_replication;
+  context.sleep_on_retry = FLAGS_sleep_on_retry;
   context.partitioner = FLAGS_partitioner;
 
   if (FLAGS_query == "mixed") {

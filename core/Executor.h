@@ -108,8 +108,10 @@ public:
               DCHECK(transaction->abort_read_validation);
               n_abort_read_validation.fetch_add(1);
             }
-            std::this_thread::sleep_for(std::chrono::microseconds(
-                random.uniform_dist(0, context.sleep_time)));
+            if (context.sleep_on_retry) {
+              std::this_thread::sleep_for(std::chrono::microseconds(
+                  random.uniform_dist(0, context.sleep_time)));
+            }
             random.set_seed(last_seed);
             retry_transaction = true;
           }
@@ -153,7 +155,7 @@ public:
     std::size_t partition_id;
 
     if (context.partitioner == "pb") {
-      partition_id = random.uniform_dist(0, context.partition_num - 1);
+      partition_id = random.uniform_dist(0, context.partition_num  - 1);
     } else {
       auto partition_num_per_node =
           context.partition_num / context.coordinator_num;

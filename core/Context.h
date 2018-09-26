@@ -21,6 +21,7 @@ public:
   std::size_t sleep_time = 50; // us
   std::string partitioner;
 
+  bool sleep_on_retry = true;
   bool operation_replication = false;
 };
 } // namespace scar

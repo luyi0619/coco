@@ -39,12 +39,14 @@ public:
   Context get_single_partition_context() const {
     Context c = *this;
     c.crossPartitionProbability = 0;
+    c.operation_replication = this->operation_replication;
     return c;
   }
 
   Context get_cross_partition_context() const {
     Context c = *this;
     c.crossPartitionProbability = 100;
+    c.operation_replication = false;
     return c;
   }
 
