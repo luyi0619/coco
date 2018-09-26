@@ -102,8 +102,6 @@ public:
 
       n_completed_workers.fetch_add(1);
 
-      // once all workers are stop, we need to process the replication
-      // requests
 
       while (static_cast<ExecutorStatus>(worker_status.load()) !=
              ExecutorStatus::STOP) {

@@ -185,8 +185,13 @@ public:
 
     for (auto i = 0u; i < readSet.size(); i++) {
       auto &readkey = readSet[i];
+      if (readkey.get_local_index_read_bit()){
+        continue;
+      }
       auto partitionID = readkey.get_partition_id();
-      active_coordinators[partitioner.master_coordinator(partitionID)] = true;
+      if (readkey.get_write_lock_bit()){
+        active_coordinators[partitioner.master_coordinator(partitionID)] = true;
+      }
     }
   }
 
