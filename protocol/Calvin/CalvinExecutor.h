@@ -55,7 +55,6 @@ public:
         partitioner(
             coordinator_id, context.coordinator_num,
             CalvinHelper::get_replica_group_sizes(context.replica_group)),
-        random(reinterpret_cast<uint64_t>(this)),
         protocol(db, partitioner) {
 
     for (auto i = 0u; i < context.coordinator_num; i++) {
@@ -104,8 +103,8 @@ public:
       n_completed_workers.fetch_add(1);
 
 
-      while (static_cast<ExecutorStatus>(worker_status.load()) ==
-             ExecutorStatus::START) {
+      while (static_cast<ExecutorStatus>(worker_status.load()) !=
+             ExecutorStatus::STOP) {
         std::this_thread::yield();
       }
 
