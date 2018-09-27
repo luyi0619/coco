@@ -31,7 +31,7 @@ public:
   Calvin(DatabaseType &db, CalvinPartitioner &partitioner)
       : db(db), partitioner(partitioner) {}
 
-  void abort(TransactionType &txn){
+  void abort(TransactionType &txn) {
     // release read locks
     release_read_locks(txn);
   }
@@ -90,7 +90,6 @@ public:
       std::atomic<uint64_t> &tid = table->search_metadata(key);
       CalvinHelper::read_lock_release(tid);
     }
-
   }
 
   void release_write_locks(TransactionType &txn) {

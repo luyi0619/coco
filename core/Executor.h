@@ -155,7 +155,7 @@ public:
     std::size_t partition_id;
 
     if (context.partitioner == "pb") {
-      partition_id = random.uniform_dist(0, context.partition_num  - 1);
+      partition_id = random.uniform_dist(0, context.partition_num - 1);
     } else {
       auto partition_num_per_node =
           context.partition_num / context.coordinator_num;

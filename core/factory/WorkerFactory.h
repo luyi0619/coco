@@ -201,8 +201,7 @@ public:
 
         auto w = std::make_shared<CalvinExecutor<WorkloadType>>(
             coordinator_id, i, db, context, manager->transactions,
-            manager->complete_transaction_num, manager->worker_status,
-            manager->n_completed_workers, manager->n_started_workers);
+            manager->complete_transaction_num, manager->worker_status);
         workers.push_back(w);
         manager->add_worker(w);
       }
