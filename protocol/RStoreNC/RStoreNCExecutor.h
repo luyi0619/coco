@@ -88,8 +88,8 @@ public:
       } else {
         n_started_workers.fetch_add(1);
 
-        while (static_cast<ExecutorStatus>(worker_status.load()) !=
-               ExecutorStatus::STOP) {
+        while (static_cast<ExecutorStatus>(worker_status.load()) ==
+               ExecutorStatus::C_PHASE) {
           process_request();
         }
 
@@ -113,8 +113,8 @@ public:
       if (coordinator_id == 0) {
         n_started_workers.fetch_add(1);
 
-        while (static_cast<ExecutorStatus>(worker_status.load()) !=
-               ExecutorStatus::STOP) {
+        while (static_cast<ExecutorStatus>(worker_status.load()) ==
+               ExecutorStatus::S_PHASE) {
           process_request();
         }
 

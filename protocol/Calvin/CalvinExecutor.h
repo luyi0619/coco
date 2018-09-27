@@ -55,6 +55,7 @@ public:
         partitioner(
             coordinator_id, context.coordinator_num,
             CalvinHelper::get_replica_group_sizes(context.replica_group)),
+        random(reinterpret_cast<uint64_t>(this)),
         protocol(db, partitioner) {
 
     for (auto i = 0u; i < context.coordinator_num; i++) {
@@ -103,8 +104,8 @@ public:
       n_completed_workers.fetch_add(1);
 
 
-      while (static_cast<ExecutorStatus>(worker_status.load()) !=
-             ExecutorStatus::STOP) {
+      while (static_cast<ExecutorStatus>(worker_status.load()) ==
+             ExecutorStatus::START) {
         std::this_thread::yield();
       }
 
@@ -185,9 +186,9 @@ public:
         for (auto i = 0u; i < active_coordinators.size(); i++) {
           if (i == coordinator_id || !active_coordinators[i])
             continue;
-
-          txn.network_size += MessageFactoryType::new_read_message(
+          auto sz =  MessageFactoryType::new_read_message(
               *messages[i], *table, id, key_offset, value);
+          txn.network_size += sz;
         }
       } else {
         txn.pendingResponses++;
@@ -232,8 +233,8 @@ private:
   std::atomic<uint32_t> &complete_transaction_num, &worker_status;
   std::atomic<uint32_t> &n_completed_workers;
   std::atomic<uint32_t> &n_started_workers;
-  RandomType random;
   CalvinPartitioner partitioner;
+  RandomType random;
   ProtocolType protocol;
   std::vector<std::unique_ptr<Message>> messages;
   std::vector<

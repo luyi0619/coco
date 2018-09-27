@@ -49,13 +49,15 @@ public:
     std::size_t n_workers = context.worker_num;
     std::size_t n_coordinators = context.coordinator_num;
 
+    prepare_read_wrie_set();
+
     while (!stopFlag.load()) {
 
       complete_transaction_num.store(0);
       n_started_workers.store(0);
       complete_transaction_num.store(0);
       // LOG(INFO) << "Seed: " << random.get_seed();
-      prepare_read_wrie_set();
+
       signal_worker(ExecutorStatus::START);
       wait_all_workers_start();
       schedule_transactions();
@@ -75,9 +77,10 @@ public:
     std::size_t n_workers = context.worker_num;
     std::size_t n_coordinators = context.coordinator_num;
 
+    prepare_read_wrie_set();
+
     for (;;) {
       // LOG(INFO) << "Seed: " << random.get_seed();
-      prepare_read_wrie_set();
       ExecutorStatus status = wait4_signal();
       if (status == ExecutorStatus::EXIT) {
         set_worker_status(ExecutorStatus::EXIT);
@@ -134,13 +137,15 @@ public:
     // a worker thread in a round-robin manner.
 
     for (auto i = 0u; i < transactions.size(); i++) {
-
+      transactions[i]->writeSet.clear();
+      transactions[i]->network_size = 0;
       analyze_active_coordinator(*transactions[i]);
       // do not grant locks to abort no retry transaction
       if (results[i]) {
         auto &readSet = transactions[i]->readSet;
         for (auto k = 0u; k < readSet.size(); k++) {
           auto &readKey = readSet[k];
+          readKey.clear_execution_processed_bit();
           auto tableId = readKey.get_table_id();
           auto partitionId = readKey.get_partition_id();
 
