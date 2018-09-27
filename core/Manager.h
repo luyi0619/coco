@@ -166,19 +166,22 @@ public:
     }
   }
 
-  void wait4_ack() {
+  int64_t wait4_ack() {
+
+    std::chrono::steady_clock::time_point start;
 
     // only coordinator waits for ack
     DCHECK(coordinator_id == 0);
 
     std::size_t n_coordinators = context.coordinator_num;
 
-    for (auto i = 0u; i < n_coordinators; i++) {
-      if (i == coordinator_id) {
-        continue;
-      }
+    for (auto i = 0u; i < n_coordinators - 1; i++) {
 
       ack_in_queue.wait_till_non_empty();
+
+      if (i == 0) {
+        start = std::chrono::steady_clock::now();
+      }
 
       std::unique_ptr<Message> message(ack_in_queue.front());
       bool ok = ack_in_queue.pop();
@@ -189,6 +192,10 @@ public:
       MessagePiece messagePiece = *(message->begin());
       auto type = static_cast<ControlMessage>(messagePiece.get_message_type());
     }
+
+    return std::chrono::duration_cast<std::chrono::microseconds>(
+               std::chrono::steady_clock::now() - start)
+        .count();
   }
 
   void send_stop(std::size_t node_id) {

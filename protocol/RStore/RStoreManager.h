@@ -25,9 +25,11 @@ public:
     std::size_t n_coordinators = context.coordinator_num;
 
     Percentile<int64_t> all_percentile, c_percentile, s_percentile;
+    Percentile<double> overhead_percentile;
 
     while (!stopFlag.load()) {
 
+      int64_t ack_wait_time = 0;
       auto c_start = std::chrono::steady_clock::now();
       // start c-phase
 
@@ -40,7 +42,7 @@ public:
       wait_all_workers_finish();
       set_worker_status(ExecutorStatus::STOP);
       broadcast_stop();
-      wait4_ack();
+      ack_wait_time += wait4_ack();
 
       c_percentile.add(std::chrono::duration_cast<std::chrono::microseconds>(
                            std::chrono::steady_clock::now() - c_start)
@@ -59,7 +61,7 @@ public:
       n_completed_workers.store(0);
       set_worker_status(ExecutorStatus::STOP);
       wait_all_workers_finish();
-      wait4_ack();
+      ack_wait_time += wait4_ack();
 
       auto now = std::chrono::steady_clock::now();
 
@@ -70,6 +72,11 @@ public:
       all_percentile.add(
           std::chrono::duration_cast<std::chrono::microseconds>(now - c_start)
               .count());
+
+      overhead_percentile.add(
+          100.0 * ack_wait_time /
+          std::chrono::duration_cast<std::chrono::microseconds>(now - c_start)
+              .count());
     }
 
     signal_worker(ExecutorStatus::EXIT);
@@ -77,7 +84,8 @@ public:
     LOG(INFO) << "Average phase switch length " << all_percentile.nth(50)
               << " us, average c phase length " << c_percentile.nth(50)
               << " us, average s phase length " << s_percentile.nth(50)
-              << " us.";
+              << " us, average overhead: " << overhead_percentile.nth(50)
+              << " %.";
   }
 
   void non_coordinator_start() override {
