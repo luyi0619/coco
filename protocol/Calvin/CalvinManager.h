@@ -133,12 +133,16 @@ public:
 
   void schedule_transactions() {
 
+    // clear transactions
+    for (auto i = 0u; i < transactions.size(); i++) {
+      transactions[i]->writeSet.clear();
+      transactions[i]->network_size = 0;
+    }
+
     // grant locks, once all locks are acquired, assign the transaction to
     // a worker thread in a round-robin manner.
 
     for (auto i = 0u; i < transactions.size(); i++) {
-      transactions[i]->writeSet.clear();
-      transactions[i]->network_size = 0;
       analyze_active_coordinator(*transactions[i]);
       // do not grant locks to abort no retry transaction
       if (results[i]) {
