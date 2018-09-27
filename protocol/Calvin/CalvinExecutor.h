@@ -165,7 +165,8 @@ public:
       protocol.commit(txn);
       n_commit.fetch_add(1);
     } else if (result == TransactionResult::ABORT) {
-      // non-active transactions
+      // non-active transactions, release lock
+      protocol.abort(txn);
       n_commit.fetch_add(1);
     } else {
       n_abort_no_retry.fetch_add(1);

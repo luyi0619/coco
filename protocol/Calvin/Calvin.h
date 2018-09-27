@@ -31,13 +31,19 @@ public:
   Calvin(DatabaseType &db, CalvinPartitioner &partitioner)
       : db(db), partitioner(partitioner) {}
 
+  void abort(TransactionType &txn){
+    // release read locks
+    release_read_locks(txn);
+  }
+
   bool commit(TransactionType &txn) {
 
     // write to db
     write(txn);
 
     // release read/write locks
-    release_lock(txn);
+    release_read_locks(txn);
+    release_write_locks(txn);
 
     return true;
   }
@@ -61,7 +67,7 @@ public:
     }
   }
 
-  void release_lock(TransactionType &txn) {
+  void release_read_locks(TransactionType &txn) {
     // release read locks
     auto &readSet = txn.readSet;
 
@@ -84,6 +90,10 @@ public:
       std::atomic<uint64_t> &tid = table->search_metadata(key);
       CalvinHelper::read_lock_release(tid);
     }
+
+  }
+
+  void release_write_locks(TransactionType &txn) {
 
     // release write lock
     auto &writeSet = txn.writeSet;
