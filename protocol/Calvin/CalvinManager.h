@@ -53,7 +53,7 @@ public:
 
     while (!stopFlag.load()) {
 
-      complete_transaction_num.store(0);
+      n_completed_workers.store(0);
       n_started_workers.store(0);
       complete_transaction_num.store(0);
       // LOG(INFO) << "Seed: " << random.get_seed();
