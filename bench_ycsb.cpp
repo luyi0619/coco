@@ -20,6 +20,7 @@ DEFINE_bool(sleep_on_retry, true, "sleep when retry aborted transactions");
 DEFINE_int32(read_write_ratio, 80, "read write ratio");
 DEFINE_int32(read_only_ratio, 0, "read only transaction ratio");
 DEFINE_int32(cross_ratio, 0, "cross partition transaction ratio");
+DEFINE_int32(delay, 0, "delay time in us.");
 
 // ./main --logtostderr=1 --id=1 --servers="127.0.0.1:10010;127.0.0.1:10011"
 // cmake -DCMAKE_BUILD_TYPE=Release
@@ -49,6 +50,7 @@ int main(int argc, char *argv[]) {
   context.readOnlyTransaction = FLAGS_read_only_ratio;
   context.sleep_on_retry = FLAGS_sleep_on_retry;
   context.crossPartitionProbability = FLAGS_cross_ratio;
+  context.delay_time = FLAGS_delay;
 
   using MetaDataType = std::atomic<uint64_t>;
   scar::ycsb::Database<MetaDataType> db;

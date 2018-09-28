@@ -42,7 +42,9 @@ public:
             context.partitioner, coordinator_id, context.coordinator_num)),
         random(reinterpret_cast<uint64_t>(this)),
         protocol(db, context, *partitioner),
-        workload(coordinator_id, db, random, *partitioner) {
+        workload(coordinator_id, db, random, *partitioner),
+        delay(std::make_unique<SameDelay>(
+            coordinator_id, context.coordinator_num, context.delay_time)) {
 
     for (auto i = 0u; i < context.coordinator_num; i++) {
       sync_messages.emplace_back(std::make_unique<Message>());
@@ -198,6 +200,16 @@ public:
       return nullptr;
 
     Message *message = out_queue.front();
+
+    if (delay->delay_enabled()) {
+      auto now = std::chrono::steady_clock::now();
+      if (std::chrono::duration_cast<std::chrono::microseconds>(now -
+                                                                message->time)
+              .count() < delay->message_delay()) {
+        return nullptr;
+      }
+    }
+
     bool ok = out_queue.pop();
     CHECK(ok);
 
@@ -288,6 +300,7 @@ protected:
   RandomType random;
   ProtocolType protocol;
   WorkloadType workload;
+  std::unique_ptr<Delay> delay;
   Percentile<int64_t> percentile;
   std::unique_ptr<TransactionType> transaction;
   std::vector<std::unique_ptr<Message>> sync_messages, async_messages;

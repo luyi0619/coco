@@ -7,6 +7,7 @@
 #include "core/Partitioner.h"
 
 #include "common/Percentile.h"
+#include "core/Delay.h"
 #include "core/Worker.h"
 #include "glog/logging.h"
 
@@ -52,7 +53,9 @@ public:
         partitioner(
             coordinator_id, context.coordinator_num,
             CalvinHelper::get_replica_group_sizes(context.replica_group)),
-        protocol(db, partitioner) {
+        protocol(db, partitioner),
+        delay(std::make_unique<SameDelay>(
+            coordinator_id, context.coordinator_num, context.delay_time)) {
 
     for (auto i = 0u; i < context.coordinator_num; i++) {
       messages.emplace_back(std::make_unique<Message>());
@@ -110,6 +113,16 @@ public:
       return nullptr;
 
     Message *message = out_queue.front();
+
+    if (delay->delay_enabled()) {
+      auto now = std::chrono::steady_clock::now();
+      if (std::chrono::duration_cast<std::chrono::microseconds>(now -
+                                                                message->time)
+              .count() < delay->message_delay()) {
+        return nullptr;
+      }
+    }
+
     bool ok = out_queue.pop();
     CHECK(ok);
 
@@ -268,6 +281,7 @@ private:
   CalvinPartitioner partitioner;
   RandomType random;
   ProtocolType protocol;
+  std::unique_ptr<Delay> delay;
   std::vector<std::unique_ptr<Message>> messages;
   std::vector<
       std::function<void(MessagePiece, Message &, TableType &,

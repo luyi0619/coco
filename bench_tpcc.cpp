@@ -21,6 +21,7 @@ DEFINE_bool(sleep_on_retry, true, "sleep when retry aborted transactions");
 DEFINE_string(query, "neworder", "tpcc query, mixed, neworder, payment");
 DEFINE_int32(neworder_dist, 10, "new order distributed.");
 DEFINE_int32(payment_dist, 15, "payment distributed.");
+DEFINE_int32(delay, 0, "delay time in us.");
 
 // ./main --logtostderr=1 --id=1 --servers="127.0.0.1:10010;127.0.0.1:10011"
 // cmake -DCMAKE_BUILD_TYPE=Release
@@ -48,6 +49,7 @@ int main(int argc, char *argv[]) {
   context.operation_replication = FLAGS_operation_replication;
   context.sleep_on_retry = FLAGS_sleep_on_retry;
   context.partitioner = FLAGS_partitioner;
+  context.delay_time = FLAGS_delay;
 
   if (FLAGS_query == "mixed") {
     context.workloadType = scar::tpcc::TPCCWorkloadType ::MIXED;

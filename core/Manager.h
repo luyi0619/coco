@@ -7,6 +7,7 @@
 #include "core/Context.h"
 #include "core/ControlMessage.h"
 #include "core/Defs.h"
+#include "core/Delay.h"
 #include "core/Worker.h"
 
 #include <thread>
@@ -17,7 +18,9 @@ class Manager : public Worker {
 public:
   Manager(std::size_t coordinator_id, std::size_t id, const Context &context,
           std::atomic<bool> &stopFlag)
-      : Worker(coordinator_id, id), context(context), stopFlag(stopFlag) {
+      : Worker(coordinator_id, id), context(context),
+        stopFlag(stopFlag), delay(std::make_unique<SameDelay>(
+            coordinator_id, context.coordinator_num, context.delay_time)) {
 
     for (auto i = 0u; i < context.coordinator_num; i++) {
       messages.emplace_back(std::make_unique<Message>());
@@ -277,6 +280,16 @@ public:
       return nullptr;
 
     Message *message = out_queue.front();
+
+    if (delay->delay_enabled()) {
+      auto now = std::chrono::steady_clock::now();
+      if (std::chrono::duration_cast<std::chrono::microseconds>(now -
+                                                                message->time)
+              .count() < delay->message_delay()) {
+        return nullptr;
+      }
+    }
+
     bool ok = out_queue.pop();
     CHECK(ok);
 
@@ -319,6 +332,8 @@ public:
   std::atomic<uint32_t> worker_status;
   std::atomic<uint32_t> n_completed_workers;
   std::atomic<uint32_t> n_started_workers;
+
+  std::unique_ptr<Delay> delay;
 };
 
 } // namespace scar

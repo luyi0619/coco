@@ -20,6 +20,7 @@ public:
   std::size_t group_time = 40; // ms
   std::size_t sleep_time = 50; // us
   std::string partitioner;
+  std::size_t delay_time = 0;
 
   bool sleep_on_retry = true;
   bool operation_replication = false;

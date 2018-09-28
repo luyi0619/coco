@@ -7,6 +7,7 @@
 #include "core/Partitioner.h"
 
 #include "common/Percentile.h"
+#include "core/Delay.h"
 #include "core/Worker.h"
 #include "glog/logging.h"
 
@@ -44,7 +45,9 @@ public:
         c_partitioner(std::make_unique<RStoreNCCPartitioner>(
             coordinator_id, context.coordinator_num)),
         worker_status(worker_status), n_complete_workers(n_complete_workers),
-        n_started_workers(n_started_workers) {
+        n_started_workers(n_started_workers),
+        delay(std::make_unique<SameDelay>(
+            coordinator_id, context.coordinator_num, context.delay_time)) {
 
     for (auto i = 0u; i < context.coordinator_num; i++) {
       messages.emplace_back(std::make_unique<Message>());
@@ -239,6 +242,16 @@ public:
       return nullptr;
 
     Message *message = out_queue.front();
+
+    if (delay->delay_enabled()) {
+      auto now = std::chrono::steady_clock::now();
+      if (std::chrono::duration_cast<std::chrono::microseconds>(now -
+                                                                message->time)
+              .count() < delay->message_delay()) {
+        return nullptr;
+      }
+    }
+
     bool ok = out_queue.pop();
     CHECK(ok);
 
@@ -320,6 +333,7 @@ private:
   std::atomic<uint32_t> &worker_status;
   std::atomic<uint32_t> &n_complete_workers, &n_started_workers;
   RandomType random;
+  std::unique_ptr<Delay> delay;
   Percentile<int64_t> percentile;
   // transaction only commit in a single group
   std::queue<std::unique_ptr<TransactionType>> q;

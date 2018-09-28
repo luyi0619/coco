@@ -6,6 +6,7 @@
 
 #include "StringPiece.h"
 #include "common/MessagePiece.h"
+#include <chrono>
 #include <string>
 
 namespace scar {
@@ -113,6 +114,7 @@ public:
     auto message_count = get_message_count();
     set_message_count(message_count + 1);
     set_message_length(data.length());
+    time = std::chrono::steady_clock::now();
   }
 
   bool check_size() { return get_message_length() == data.size(); }
@@ -212,6 +214,7 @@ private:
 
 public:
   std::string data;
+  std::chrono::steady_clock::time_point time;
 
 public:
   static constexpr uint32_t get_prefix_size() {
