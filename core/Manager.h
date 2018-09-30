@@ -18,8 +18,8 @@ class Manager : public Worker {
 public:
   Manager(std::size_t coordinator_id, std::size_t id, const Context &context,
           std::atomic<bool> &stopFlag)
-      : Worker(coordinator_id, id), context(context),
-        stopFlag(stopFlag), delay(std::make_unique<SameDelay>(
+      : Worker(coordinator_id, id), context(context), stopFlag(stopFlag),
+        delay(std::make_unique<SameDelay>(
             coordinator_id, context.coordinator_num, context.delay_time)) {
 
     for (auto i = 0u; i < context.coordinator_num; i++) {
@@ -169,7 +169,7 @@ public:
     }
   }
 
-  int64_t wait4_ack() {
+  void wait4_ack() {
 
     std::chrono::steady_clock::time_point start;
 
@@ -182,10 +182,6 @@ public:
 
       ack_in_queue.wait_till_non_empty();
 
-      if (i == 0) {
-        start = std::chrono::steady_clock::now();
-      }
-
       std::unique_ptr<Message> message(ack_in_queue.front());
       bool ok = ack_in_queue.pop();
       CHECK(ok);
@@ -195,10 +191,6 @@ public:
       MessagePiece messagePiece = *(message->begin());
       auto type = static_cast<ControlMessage>(messagePiece.get_message_type());
     }
-
-    return std::chrono::duration_cast<std::chrono::microseconds>(
-               std::chrono::steady_clock::now() - start)
-        .count();
   }
 
   void send_stop(std::size_t node_id) {

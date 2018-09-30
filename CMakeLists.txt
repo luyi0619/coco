@@ -31,7 +31,7 @@ include_directories(${CMAKE_SOURCE_DIR})
 file(GLOB_RECURSE COMMON_SOURCE_FILES common/*.cpp)
 add_library(common STATIC ${COMMON_SOURCE_FILES})
 
-target_link_libraries(common ${jemalloc_lib} glog gflags)
+target_link_libraries(common ${jemalloc_lib} glog::glog gflags)
 
 include(CTest)
 
