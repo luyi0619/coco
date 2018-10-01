@@ -22,6 +22,7 @@ public:
   std::string partitioner;
   std::size_t delay_time = 0;
 
+  bool read_on_replica = false;
   bool sleep_on_retry = true;
   bool operation_replication = false;
 };

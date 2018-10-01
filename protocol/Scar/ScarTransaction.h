@@ -62,10 +62,6 @@ public:
   void search_for_read(std::size_t table_id, std::size_t partition_id,
                        const KeyType &key, ValueType &value) {
 
-    if (!partitioner.has_master_partition(partition_id)) {
-      pendingResponses++;
-    }
-
     ScarRWKey readKey;
 
     readKey.set_table_id(table_id);
@@ -82,10 +78,6 @@ public:
   template <class KeyType, class ValueType>
   void search_for_update(std::size_t table_id, std::size_t partition_id,
                          const KeyType &key, ValueType &value) {
-
-    if (!partitioner.has_master_partition(partition_id)) {
-      pendingResponses++;
-    }
 
     ScarRWKey readKey;
 
