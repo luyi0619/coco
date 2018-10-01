@@ -25,12 +25,8 @@ enum class ScarMessage {
   READ_VALIDATION_RESPONSE,
   ABORT_REQUEST,
   WRITE_REQUEST,
-  WRITE_RESPONSE,
   REPLICATION_REQUEST,
-  REPLICATION_RESPONSE,
-  ASYNC_REPLICATION_REQUEST, // for read set replication
   RTS_REPLICATION_REQUEST,
-  RELEASE_LOCK_REQUEST,
   NFIELDS
 };
 
@@ -133,16 +129,18 @@ public:
   }
 
   static std::size_t new_write_message(Message &message, Table &table,
-                                       const void *key, const void *value) {
+                                       const void *key, const void *value,
+                                       uint64_t commit_ts) {
 
     /*
-     * The structure of a write request: (primary key, field value)
+     * The structure of a write request: (primary key, field value, commit_ts)
      */
 
     auto key_size = table.key_size();
     auto field_size = table.field_size();
 
-    auto message_size = MessagePiece::get_header_size() + key_size + field_size;
+    auto message_size = MessagePiece::get_header_size() + key_size +
+                        field_size + sizeof(commit_ts);
     auto message_piece_header = MessagePiece::construct_message_piece_header(
         static_cast<uint32_t>(ScarMessage::WRITE_REQUEST), message_size,
         table.tableID(), table.partitionID());
@@ -151,6 +149,7 @@ public:
     encoder << message_piece_header;
     encoder.write_n_bytes(key, key_size);
     table.serialize_value(encoder, value);
+    encoder << commit_ts;
     message.flush();
     return message_size;
   }
@@ -182,33 +181,6 @@ public:
     return message_size;
   }
 
-  static std::size_t
-  new_async_replication_message(Message &message, Table &table, const void *key,
-                                const void *value, uint64_t commit_ts) {
-
-    /*
-     * The structure of an async replication request: (primary key, field value,
-     * commit_ts)
-     */
-
-    auto key_size = table.key_size();
-    auto field_size = table.field_size();
-
-    auto message_size = MessagePiece::get_header_size() + key_size +
-                        field_size + sizeof(commit_ts);
-    auto message_piece_header = MessagePiece::construct_message_piece_header(
-        static_cast<uint32_t>(ScarMessage::ASYNC_REPLICATION_REQUEST),
-        message_size, table.tableID(), table.partitionID());
-
-    Encoder encoder(message.data);
-    encoder << message_piece_header;
-    encoder.write_n_bytes(key, key_size);
-    table.serialize_value(encoder, value);
-    encoder << commit_ts;
-    message.flush();
-    return message_size;
-  }
-
   static std::size_t new_rts_replication_message(Message &message, Table &table,
                                                  const void *key, uint64_t ts) {
 
@@ -228,29 +200,6 @@ public:
     encoder << message_piece_header;
     encoder.write_n_bytes(key, key_size);
     encoder << ts;
-    message.flush();
-    return message_size;
-  }
-
-  static std::size_t new_release_lock_message(Message &message, Table &table,
-                                              const void *key,
-                                              uint64_t commit_ts) {
-    /*
-     * The structure of a replication request: (primary key, commit ts)
-     */
-
-    auto key_size = table.key_size();
-
-    auto message_size =
-        MessagePiece::get_header_size() + key_size + sizeof(commit_ts);
-    auto message_piece_header = MessagePiece::construct_message_piece_header(
-        static_cast<uint32_t>(ScarMessage::RELEASE_LOCK_REQUEST), message_size,
-        table.tableID(), table.partitionID());
-
-    Encoder encoder(message.data);
-    encoder << message_piece_header;
-    encoder.write_n_bytes(key, key_size);
-    encoder << commit_ts;
     message.flush();
     return message_size;
   }
@@ -596,67 +545,8 @@ public:
     auto field_size = table.field_size();
 
     /*
-     * The structure of a write request: (primary key, field value)
-     * The structure of a write response: ()
-     */
-
-    DCHECK(inputPiece.get_message_length() ==
-           MessagePiece::get_header_size() + key_size + field_size);
-
-    auto stringPiece = inputPiece.toStringPiece();
-
-    const void *key = stringPiece.data();
-    stringPiece.remove_prefix(key_size);
-
-    table.deserialize_value(key, stringPiece);
-
-    // prepare response message header
-    auto message_size = MessagePiece::get_header_size();
-    auto message_piece_header = MessagePiece::construct_message_piece_header(
-        static_cast<uint32_t>(ScarMessage::WRITE_RESPONSE), message_size,
-        table_id, partition_id);
-
-    scar::Encoder encoder(responseMessage.data);
-    encoder << message_piece_header;
-    responseMessage.flush();
-  }
-
-  static void write_response_handler(MessagePiece inputPiece,
-                                     Message &responseMessage, Table &table,
-                                     Transaction &txn) {
-
-    DCHECK(inputPiece.get_message_type() ==
-           static_cast<uint32_t>(ScarMessage::WRITE_RESPONSE));
-    auto table_id = inputPiece.get_table_id();
-    auto partition_id = inputPiece.get_partition_id();
-    DCHECK(table_id == table.tableID());
-    DCHECK(partition_id == table.partitionID());
-
-    /*
-     * The structure of a write response: ()
-     */
-
-    txn.pendingResponses--;
-    txn.network_size += inputPiece.get_message_length();
-  }
-
-  static void replication_request_handler(MessagePiece inputPiece,
-                                          Message &responseMessage,
-                                          Table &table, Transaction &txn) {
-
-    DCHECK(inputPiece.get_message_type() ==
-           static_cast<uint32_t>(ScarMessage::REPLICATION_REQUEST));
-    auto table_id = inputPiece.get_table_id();
-    auto partition_id = inputPiece.get_partition_id();
-    DCHECK(table_id == table.tableID());
-    DCHECK(partition_id == table.partitionID());
-    auto key_size = table.key_size();
-    auto field_size = table.field_size();
-
-    /*
-     * The structure of a replication request: (primary key, field value,
-     * commit_ts).
-     * The structure of a replication response: ()
+     * The structure of a write request: (primary key, field value, commit_ts)
+     * The structure of a write response: null
      */
 
     DCHECK(inputPiece.get_message_length() == MessagePiece::get_header_size() +
@@ -677,50 +567,17 @@ public:
     DCHECK(dec.size() == 0);
 
     std::atomic<uint64_t> &tid = table.search_metadata(key);
-
-    uint64_t last_tid = ScarHelper::lock(tid);
-    DCHECK(ScarHelper::get_wts(last_tid) < ScarHelper::get_wts(commit_ts));
     table.deserialize_value(key, valueStringPiece);
+
     ScarHelper::unlock(tid, commit_ts);
-
-    // prepare response message header
-    auto message_size = MessagePiece::get_header_size();
-    auto message_piece_header = MessagePiece::construct_message_piece_header(
-        static_cast<uint32_t>(ScarMessage::REPLICATION_RESPONSE), message_size,
-        table_id, partition_id);
-
-    scar::Encoder encoder(responseMessage.data);
-    encoder << message_piece_header;
-    responseMessage.flush();
   }
 
-  static void replication_response_handler(MessagePiece inputPiece,
-                                           Message &responseMessage,
-                                           Table &table, Transaction &txn) {
+  static void replication_request_handler(MessagePiece inputPiece,
+                                          Message &responseMessage,
+                                          Table &table, Transaction &txn) {
 
     DCHECK(inputPiece.get_message_type() ==
-           static_cast<uint32_t>(ScarMessage::REPLICATION_RESPONSE));
-    auto table_id = inputPiece.get_table_id();
-    auto partition_id = inputPiece.get_partition_id();
-    DCHECK(table_id == table.tableID());
-    DCHECK(partition_id == table.partitionID());
-    auto key_size = table.key_size();
-
-    /*
-     * The structure of a replication response: ()
-     */
-
-    txn.pendingResponses--;
-    txn.network_size += inputPiece.get_message_length();
-  }
-
-  static void async_replication_request_handler(MessagePiece inputPiece,
-                                                Message &responseMessage,
-                                                Table &table,
-                                                Transaction &txn) {
-
-    DCHECK(inputPiece.get_message_type() ==
-           static_cast<uint32_t>(ScarMessage::ASYNC_REPLICATION_REQUEST));
+           static_cast<uint32_t>(ScarMessage::REPLICATION_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     DCHECK(table_id == table.tableID());
@@ -729,7 +586,7 @@ public:
     auto field_size = table.field_size();
 
     /*
-     * The structure of an async replication request: (primary key, field value,
+     * The structure of a replication request: (primary key, field value,
      * commit_ts).
      * The structure of a replication response: null
      */
@@ -754,9 +611,12 @@ public:
     std::atomic<uint64_t> &tid = table.search_metadata(key);
 
     uint64_t last_tid = ScarHelper::lock(tid);
-    DCHECK(ScarHelper::get_wts(last_tid) < ScarHelper::get_wts(commit_ts));
-    table.deserialize_value(key, valueStringPiece);
-    ScarHelper::unlock(tid, commit_ts);
+    if (commit_ts > ScarHelper::get_wts(last_tid)) {
+      table.deserialize_value(key, valueStringPiece);
+      ScarHelper::unlock(tid, commit_ts);
+    } else {
+      ScarHelper::unlock(tid);
+    }
   }
 
   static void rts_replication_request_handler(MessagePiece inputPiece,
@@ -805,40 +665,6 @@ public:
     }
   }
 
-  static void release_lock_request_handler(MessagePiece inputPiece,
-                                           Message &responseMessage,
-                                           Table &table, Transaction &txn) {
-
-    DCHECK(inputPiece.get_message_type() ==
-           static_cast<uint32_t>(ScarMessage::RELEASE_LOCK_REQUEST));
-    auto table_id = inputPiece.get_table_id();
-    auto partition_id = inputPiece.get_partition_id();
-    DCHECK(table_id == table.tableID());
-    DCHECK(partition_id == table.partitionID());
-    auto key_size = table.key_size();
-
-    /*
-     * The structure of a release lock request: (primary key, commit_ts)
-     * The structure of a write response: null
-     */
-
-    DCHECK(inputPiece.get_message_length() ==
-           MessagePiece::get_header_size() + key_size + sizeof(uint64_t));
-
-    auto stringPiece = inputPiece.toStringPiece();
-
-    const void *key = stringPiece.data();
-    stringPiece.remove_prefix(key_size);
-
-    uint64_t commit_ts;
-    Decoder dec(stringPiece);
-    dec >> commit_ts;
-    DCHECK(dec.size() == 0);
-
-    std::atomic<uint64_t> &tid = table.search_metadata(key);
-    ScarHelper::unlock(tid, commit_ts);
-  }
-
   static std::vector<
       std::function<void(MessagePiece, Message &, Table &, Transaction &)>>
   get_message_handlers() {
@@ -854,12 +680,8 @@ public:
     v.push_back(read_validation_response_handler);
     v.push_back(abort_request_handler);
     v.push_back(write_request_handler);
-    v.push_back(write_response_handler);
     v.push_back(replication_request_handler);
-    v.push_back(replication_response_handler);
-    v.push_back(async_replication_request_handler);
     v.push_back(rts_replication_request_handler);
-    v.push_back(release_lock_request_handler);
     return v;
   }
 };

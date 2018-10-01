@@ -75,7 +75,8 @@ public:
   }
 
   void abort(TransactionType &txn,
-             std::vector<std::unique_ptr<Message>> &messages) {
+             std::vector<std::unique_ptr<Message>> &syncMessages,
+             std::vector<std::unique_ptr<Message>> &asyncMessages) {
 
     // assume all writes are updates
     auto &readSet = txn.readSet;
@@ -94,7 +95,7 @@ public:
         } else {
           auto coordinatorID = partitioner.master_coordinator(partitionId);
           txn.network_size += MessageFactoryType::new_abort_message(
-              *messages[coordinatorID], *table, readKey.get_key(), false);
+              *syncMessages[coordinatorID], *table, readKey.get_key(), false);
         }
       }
 
@@ -107,7 +108,7 @@ public:
         } else {
           auto coordinatorID = partitioner.master_coordinator(partitionId);
           txn.network_size += MessageFactoryType::new_abort_message(
-              *messages[coordinatorID], *table, readKey.get_key(), true);
+              *syncMessages[coordinatorID], *table, readKey.get_key(), true);
         }
       }
     }
@@ -120,7 +121,7 @@ public:
               std::vector<std::unique_ptr<Message>> &asyncMessages) {
 
     if (txn.abort_lock) {
-      abort(txn, syncMessages);
+      abort(txn, syncMessages, asyncMessages);
       return false;
     }
 

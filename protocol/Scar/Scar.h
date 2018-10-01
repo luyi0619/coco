@@ -46,7 +46,8 @@ public:
   }
 
   void abort(TransactionType &txn,
-             std::vector<std::unique_ptr<Message>> &messages) {
+             std::vector<std::unique_ptr<Message>> &syncMessages,
+             std::vector<std::unique_ptr<Message>> &asyncMessage) {
 
     auto &writeSet = txn.writeSet;
 
@@ -67,41 +68,39 @@ public:
       } else {
         auto coordinatorID = partitioner.master_coordinator(partitionId);
         txn.network_size += MessageFactoryType::new_abort_message(
-            *messages[coordinatorID], *table, writeKey.get_key());
+            *syncMessages[coordinatorID], *table, writeKey.get_key());
       }
     }
 
-    replicate_read_set(txn, messages, false);
+    replicate_read_set(txn, asyncMessage, false);
 
     if (context.rts_sync) {
-      replicate_rts(txn, messages);
+      replicate_rts(txn, asyncMessage);
     }
 
     sync_messages(txn, false);
   }
 
   bool commit(TransactionType &txn,
-              std::vector<std::unique_ptr<Message>> &messages) {
+              std::vector<std::unique_ptr<Message>> &syncMessages,
+              std::vector<std::unique_ptr<Message>> &asyncMessage) {
 
     // lock write set
-    if (lock_write_set(txn, messages)) {
-      abort(txn, messages);
+    if (lock_write_set(txn, syncMessages)) {
+      abort(txn, syncMessages, asyncMessage);
       return false;
     }
 
     compute_commit_ts(txn);
 
     // commit phase 2, read validation
-    if (!validate_read_set(txn, messages)) {
-      abort(txn, messages);
+    if (!validate_read_set(txn, syncMessages)) {
+      abort(txn, syncMessages, asyncMessage);
       return false;
     }
 
     // write and replicate
-    write_and_replicate(txn, messages);
-
-    // release locks
-    release_lock(txn, messages);
+    write_and_replicate(txn, syncMessages, asyncMessage);
 
     return true;
   }
@@ -255,52 +254,12 @@ private:
     return !txn.abort_read_validation;
   }
 
-  void write_and_replicate(TransactionType &txn,
-                           std::vector<std::unique_ptr<Message>> &messages) {
+  void
+  write_and_replicate(TransactionType &txn,
+                      std::vector<std::unique_ptr<Message>> &syncMessages,
+                      std::vector<std::unique_ptr<Message>> &asyncMessage) {
 
     // no operation replication in Scar
-
-    auto &readSet = txn.readSet;
-    auto &writeSet = txn.writeSet;
-
-    uint64_t commit_wts = txn.commit_wts;
-
-    for (auto i = 0u; i < writeSet.size(); i++) {
-      auto &writeKey = writeSet[i];
-      auto tableId = writeKey.get_table_id();
-      auto partitionId = writeKey.get_partition_id();
-      auto table = db.find_table(tableId, partitionId);
-
-      // write
-      if (partitioner.has_master_partition(partitionId)) {
-        auto key = writeKey.get_key();
-        auto value = writeKey.get_value();
-        table->update(key, value);
-      } else {
-        txn.pendingResponses++;
-        auto coordinatorID = partitioner.master_coordinator(partitionId);
-        txn.network_size += MessageFactoryType::new_write_message(
-            *messages[coordinatorID], *table, writeKey.get_key(),
-            writeKey.get_value());
-      }
-
-      // value replicate
-
-      replicate_record(txn, messages, tableId, partitionId, writeKey.get_key(),
-                       writeKey.get_value(), commit_wts, true);
-    }
-
-    replicate_read_set(txn, messages, true);
-
-    if (context.rts_sync) {
-      replicate_rts(txn, messages);
-    }
-
-    sync_messages(txn);
-  }
-
-  void release_lock(TransactionType &txn,
-                    std::vector<std::unique_ptr<Message>> &messages) {
 
     auto &readSet = txn.readSet;
     auto &writeSet = txn.writeSet;
@@ -321,10 +280,23 @@ private:
         table->update(key, value);
         ScarHelper::unlock(tid, commit_wts);
       } else {
+        txn.pendingResponses++;
         auto coordinatorID = partitioner.master_coordinator(partitionId);
-        txn.network_size += MessageFactoryType::new_release_lock_message(
-            *messages[coordinatorID], *table, writeKey.get_key(), commit_wts);
+        txn.network_size += MessageFactoryType::new_write_message(
+            *syncMessages[coordinatorID], *table, writeKey.get_key(),
+            writeKey.get_value(), commit_wts);
       }
+
+      // value replicate
+
+      replicate_record(txn, asyncMessage, tableId, partitionId,
+                       writeKey.get_key(), writeKey.get_value(), commit_wts);
+    }
+
+    replicate_read_set(txn, asyncMessage, true);
+
+    if (context.rts_sync) {
+      replicate_rts(txn, asyncMessage);
     }
 
     sync_messages(txn, false);
@@ -362,7 +334,7 @@ private:
 
       // value replicate
       replicate_record(txn, messages, tableId, partitionId, readKey.get_key(),
-                       readKey.get_value(), readKey.get_tid(), false);
+                       readKey.get_value(), readKey.get_tid());
     }
   }
 
@@ -433,8 +405,7 @@ private:
   void replicate_record(TransactionType &txn,
                         std::vector<std::unique_ptr<Message>> &messages,
                         std::size_t table_id, std::size_t partition_id,
-                        const void *key, void *value, uint64_t commit_wts,
-                        bool sync) {
+                        const void *key, void *value, uint64_t commit_wts) {
 
     std::size_t replicate_count = 0;
 
@@ -461,16 +432,10 @@ private:
         table->update(key, value);
         ScarHelper::unlock(tid, commit_wts);
       } else {
-        if (sync) {
-          auto coordinatorID = k;
-          txn.pendingResponses++;
-          txn.network_size += MessageFactoryType::new_replication_message(
-              *messages[coordinatorID], *table, key, value, commit_wts);
-        } else {
-          auto coordinatorID = k;
-          txn.network_size += MessageFactoryType::new_async_replication_message(
-              *messages[coordinatorID], *table, key, value, commit_wts);
-        }
+        auto coordinatorID = k;
+        txn.pendingResponses++;
+        txn.network_size += MessageFactoryType::new_replication_message(
+            *messages[coordinatorID], *table, key, value, commit_wts);
       }
     }
 

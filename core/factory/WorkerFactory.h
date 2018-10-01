@@ -109,7 +109,7 @@ public:
       using WorkloadType =
           typename InferType<Context>::template WorkloadType<TransactionType>;
 
-      auto manager = std::make_shared<Manager>(
+      auto manager = std::make_shared<group_commit::Manager>(
           coordinator_id, context.worker_num, context, stop_flag);
 
       for (auto i = 0u; i < context.worker_num; i++) {

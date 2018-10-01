@@ -139,7 +139,7 @@ public:
               retry_transaction = true;
             }
           } else {
-            protocol.abort(*transaction, sync_messages);
+            protocol.abort(*transaction, sync_messages, async_messages);
             n_abort_no_retry.fetch_add(1);
           }
 

@@ -4,15 +4,17 @@
 
 #pragma once
 
-#include "core/Executor.h"
+#include "core/group_commit/Executor.h"
 #include "protocol/Scar/Scar.h"
 
 namespace scar {
 template <class Workload>
 class ScarExecutor
-    : public Executor<Workload, Scar<typename Workload::DatabaseType>> {
+    : public group_commit::Executor<Workload,
+                                    Scar<typename Workload::DatabaseType>> {
 public:
-  using base_type = Executor<Workload, Scar<typename Workload::DatabaseType>>;
+  using base_type =
+      group_commit::Executor<Workload, Scar<typename Workload::DatabaseType>>;
 
   using WorkloadType = Workload;
   using ProtocolType = Scar<typename Workload::DatabaseType>;
@@ -57,14 +59,14 @@ public:
         auto coordinatorID =
             this->partitioner->master_coordinator(partition_id);
         txn.network_size += MessageFactoryType::new_search_message(
-            *(this->messages[coordinatorID]), *table, key, key_offset);
+            *(this->sync_messages[coordinatorID]), *table, key, key_offset);
         txn.pendingResponses++;
         return 0;
       }
     };
 
     txn.remote_request_handler = [this]() { return this->process_request(); };
-    txn.message_flusher = [this]() { this->flush_messages(); };
+    txn.message_flusher = [this]() { this->flush_sync_messages(); };
   };
 };
 } // namespace scar

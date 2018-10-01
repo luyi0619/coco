@@ -46,7 +46,8 @@ public:
   }
 
   void abort(TransactionType &txn,
-             std::vector<std::unique_ptr<Message>> &messages) {
+             std::vector<std::unique_ptr<Message>> &syncMessages,
+             std::vector<std::unique_ptr<Message>> &asyncMessages) {
 
     auto &writeSet = txn.writeSet;
 
@@ -67,7 +68,7 @@ public:
       } else {
         auto coordinatorID = partitioner.master_coordinator(partitionId);
         txn.network_size += MessageFactoryType::new_abort_message(
-            *messages[coordinatorID], *table, writeKey.get_key());
+            *syncMessages[coordinatorID], *table, writeKey.get_key());
       }
     }
 
@@ -80,13 +81,13 @@ public:
 
     // lock write set
     if (lock_write_set(txn, syncMessages)) {
-      abort(txn, syncMessages);
+      abort(txn, syncMessages, asyncMessages);
       return false;
     }
 
     // commit phase 2, read validation
     if (!validate_read_set(txn, syncMessages)) {
-      abort(txn, syncMessages);
+      abort(txn, syncMessages, asyncMessages);
       return false;
     }
 
