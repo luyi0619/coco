@@ -71,6 +71,8 @@ public:
       }
     }
 
+    replicate_read_set(txn, messages, false);
+
     sync_messages(txn, false);
   }
 
@@ -231,7 +233,7 @@ private:
         }
       } else {
 
-        if (!use_local_validation || ScarHelper::get_rts(tid) < commit_ts){
+        if (!use_local_validation || ScarHelper::get_rts(tid) < commit_ts) {
           txn.pendingResponses++;
           auto coordinatorID = partitioner.master_coordinator(partitionId);
           txn.network_size += MessageFactoryType::new_read_validation_message(
@@ -240,7 +242,7 @@ private:
       }
     }
 
-    if(txn.pendingResponses == 0){
+    if (txn.pendingResponses == 0) {
       txn.local_validated = true;
     }
 
@@ -280,43 +282,11 @@ private:
 
       // value replicate
 
-      std::size_t replicate_count = 0;
-
-      for (auto k = 0u; k < partitioner.total_coordinators(); k++) {
-
-        // k does not have this partition
-        if (!partitioner.is_partition_replicated_on(partitionId, k)) {
-          continue;
-        }
-
-        // already write
-        if (k == partitioner.master_coordinator(partitionId)) {
-          continue;
-        }
-
-        replicate_count++;
-
-        // local replicate
-        if (k == txn.coordinator_id) {
-          auto key = writeKey.get_key();
-          auto value = writeKey.get_value();
-          std::atomic<uint64_t> &tid = table->search_metadata(key);
-
-          uint64_t last_tid = ScarHelper::lock(tid);
-          DCHECK(ScarHelper::get_wts(last_tid) < commit_wts);
-          table->update(key, value);
-          ScarHelper::unlock(tid, commit_wts);
-        } else {
-          txn.pendingResponses++;
-          auto coordinatorID = k;
-          txn.network_size += MessageFactoryType::new_replication_message(
-              *messages[coordinatorID], *table, writeKey.get_key(),
-              writeKey.get_value(), commit_wts);
-        }
-      }
-
-      DCHECK(replicate_count == partitioner.replica_num() - 1);
+      replicate_record(txn, messages, tableId, partitionId, writeKey.get_key(),
+                       writeKey.get_value(), commit_wts, true);
     }
+
+    replicate_read_set(txn, messages, true);
 
     sync_messages(txn);
   }
@@ -350,6 +320,87 @@ private:
     }
 
     sync_messages(txn, false);
+  }
+
+
+  void replicate_read_set(TransactionType &txn, std::vector<std::unique_ptr<Message>> &messages, bool skip_write_set){
+
+    auto &readSet = txn.readSet;
+    auto &writeSet = txn.writeSet;
+
+    auto isKeyInWriteSet = [&writeSet](const void *key) {
+      for (auto &writeKey : writeSet) {
+        if (writeKey.get_key() == key) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    for (auto i = 0u; i < readSet.size(); i++) {
+      auto &readKey = readSet[i];
+      auto tableId = readKey.get_table_id();
+      auto partitionId = readKey.get_partition_id();
+      auto table = db.find_table(tableId, partitionId);
+
+      if (!readKey.get_wts_change_in_read_validation_bit()){
+        continue;
+      }
+
+      if (skip_write_set && isKeyInWriteSet(readKey.get_key())){
+        continue;
+      }
+
+      // value replicate
+      replicate_record(txn, messages, tableId, partitionId, readKey.get_key(),
+                       readKey.get_value(), readKey.get_tid(), false);
+    }
+  }
+
+  void replicate_record(TransactionType &txn,
+                        std::vector<std::unique_ptr<Message>> &messages,
+                        std::size_t table_id, std::size_t partition_id,
+                        const void *key, void *value, uint64_t commit_wts, bool sync) {
+
+    std::size_t replicate_count = 0;
+
+    auto table = db.find_table(table_id, partition_id);
+    for (auto k = 0u; k < partitioner.total_coordinators(); k++) {
+
+      // k does not have this partition
+      if (!partitioner.is_partition_replicated_on(partition_id, k)) {
+        continue;
+      }
+
+      // already write
+      if (k == partitioner.master_coordinator(partition_id)) {
+        continue;
+      }
+
+      replicate_count++;
+
+      // local replicate
+      if (k == txn.coordinator_id) {
+        std::atomic<uint64_t> &tid = table->search_metadata(key);
+        uint64_t last_tid = ScarHelper::lock(tid);
+        DCHECK(ScarHelper::get_wts(last_tid) < commit_wts);
+        table->update(key, value);
+        ScarHelper::unlock(tid, commit_wts);
+      } else {
+        if (sync){
+          auto coordinatorID = k;
+          txn.pendingResponses ++;
+          txn.network_size += MessageFactoryType::new_replication_message(
+              *messages[coordinatorID], *table, key, value, commit_wts);
+        } else {
+          auto coordinatorID = k;
+          txn.network_size += MessageFactoryType::new_async_replication_message(
+              *messages[coordinatorID], *table, key, value, commit_wts);
+        }
+      }
+    }
+
+    DCHECK(replicate_count == partitioner.replica_num() - 1);
   }
 
   void sync_messages(TransactionType &txn, bool wait_response = true) {

@@ -28,6 +28,7 @@ enum class ScarMessage {
   WRITE_RESPONSE,
   REPLICATION_REQUEST,
   REPLICATION_RESPONSE,
+  ASYNC_REPLICATION_REQUEST, // for read set replication
   RTS_REPLICATION_REQUEST,
   RELEASE_LOCK_REQUEST,
   NFIELDS
@@ -170,6 +171,33 @@ public:
                         field_size + sizeof(commit_ts);
     auto message_piece_header = MessagePiece::construct_message_piece_header(
         static_cast<uint32_t>(ScarMessage::REPLICATION_REQUEST), message_size,
+        table.tableID(), table.partitionID());
+
+    Encoder encoder(message.data);
+    encoder << message_piece_header;
+    encoder.write_n_bytes(key, key_size);
+    table.serialize_value(encoder, value);
+    encoder << commit_ts;
+    message.flush();
+    return message_size;
+  }
+
+  static std::size_t new_async_replication_message(Message &message, Table &table,
+                                             const void *key, const void *value,
+                                             uint64_t commit_ts) {
+
+    /*
+     * The structure of an async replication request: (primary key, field value,
+     * commit_ts)
+     */
+
+    auto key_size = table.key_size();
+    auto field_size = table.field_size();
+
+    auto message_size = MessagePiece::get_header_size() + key_size +
+                        field_size + sizeof(commit_ts);
+    auto message_piece_header = MessagePiece::construct_message_piece_header(
+        static_cast<uint32_t>(ScarMessage::ASYNC_REPLICATION_REQUEST), message_size,
         table.tableID(), table.partitionID());
 
     Encoder encoder(message.data);
@@ -628,7 +656,7 @@ public:
     /*
      * The structure of a replication request: (primary key, field value,
      * commit_ts).
-     * The structure of a replication response: null
+     * The structure of a replication response: ()
      */
 
     DCHECK(inputPiece.get_message_length() == MessagePiece::get_header_size() +
@@ -666,6 +694,7 @@ public:
     responseMessage.flush();
   }
 
+
   static void replication_response_handler(MessagePiece inputPiece,
                                            Message &responseMessage,
                                            Table &table, Transaction &txn) {
@@ -684,6 +713,50 @@ public:
 
     txn.pendingResponses--;
     txn.network_size += inputPiece.get_message_length();
+  }
+
+  static void async_replication_request_handler(MessagePiece inputPiece,
+                                                Message &responseMessage,
+                                                Table &table, Transaction &txn) {
+
+    DCHECK(inputPiece.get_message_type() ==
+           static_cast<uint32_t>(ScarMessage::ASYNC_REPLICATION_REQUEST));
+    auto table_id = inputPiece.get_table_id();
+    auto partition_id = inputPiece.get_partition_id();
+    DCHECK(table_id == table.tableID());
+    DCHECK(partition_id == table.partitionID());
+    auto key_size = table.key_size();
+    auto field_size = table.field_size();
+
+    /*
+     * The structure of an async replication request: (primary key, field value,
+     * commit_ts).
+     * The structure of a replication response: null
+     */
+
+    DCHECK(inputPiece.get_message_length() == MessagePiece::get_header_size() +
+                                              key_size + field_size +
+                                              sizeof(uint64_t));
+
+    auto stringPiece = inputPiece.toStringPiece();
+
+    const void *key = stringPiece.data();
+    stringPiece.remove_prefix(key_size);
+    auto valueStringPiece = stringPiece;
+    stringPiece.remove_prefix(field_size);
+
+    uint64_t commit_ts;
+    Decoder dec(stringPiece);
+    dec >> commit_ts;
+
+    DCHECK(dec.size() == 0);
+
+    std::atomic<uint64_t> &tid = table.search_metadata(key);
+
+    uint64_t last_tid = ScarHelper::lock(tid);
+    DCHECK(ScarHelper::get_wts(last_tid) < ScarHelper::get_wts(commit_ts));
+    table.deserialize_value(key, valueStringPiece);
+    ScarHelper::unlock(tid, commit_ts);
   }
 
   static void rts_replication_request_handler(MessagePiece inputPiece,
@@ -784,6 +857,7 @@ public:
     v.push_back(write_response_handler);
     v.push_back(replication_request_handler);
     v.push_back(replication_response_handler);
+    v.push_back(async_replication_request_handler);
     v.push_back(rts_replication_request_handler);
     v.push_back(release_lock_request_handler);
     return v;
