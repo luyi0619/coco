@@ -33,7 +33,7 @@ public:
     pendingResponses = 0;
     network_size = 0;
     abort_lock = false;
-    operations.clear();
+    operation.clear();
     readSet.clear();
     writeSet.clear();
   }
@@ -201,7 +201,7 @@ public:
   std::function<void()> message_flusher;
 
   Partitioner &partitioner;
-  std::vector<Operation> operations;
+  Operation operation;
   std::vector<TwoPLRWKey> readSet, writeSet;
 };
 } // namespace scar

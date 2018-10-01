@@ -34,7 +34,7 @@ public:
     network_size = 0;
     abort_lock = false;
     abort_read_validation = false;
-    operations.clear();
+    operation.clear();
     readSet.clear();
     writeSet.clear();
   }
@@ -180,7 +180,7 @@ public:
   std::function<void()> message_flusher;
 
   Partitioner &partitioner;
-  std::vector<Operation> operations;
+  Operation operation;
   std::vector<SiloRWKey> readSet, writeSet;
 };
 

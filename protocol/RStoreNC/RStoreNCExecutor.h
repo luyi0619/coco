@@ -145,9 +145,29 @@ public:
     }
   }
 
+  std::size_t get_partition_id(ExecutorStatus status) {
+
+    std::size_t partition_id;
+
+    if (status == ExecutorStatus::C_PHASE) {
+      CHECK(coordinator_id == 0);
+      CHECK(context.partition_num % context.worker_num == 0);
+      auto partition_num_per_thread =
+          context.partition_num / context.worker_num;
+      partition_id = id * partition_num_per_thread +
+                     random.uniform_dist(0, partition_num_per_thread - 1);
+    } else if (status == ExecutorStatus::S_PHASE) {
+      partition_id = id * (context.coordinator_num - 1) + coordinator_id - 1;
+    } else {
+      CHECK(false);
+    }
+
+    return partition_id;
+  }
+
   void run_transaction(ExecutorStatus status) {
 
-    std::size_t partition_id = 0, query_num = 0;
+    std::size_t query_num = 0;
 
     Partitioner *partitioner = nullptr;
 
@@ -155,20 +175,16 @@ public:
 
     if (status == ExecutorStatus::C_PHASE) {
       CHECK(coordinator_id == 0);
-      partition_id = random.uniform_dist(0, context.partition_num - 1);
       partitioner = c_partitioner.get();
       query_num = RStoreNCQueryNum<ContextType>::get_c_phase_query_num(context);
       phase_context = this->context.get_cross_partition_context();
     } else if (status == ExecutorStatus::S_PHASE) {
-      partition_id = id * (context.coordinator_num - 1) + coordinator_id - 1;
       partitioner = s_partitioner.get();
       query_num = RStoreNCQueryNum<ContextType>::get_s_phase_query_num(context);
       phase_context = this->context.get_single_partition_context();
     } else {
       CHECK(false);
     }
-
-    CHECK(partitioner->has_master_partition(partition_id));
 
     ProtocolType protocol(db, phase_context, *partitioner);
     WorkloadType workload(coordinator_id, db, random, *partitioner);
@@ -190,6 +206,7 @@ public:
         if (retry_transaction) {
           transaction->reset();
         } else {
+          std::size_t partition_id = get_partition_id(status);
           transaction =
               workload.next_transaction(phase_context, partition_id, storage);
           setupHandlers(*transaction, protocol);
@@ -279,8 +296,7 @@ private:
         if (type == static_cast<uint32_t>(
                         ControlMessage::OPERATION_REPLICATION_REQUEST)) {
           ControlMessageHandler::operation_replication_request_handler(
-              messagePiece, *messages[message->get_source_node_id()], db,
-              false);
+              messagePiece, *messages[message->get_source_node_id()], db);
         } else {
           messageHandlers[type](
               messagePiece, *messages[message->get_source_node_id()], *table);

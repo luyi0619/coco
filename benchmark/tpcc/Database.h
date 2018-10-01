@@ -236,35 +236,31 @@ public:
 
   void apply_operation(const Operation &operation) {
 
-    auto table_id = operation.get_table_id();
-    auto partition_id = operation.get_partition_id();
-    auto operation_type = operation.get_operation_type();
-
     Decoder dec(operation.data);
+    bool is_neworder;
+    dec >> is_neworder;
 
-    if (operation_type == 0) { // new order
-
+    if (is_neworder) {
+      // district
       auto districtTableID = district::tableID;
+      district::key district_key;
+      dec >> district_key.D_W_ID >> district_key.D_ID;
+
+      auto row =
+          tbl_district_vec[district_key.D_W_ID - 1]->search(&district_key);
+      MetaDataType &tid = *std::get<0>(row);
+      tid.store(operation.tid);
+      district::value &district_value =
+          *static_cast<district::value *>(std::get<1>(row));
+      dec >> district_value.D_NEXT_O_ID;
+
+      // stock
       auto stockTableID = stock::tableID;
-
-      if (table_id == districtTableID) {
-
-        district::key district_key;
-        dec >> district_key.D_W_ID >> district_key.D_ID;
-
-        auto row = tbl_district_vec[partition_id]->search(&district_key);
-        MetaDataType &tid = *std::get<0>(row);
-        tid.store(operation.tid);
-        district::value &district_value =
-            *static_cast<district::value *>(std::get<1>(row));
-        dec >> district_value.D_NEXT_O_ID;
-
-      } else if (table_id == stockTableID) {
-
+      while (dec.size() > 0) {
         stock::key stock_key;
         dec >> stock_key.S_W_ID >> stock_key.S_I_ID;
 
-        auto row = tbl_stock_vec[partition_id]->search(&stock_key);
+        auto row = tbl_stock_vec[stock_key.S_W_ID - 1]->search(&stock_key);
         MetaDataType &tid = *std::get<0>(row);
         tid.store(operation.tid);
         stock::value &stock_value =
@@ -272,22 +268,16 @@ public:
 
         dec >> stock_value.S_QUANTITY >> stock_value.S_YTD >>
             stock_value.S_ORDER_CNT >> stock_value.S_REMOTE_CNT;
-
-      } else {
-        CHECK(false);
       }
-
-    } else { // payment
-
-      auto warehouseTableID = warehouse::tableID;
-      auto districtTableID = district::tableID;
-      auto customerTableID = customer::tableID;
-
-      if (table_id == warehouseTableID) {
+    } else {
+      {
+        // warehouse
+        auto warehouseTableID = warehouse::tableID;
         warehouse::key warehouse_key;
         dec >> warehouse_key.W_ID;
 
-        auto row = tbl_warehouse_vec[partition_id]->search(&warehouse_key);
+        auto row =
+            tbl_warehouse_vec[warehouse_key.W_ID - 1]->search(&warehouse_key);
         MetaDataType &tid = *std::get<0>(row);
         tid.store(operation.tid);
 
@@ -295,13 +285,16 @@ public:
             *static_cast<warehouse::value *>(std::get<1>(row));
 
         dec >> warehouse_value.W_YTD;
+      }
 
-      } else if (table_id == districtTableID) {
-
+      {
+        // district
+        auto districtTableID = district::tableID;
         district::key district_key;
         dec >> district_key.D_W_ID >> district_key.D_ID;
 
-        auto row = tbl_district_vec[partition_id]->search(&district_key);
+        auto row =
+            tbl_district_vec[district_key.D_W_ID - 1]->search(&district_key);
         MetaDataType &tid = *std::get<0>(row);
         tid.store(operation.tid);
 
@@ -309,13 +302,16 @@ public:
             *static_cast<district::value *>(std::get<1>(row));
 
         dec >> district_value.D_YTD;
+      }
 
-      } else if (table_id == customerTableID) {
-
+      {
+        // custoemer
+        auto customerTableID = customer::tableID;
         customer::key customer_key;
         dec >> customer_key.C_W_ID >> customer_key.C_D_ID >> customer_key.C_ID;
 
-        auto row = tbl_customer_vec[partition_id]->search(&customer_key);
+        auto row =
+            tbl_customer_vec[customer_key.C_W_ID - 1]->search(&customer_key);
         MetaDataType &tid = *std::get<0>(row);
         tid.store(operation.tid);
 
@@ -333,9 +329,6 @@ public:
 
         dec >> customer_value.C_BALANCE >> customer_value.C_YTD_PAYMENT >>
             customer_value.C_PAYMENT_CNT;
-
-      } else {
-        CHECK(false);
       }
     }
   }

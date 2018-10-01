@@ -294,8 +294,7 @@ private:
         if (type == static_cast<uint32_t>(
                         ControlMessage::OPERATION_REPLICATION_REQUEST)) {
           ControlMessageHandler::operation_replication_request_handler(
-              messagePiece, *messages[message->get_source_node_id()], db,
-              false);
+              messagePiece, *messages[message->get_source_node_id()], db);
         } else {
           messageHandlers[type](
               messagePiece, *messages[message->get_source_node_id()], *table);

@@ -126,11 +126,11 @@ public:
                  storage.district_value);
 
     if (context.operation_replication) {
-      Operation operation(districtTableID, storage.district_key.D_W_ID - 1, 0);
-      Encoder encoder(operation.data);
-      encoder << storage.district_key.D_W_ID << storage.district_key.D_ID
+      Encoder encoder(this->operation.data);
+      this->operation.partition_id = this->partition_id;
+      encoder << true << storage.district_key.D_W_ID
+              << storage.district_key.D_ID
               << storage.district_value.D_NEXT_O_ID;
-      this->operations.push_back(std::move(operation)); // move operation.data
     }
 
     float C_DISCOUNT = storage.customer_value.C_DISCOUNT;
@@ -188,14 +188,12 @@ public:
                    storage.stock_values[i]);
 
       if (context.operation_replication) {
-        Operation operation(stockTableID, storage.stock_keys[i].S_W_ID - 1, 0);
-        Encoder encoder(operation.data);
+        Encoder encoder(this->operation.data);
         encoder << storage.stock_keys[i].S_W_ID << storage.stock_keys[i].S_I_ID
                 << storage.stock_values[i].S_QUANTITY
                 << storage.stock_values[i].S_YTD
                 << storage.stock_values[i].S_ORDER_CNT
                 << storage.stock_values[i].S_REMOTE_CNT;
-        this->operations.push_back(std::move(operation)); // move operation.data
       }
 
       float OL_AMOUNT = I_PRICE * OL_QUANTITY;
@@ -348,10 +346,10 @@ public:
                  storage.warehouse_value);
 
     if (context.operation_replication) {
-      Operation operation(warehouseTableID, storage.warehouse_key.W_ID - 1, 1);
-      Encoder encoder(operation.data);
-      encoder << storage.warehouse_key.W_ID << storage.warehouse_value.W_YTD;
-      this->operations.push_back(std::move(operation)); // move operation.data
+      this->operation.partition_id = this->partition_id;
+      Encoder encoder(this->operation.data);
+      encoder << false << storage.warehouse_key.W_ID
+              << storage.warehouse_value.W_YTD;
     }
 
     // the district's year-to-date balance, is increased by H_AMOUNT.
@@ -360,11 +358,9 @@ public:
                  storage.district_value);
 
     if (context.operation_replication) {
-      Operation operation(districtTableID, storage.district_key.D_W_ID - 1, 1);
-      Encoder encoder(operation.data);
+      Encoder encoder(this->operation.data);
       encoder << storage.district_key.D_W_ID << storage.district_key.D_ID
               << storage.district_value.D_YTD;
-      this->operations.push_back(std::move(operation)); // move operation.data
     }
 
     char C_DATA[501];
@@ -407,8 +403,7 @@ public:
                  storage.customer_value);
 
     if (context.operation_replication) {
-      Operation operation(customerTableID, storage.customer_key.C_W_ID - 1, 1);
-      Encoder encoder(operation.data);
+      Encoder encoder(this->operation.data);
       encoder << storage.customer_key.C_W_ID << storage.customer_key.C_D_ID
               << storage.customer_key.C_ID;
       encoder << uint32_t(total_written);
@@ -416,7 +411,6 @@ public:
       encoder << storage.customer_value.C_BALANCE
               << storage.customer_value.C_YTD_PAYMENT
               << storage.customer_value.C_PAYMENT_CNT;
-      this->operations.push_back(std::move(operation)); // move operation.data
     }
 
     char H_DATA[25];

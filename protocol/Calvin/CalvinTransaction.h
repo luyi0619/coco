@@ -36,7 +36,7 @@ public:
     execution_phase = false;
     network_size = 0;
     active_coordinators.clear();
-    operations.clear();
+    operation.clear();
     readSet.clear();
     writeSet.clear();
   }
@@ -220,7 +220,7 @@ public:
 
   Partitioner &partitioner;
   std::vector<bool> active_coordinators;
-  std::vector<Operation> operations; // never used
+  Operation operation; // never used
   std::vector<CalvinRWKey> readSet, writeSet;
 };
 } // namespace scar
