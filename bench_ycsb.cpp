@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
 
   context.keysPerPartition = 2000;
 
-  if(FLAGS_zipf > 0){
+  if (FLAGS_zipf > 0) {
     context.isUniform = false;
     scar::Zipf::globalZipf().init(context.keysPerPartition, FLAGS_zipf);
   }

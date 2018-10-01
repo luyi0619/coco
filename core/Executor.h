@@ -53,6 +53,7 @@ public:
     }
 
     messageHandlers = MessageHandlerType::get_message_handlers();
+    message_stats.resize(messageHandlers.size(), 0);
   }
 
   ~Executor() = default;
@@ -151,6 +152,13 @@ public:
                 << " us (99%), size: " << percentile.size() * sizeof(int64_t)
                 << " bytes.";
     }
+
+    if (id == 0) {
+      for (auto i = 0u; i < message_stats.size(); i++) {
+        LOG(INFO) << "message stats, type: " << i
+                  << " count: " << message_stats[i];
+      }
+    }
   }
 
   std::size_t get_partition_id() {
@@ -213,6 +221,8 @@ public:
         messageHandlers[type](messagePiece,
                               *messages[message->get_source_node_id()], *table,
                               *transaction);
+
+        message_stats[type]++;
       }
 
       size += message->get_message_count();
@@ -265,6 +275,7 @@ protected:
   std::vector<std::function<void(MessagePiece, Message &, TableType &,
                                  TransactionType &)>>
       messageHandlers;
+  std::vector<std::size_t> message_stats;
   LockfreeQueue<Message *> in_queue, out_queue;
 };
 } // namespace scar

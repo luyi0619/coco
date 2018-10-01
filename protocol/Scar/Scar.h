@@ -73,7 +73,7 @@ public:
 
     replicate_read_set(txn, messages, false);
 
-    if(context.rts_sync){
+    if (context.rts_sync) {
       replicate_rts(txn, messages);
     }
 
@@ -292,7 +292,7 @@ private:
 
     replicate_read_set(txn, messages, true);
 
-    if(context.rts_sync){
+    if (context.rts_sync) {
       replicate_rts(txn, messages);
     }
 
