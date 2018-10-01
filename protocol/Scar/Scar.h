@@ -73,6 +73,10 @@ public:
 
     replicate_read_set(txn, messages, false);
 
+    if(context.rts_sync){
+      replicate_rts(txn, messages);
+    }
+
     sync_messages(txn, false);
   }
 
@@ -288,6 +292,10 @@ private:
 
     replicate_read_set(txn, messages, true);
 
+    if(context.rts_sync){
+      replicate_rts(txn, messages);
+    }
+
     sync_messages(txn);
   }
 
@@ -322,8 +330,9 @@ private:
     sync_messages(txn, false);
   }
 
-
-  void replicate_read_set(TransactionType &txn, std::vector<std::unique_ptr<Message>> &messages, bool skip_write_set){
+  void replicate_read_set(TransactionType &txn,
+                          std::vector<std::unique_ptr<Message>> &messages,
+                          bool skip_write_set) {
 
     auto &readSet = txn.readSet;
     auto &writeSet = txn.writeSet;
@@ -343,11 +352,11 @@ private:
       auto partitionId = readKey.get_partition_id();
       auto table = db.find_table(tableId, partitionId);
 
-      if (!readKey.get_wts_change_in_read_validation_bit()){
+      if (!readKey.get_wts_change_in_read_validation_bit()) {
         continue;
       }
 
-      if (skip_write_set && isKeyInWriteSet(readKey.get_key())){
+      if (skip_write_set && isKeyInWriteSet(readKey.get_key())) {
         continue;
       }
 
@@ -357,10 +366,75 @@ private:
     }
   }
 
+  void replicate_rts(TransactionType &txn,
+                     std::vector<std::unique_ptr<Message>> &messages) {
+
+    auto &readSet = txn.readSet;
+    uint64_t extend_rts = txn.commit_wts;
+
+    for (auto i = 0u; i < readSet.size(); i++) {
+      auto &readKey = readSet[i];
+      auto tableId = readKey.get_table_id();
+      auto partitionId = readKey.get_partition_id();
+      auto table = db.find_table(tableId, partitionId);
+
+      if (!readKey.get_read_validation_success_bit()) {
+        continue;
+      }
+
+      if (extend_rts <= ScarHelper::get_rts(readKey.get_tid())) {
+        continue;
+      }
+
+      for (auto k = 0u; k < partitioner.total_coordinators(); k++) {
+
+        // k does not have this partition
+        if (!partitioner.is_partition_replicated_on(partitionId, k)) {
+          continue;
+        }
+
+        // already write
+        if (k == partitioner.master_coordinator(partitionId)) {
+          continue;
+        }
+
+        uint64_t compact_ts =
+            ScarHelper::set_rts(readKey.get_tid(), extend_rts);
+        if (ScarHelper::get_wts(compact_ts) !=
+            ScarHelper::get_wts(readKey.get_tid())) {
+          continue; // if delta is too larger, continue
+        }
+
+        CHECK(ScarHelper::get_wts(compact_ts) ==
+              ScarHelper::get_wts(readKey.get_tid()));
+        CHECK(ScarHelper::get_rts(compact_ts) == extend_rts);
+
+        // local extend
+        if (k == txn.coordinator_id) {
+          std::atomic<uint64_t> &tid =
+              table->search_metadata(readKey.get_key());
+          uint64_t last_tid = ScarHelper::lock(tid);
+          if (ScarHelper::get_wts(compact_ts) ==
+                  ScarHelper::get_wts(last_tid) &&
+              ScarHelper::get_rts(compact_ts) > ScarHelper::get_rts(last_tid)) {
+            ScarHelper::unlock(tid, compact_ts);
+          } else {
+            ScarHelper::unlock(tid);
+          }
+        } else {
+          auto coordinatorID = k;
+          txn.network_size += MessageFactoryType::new_rts_replication_message(
+              *messages[coordinatorID], *table, readKey.get_key(), compact_ts);
+        }
+      }
+    }
+  }
+
   void replicate_record(TransactionType &txn,
                         std::vector<std::unique_ptr<Message>> &messages,
                         std::size_t table_id, std::size_t partition_id,
-                        const void *key, void *value, uint64_t commit_wts, bool sync) {
+                        const void *key, void *value, uint64_t commit_wts,
+                        bool sync) {
 
     std::size_t replicate_count = 0;
 
@@ -387,9 +461,9 @@ private:
         table->update(key, value);
         ScarHelper::unlock(tid, commit_wts);
       } else {
-        if (sync){
+        if (sync) {
           auto coordinatorID = k;
-          txn.pendingResponses ++;
+          txn.pendingResponses++;
           txn.network_size += MessageFactoryType::new_replication_message(
               *messages[coordinatorID], *table, key, value, commit_wts);
         } else {

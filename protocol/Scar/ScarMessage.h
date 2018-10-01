@@ -182,9 +182,9 @@ public:
     return message_size;
   }
 
-  static std::size_t new_async_replication_message(Message &message, Table &table,
-                                             const void *key, const void *value,
-                                             uint64_t commit_ts) {
+  static std::size_t
+  new_async_replication_message(Message &message, Table &table, const void *key,
+                                const void *value, uint64_t commit_ts) {
 
     /*
      * The structure of an async replication request: (primary key, field value,
@@ -197,8 +197,8 @@ public:
     auto message_size = MessagePiece::get_header_size() + key_size +
                         field_size + sizeof(commit_ts);
     auto message_piece_header = MessagePiece::construct_message_piece_header(
-        static_cast<uint32_t>(ScarMessage::ASYNC_REPLICATION_REQUEST), message_size,
-        table.tableID(), table.partitionID());
+        static_cast<uint32_t>(ScarMessage::ASYNC_REPLICATION_REQUEST),
+        message_size, table.tableID(), table.partitionID());
 
     Encoder encoder(message.data);
     encoder << message_piece_header;
@@ -694,7 +694,6 @@ public:
     responseMessage.flush();
   }
 
-
   static void replication_response_handler(MessagePiece inputPiece,
                                            Message &responseMessage,
                                            Table &table, Transaction &txn) {
@@ -717,7 +716,8 @@ public:
 
   static void async_replication_request_handler(MessagePiece inputPiece,
                                                 Message &responseMessage,
-                                                Table &table, Transaction &txn) {
+                                                Table &table,
+                                                Transaction &txn) {
 
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(ScarMessage::ASYNC_REPLICATION_REQUEST));
@@ -735,8 +735,8 @@ public:
      */
 
     DCHECK(inputPiece.get_message_length() == MessagePiece::get_header_size() +
-                                              key_size + field_size +
-                                              sizeof(uint64_t));
+                                                  key_size + field_size +
+                                                  sizeof(uint64_t));
 
     auto stringPiece = inputPiece.toStringPiece();
 

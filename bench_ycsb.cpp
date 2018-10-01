@@ -19,10 +19,12 @@ DEFINE_string(partitioner, "hash", "database partitioner (hash, hash2, pb)");
 DEFINE_bool(sleep_on_retry, true, "sleep when retry aborted transactions");
 DEFINE_bool(read_on_replica, false, "read from replicas");
 DEFINE_bool(local_validation, false, "local validation");
+DEFINE_bool(rts_sync, false, "rts sync");
 DEFINE_int32(read_write_ratio, 80, "read write ratio");
 DEFINE_int32(read_only_ratio, 0, "read only transaction ratio");
 DEFINE_int32(cross_ratio, 0, "cross partition transaction ratio");
 DEFINE_int32(delay, 0, "delay time in us.");
+DEFINE_double(zipf, 0, "skew factor");
 
 // ./main --logtostderr=1 --id=1 --servers="127.0.0.1:10010;127.0.0.1:10011"
 // cmake -DCMAKE_BUILD_TYPE=Release
@@ -53,8 +55,16 @@ int main(int argc, char *argv[]) {
   context.sleep_on_retry = FLAGS_sleep_on_retry;
   context.read_on_replica = FLAGS_read_on_replica;
   context.local_validation = FLAGS_local_validation;
+  context.rts_sync = FLAGS_rts_sync;
   context.crossPartitionProbability = FLAGS_cross_ratio;
   context.delay_time = FLAGS_delay;
+
+  context.keysPerPartition = 2000;
+
+  if(FLAGS_zipf > 0){
+    context.isUniform = false;
+    scar::Zipf::globalZipf().init(context.keysPerPartition, FLAGS_zipf);
+  }
 
   using MetaDataType = std::atomic<uint64_t>;
   scar::ycsb::Database<MetaDataType> db;

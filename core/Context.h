@@ -24,6 +24,7 @@ public:
 
   bool read_on_replica = false;
   bool local_validation = false;
+  bool rts_sync = false;
   bool sleep_on_retry = true;
   bool operation_replication = false;
 };

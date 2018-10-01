@@ -20,6 +20,7 @@ DEFINE_bool(operation_replication, false, "use operation replication");
 DEFINE_bool(sleep_on_retry, true, "sleep when retry aborted transactions");
 DEFINE_bool(read_on_replica, false, "read from replicas");
 DEFINE_bool(local_validation, false, "local validation");
+DEFINE_bool(rts_sync, false, "rts sync");
 DEFINE_string(query, "neworder", "tpcc query, mixed, neworder, payment");
 DEFINE_int32(neworder_dist, 10, "new order distributed.");
 DEFINE_int32(payment_dist, 15, "payment distributed.");
@@ -51,6 +52,7 @@ int main(int argc, char *argv[]) {
   context.operation_replication = FLAGS_operation_replication;
   context.read_on_replica = FLAGS_read_on_replica;
   context.local_validation = FLAGS_local_validation;
+  context.rts_sync = FLAGS_rts_sync;
   context.sleep_on_retry = FLAGS_sleep_on_retry;
   context.partitioner = FLAGS_partitioner;
   context.delay_time = FLAGS_delay;
