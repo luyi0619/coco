@@ -55,6 +55,7 @@ public:
     }
 
     messageHandlers = MessageHandlerType::get_message_handlers();
+    message_stats.resize(messageHandlers.size(), 0);
   }
 
   void start() override {
@@ -174,6 +175,13 @@ public:
               << " us (50%) " << percentile.nth(75) << " us (75%) "
               << percentile.nth(95) << " us (95%) " << percentile.nth(99)
               << " us (99%).";
+
+    if (id == 0) {
+      for (auto i = 0u; i < message_stats.size(); i++) {
+        LOG(INFO) << "message stats, type: " << i
+                  << " count: " << message_stats[i];
+      }
+    }
   }
 
   std::size_t get_partition_id() {
@@ -236,6 +244,7 @@ public:
         messageHandlers[type](messagePiece,
                               *sync_messages[message->get_source_node_id()],
                               *table, *transaction);
+        message_stats[type]++;
       }
 
       size += message->get_message_count();
@@ -307,6 +316,7 @@ protected:
   std::vector<std::function<void(MessagePiece, Message &, TableType &,
                                  TransactionType &)>>
       messageHandlers;
+  std::vector<std::size_t> message_stats;
   LockfreeQueue<Message *> in_queue, out_queue;
 };
 } // namespace group_commit

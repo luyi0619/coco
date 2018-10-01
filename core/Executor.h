@@ -145,13 +145,12 @@ public:
   }
 
   void onExit() override {
-    if (percentile.size() > 0) {
-      LOG(INFO) << "Worker " << id << " latency: " << percentile.nth(50)
-                << " us (50%) " << percentile.nth(75) << " us (75%) "
-                << percentile.nth(99)
-                << " us (99%), size: " << percentile.size() * sizeof(int64_t)
-                << " bytes.";
-    }
+
+    LOG(INFO) << "Worker " << id << " latency: " << percentile.nth(50)
+              << " us (50%) " << percentile.nth(75) << " us (75%) "
+              << percentile.nth(99)
+              << " us (99%), size: " << percentile.size() * sizeof(int64_t)
+              << " bytes.";
 
     if (id == 0) {
       for (auto i = 0u; i < message_stats.size(); i++) {

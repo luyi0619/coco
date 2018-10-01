@@ -13,6 +13,8 @@
 
 #include "protocol/Scar/Scar.h"
 #include "protocol/Scar/ScarExecutor.h"
+#include "protocol/ScarSI/ScarSI.h"
+#include "protocol/ScarSI/ScarSIExecutor.h"
 #include "protocol/Silo/Silo.h"
 #include "protocol/Silo/SiloExecutor.h"
 #include "protocol/TwoPL/TwoPL.h"
@@ -63,9 +65,9 @@ public:
   create_workers(std::size_t coordinator_id, Database &db,
                  const Context &context, std::atomic<bool> &stop_flag) {
 
-    std::unordered_set<std::string> protocols = {"Silo",    "SiloGC",   "Scar",
-                                                 "RStore",  "RStoreNC", "TwoPL",
-                                                 "TwoPLGC", "Calvin"};
+    std::unordered_set<std::string> protocols = {
+        "Silo",     "SiloGC", "Scar",    "ScarSI", "RStore",
+        "RStoreNC", "TwoPL",  "TwoPLGC", "Calvin"};
     CHECK(protocols.count(context.protocol) == 1);
 
     std::vector<std::shared_ptr<Worker>> workers;
@@ -120,7 +122,26 @@ public:
 
       workers.push_back(manager);
 
-    } else if (context.protocol == "RStore") {
+    } else if (context.protocol == "ScarSI") {
+
+      using TransactionType = scar::ScarTransaction;
+      using WorkloadType =
+          typename InferType<Context>::template WorkloadType<TransactionType>;
+
+      auto manager = std::make_shared<group_commit::Manager>(
+          coordinator_id, context.worker_num, context, stop_flag);
+
+      for (auto i = 0u; i < context.worker_num; i++) {
+        workers.push_back(std::make_shared<ScarSIExecutor<WorkloadType>>(
+            coordinator_id, i, db, context, manager->worker_status,
+            manager->n_completed_workers, manager->n_started_workers));
+      }
+
+      workers.push_back(manager);
+
+    }
+
+    else if (context.protocol == "RStore") {
 
       using TransactionType = scar::SiloTransaction;
       using WorkloadType =
