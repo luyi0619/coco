@@ -18,6 +18,7 @@ DEFINE_string(replica_group, "1,3", "calvin replica group");
 DEFINE_string(partitioner, "hash", "database partitioner (hash, hash2, pb)");
 DEFINE_bool(sleep_on_retry, true, "sleep when retry aborted transactions");
 DEFINE_bool(read_on_replica, false, "read from replicas");
+DEFINE_bool(local_validation, false, "local validation");
 DEFINE_int32(read_write_ratio, 80, "read write ratio");
 DEFINE_int32(read_only_ratio, 0, "read only transaction ratio");
 DEFINE_int32(cross_ratio, 0, "cross partition transaction ratio");
@@ -51,6 +52,7 @@ int main(int argc, char *argv[]) {
   context.readOnlyTransaction = FLAGS_read_only_ratio;
   context.sleep_on_retry = FLAGS_sleep_on_retry;
   context.read_on_replica = FLAGS_read_on_replica;
+  context.local_validation = FLAGS_local_validation;
   context.crossPartitionProbability = FLAGS_cross_ratio;
   context.delay_time = FLAGS_delay;
 

@@ -180,6 +180,8 @@ private:
     auto &readSet = txn.readSet;
     auto &writeSet = txn.writeSet;
 
+    bool use_local_validation = context.local_validation;
+
     // TODO: change to commit_rts if the transaction validates in SI
     uint64_t commit_ts = txn.commit_wts;
 
@@ -228,11 +230,18 @@ private:
           break;
         }
       } else {
-        txn.pendingResponses++;
-        auto coordinatorID = partitioner.master_coordinator(partitionId);
-        txn.network_size += MessageFactoryType::new_read_validation_message(
-            *messages[coordinatorID], *table, key, i, tid, commit_ts);
+
+        if (!use_local_validation || ScarHelper::get_rts(tid) < commit_ts){
+          txn.pendingResponses++;
+          auto coordinatorID = partitioner.master_coordinator(partitionId);
+          txn.network_size += MessageFactoryType::new_read_validation_message(
+              *messages[coordinatorID], *table, key, i, tid, commit_ts);
+        }
       }
+    }
+
+    if(txn.pendingResponses == 0){
+      txn.local_validated = true;
     }
 
     sync_messages(txn);
