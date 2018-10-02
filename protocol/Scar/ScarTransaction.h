@@ -34,7 +34,7 @@ public:
     network_size = 0;
     abort_lock = false;
     abort_read_validation = false;
-    si_in_serializable = true;
+    si_in_serializable = false;
     local_validated = false;
     operation.clear();
     readSet.clear();

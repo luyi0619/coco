@@ -99,6 +99,9 @@ public:
           n_network_size.fetch_add(transaction->network_size);
           if (commit) {
             n_commit.fetch_add(1);
+            if (transaction->si_in_serializable) {
+              n_si_in_serializable.fetch_add(1);
+            }
             retry_transaction = false;
             auto latency =
                 std::chrono::duration_cast<std::chrono::microseconds>(
