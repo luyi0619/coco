@@ -19,7 +19,10 @@
 namespace scar {
 namespace retwis {
 
-// TODO: this benchmark has blind write
+/*
+ * In this benchmark, all blind writes are updates.
+ *
+ */
 
 template <class Transaction> class AddUser : public Transaction {
 public:
@@ -35,7 +38,7 @@ public:
           Partitioner &partitioner, Storage &storage)
       : Transaction(coordinator_id, partition_id, partitioner), db(db),
         context(context), random(random), storage(storage),
-        query(makeAddUserQuery()(context, partition_id + 1, random)) {}
+        query(makeAddUserQuery()(context, partition_id, random)) {}
 
   virtual ~AddUser() override = default;
 
@@ -56,7 +59,7 @@ public:
       return TransactionResult::ABORT;
     }
 
-    for (auto i = 0u; i < 1; i++) {
+    for (auto i = 0u; i < 3; i++) {
       auto key = query.KEY[i];
       storage.values[i].VALUE.assign(random.a_string(RETWIS_SIZE, RETWIS_SIZE));
       this->update(retwisTableID, context.getPartitionID(key), storage.keys[i],
@@ -88,7 +91,7 @@ public:
                  RandomType &random, Partitioner &partitioner, Storage &storage)
       : Transaction(coordinator_id, partition_id, partitioner), db(db),
         context(context), random(random), storage(storage),
-        query(makeFollowUnfollowQuery()(context, partition_id + 1, random)) {}
+        query(makeFollowUnfollowQuery()(context, partition_id, random)) {}
 
   virtual ~FollowUnfollow() override = default;
 
@@ -141,7 +144,7 @@ public:
             Partitioner &partitioner, Storage &storage)
       : Transaction(coordinator_id, partition_id, partitioner), db(db),
         context(context), random(random), storage(storage),
-        query(makePostTweetQuery()(context, partition_id + 1, random)) {}
+        query(makePostTweetQuery()(context, partition_id, random)) {}
 
   virtual ~PostTweet() override = default;
 
@@ -162,7 +165,7 @@ public:
       return TransactionResult::ABORT;
     }
 
-    for (auto i = 0u; i < 3; i++) {
+    for (auto i = 0u; i < 5; i++) {
       auto key = query.KEY[i];
       storage.values[i].VALUE.assign(random.a_string(RETWIS_SIZE, RETWIS_SIZE));
       this->update(retwisTableID, context.getPartitionID(key), storage.keys[i],
@@ -194,7 +197,7 @@ public:
               Partitioner &partitioner, Storage &storage)
       : Transaction(coordinator_id, partition_id, partitioner), db(db),
         context(context), random(random), storage(storage),
-        query(makeGetTimelineQuery()(context, partition_id + 1, random)) {}
+        query(makeGetTimelineQuery()(context, partition_id, random)) {}
 
   virtual ~GetTimeline() override = default;
 
