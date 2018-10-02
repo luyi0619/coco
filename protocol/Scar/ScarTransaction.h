@@ -34,6 +34,7 @@ public:
     network_size = 0;
     abort_lock = false;
     abort_read_validation = false;
+    si_in_serializable = true;
     local_validated = false;
     operation.clear();
     readSet.clear();
@@ -162,7 +163,7 @@ public:
   std::size_t pendingResponses;
   std::size_t network_size;
   uint64_t commit_rts, commit_wts;
-  bool abort_lock, abort_read_validation, local_validated;
+  bool abort_lock, abort_read_validation, local_validated, si_in_serializable;
 
   // table id, partition id, key, value, local index read?
   std::function<uint64_t(std::size_t, std::size_t, uint32_t, const void *,

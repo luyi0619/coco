@@ -95,6 +95,10 @@ public:
 
     compute_commit_wts(txn);
 
+    if (txn.commit_rts == txn.commit_wts) {
+      txn.si_in_serializable = true;
+    }
+
     // write and replicate
     write_and_replicate(txn, syncMessages, asyncMessage);
     return true;
