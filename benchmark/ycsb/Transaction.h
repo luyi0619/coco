@@ -42,8 +42,6 @@ public:
 
   TransactionResult execute() override {
 
-    operations.clear();
-
     RandomType random;
 
     DCHECK(context.keysPerTransaction == keys_num);
@@ -102,7 +100,6 @@ private:
   const ContextType &context;
   RandomType &random;
   Storage &storage;
-  std::vector<Operation> operations;
   YCSBQuery<keys_num> query;
 };
 } // namespace ycsb

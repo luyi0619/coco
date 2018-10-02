@@ -51,3 +51,6 @@ target_link_libraries(bench_tpcc common)
 
 add_executable(bench_ycsb bench_ycsb.cpp)
 target_link_libraries(bench_ycsb common)
+
+add_executable(bench_retwis bench_retwis.cpp)
+target_link_libraries(bench_retwis common)

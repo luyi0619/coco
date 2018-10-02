@@ -8,7 +8,19 @@
 #include "benchmark/ycsb/Context.h"
 
 namespace scar {
-template <class Context> class RStoreQueryNum {};
+template <class Context> class RStoreQueryNum {
+
+public:
+  static std::size_t get_s_phase_query_num(const Context &context) {
+    CHECK(false) << "not supported.";
+    return 0;
+  }
+
+  static std::size_t get_c_phase_query_num(const Context &context) {
+    CHECK(false) << "not supported.";
+    return 0;
+  }
+};
 
 template <> class RStoreQueryNum<scar::tpcc::Context> {
 public:

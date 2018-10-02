@@ -8,6 +8,7 @@
 #include "core/Executor.h"
 #include "core/Manager.h"
 
+#include "benchmark/retwis/Workload.h"
 #include "benchmark/tpcc/Workload.h"
 #include "benchmark/ycsb/Workload.h"
 
@@ -55,6 +56,12 @@ template <> class InferType<scar::ycsb::Context> {
 public:
   template <class Transaction>
   using WorkloadType = scar::ycsb::Workload<Transaction>;
+};
+
+template <> class InferType<scar::retwis::Context> {
+public:
+  template <class Transaction>
+  using WorkloadType = scar::retwis::Workload<Transaction>;
 };
 
 class WorkerFactory {
