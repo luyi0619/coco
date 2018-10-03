@@ -86,7 +86,7 @@ public:
         auto latency = std::chrono::duration_cast<std::chrono::microseconds>(
                            std::chrono::steady_clock::now() - ptr->startTime)
                            .count();
-        percentile.add(latency);
+        commit_latency.add(latency);
         q.pop();
       }
 
@@ -126,6 +126,11 @@ public:
               if (transaction->si_in_serializable) {
                 n_si_in_serializable.fetch_add(1);
               }
+              auto latency =
+                  std::chrono::duration_cast<std::chrono::microseconds>(
+                      std::chrono::steady_clock::now() - transaction->startTime)
+                      .count();
+              write_latency.add(latency);
               retry_transaction = false;
               q.push(std::move(transaction));
             } else {
@@ -174,9 +179,13 @@ public:
 
   void onExit() override {
 
-    LOG(INFO) << "Worker " << id << " latency: " << percentile.nth(50)
-              << " us (50%) " << percentile.nth(75) << " us (75%) "
-              << percentile.nth(95) << " us (95%) " << percentile.nth(99)
+    LOG(INFO) << "Worker " << id << " latency: " << commit_latency.nth(50)
+              << " us (50%) " << commit_latency.nth(75) << " us (75%) "
+              << commit_latency.nth(95) << " us (95%) "
+              << commit_latency.nth(99)
+              << " us (99%). write latency: " << write_latency.nth(50)
+              << " us (50%) " << write_latency.nth(75) << " us (75%) "
+              << write_latency.nth(95) << " us (95%) " << write_latency.nth(99)
               << " us (99%).";
 
     if (id == 0) {
@@ -313,7 +322,7 @@ protected:
   ProtocolType protocol;
   WorkloadType workload;
   std::unique_ptr<Delay> delay;
-  Percentile<int64_t> percentile;
+  Percentile<int64_t> commit_latency, write_latency;
   std::unique_ptr<TransactionType> transaction;
   std::vector<std::unique_ptr<Message>> sync_messages, async_messages;
   std::vector<std::function<void(MessagePiece, Message &, TableType &,
