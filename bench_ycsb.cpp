@@ -59,8 +59,6 @@ int main(int argc, char *argv[]) {
   context.crossPartitionProbability = FLAGS_cross_ratio;
   context.delay_time = FLAGS_delay;
 
-  context.keysPerPartition = 2000;
-
   if (FLAGS_zipf > 0) {
     context.isUniform = false;
     scar::Zipf::globalZipf().init(context.keysPerPartition, FLAGS_zipf);

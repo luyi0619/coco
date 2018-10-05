@@ -336,7 +336,7 @@ private:
                      std::vector<std::unique_ptr<Message>> &messages) {
 
     auto &readSet = txn.readSet;
-    uint64_t extend_rts = txn.commit_wts;
+    uint64_t extend_rts = txn.commit_rts;
 
     for (auto i = 0u; i < readSet.size(); i++) {
       auto &readKey = readSet[i];

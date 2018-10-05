@@ -39,11 +39,11 @@ public:
       p = std::make_unique<AddUser<Transaction>>(coordinator_id, partition_id,
                                                  db, context, random,
                                                  partitioner, storage);
-    } else if (x <= 20) {
+    } else if (x <= 10) {
       p = std::make_unique<FollowUnfollow<Transaction>>(
           coordinator_id, partition_id, db, context, random, partitioner,
           storage);
-    } else if (x <= 50) {
+    } else if (x <= 20) {
       p = std::make_unique<PostTweet<Transaction>>(coordinator_id, partition_id,
                                                    db, context, random,
                                                    partitioner, storage);
