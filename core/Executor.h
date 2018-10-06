@@ -160,6 +160,7 @@ public:
         LOG(INFO) << "message stats, type: " << i
                   << " count: " << message_stats[i];
       }
+      percentile.save_cdf(context.cdf_path);
     }
   }
 

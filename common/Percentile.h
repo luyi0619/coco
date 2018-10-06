@@ -6,7 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
-
+#include <fstream>
 #include <glog/logging.h>
 
 // The nearest-rank method
@@ -45,6 +45,37 @@ public:
     auto i = static_cast<decltype(sz)>(ceil(n / 100 * sz)) - 1;
     DCHECK(i >= 0 && i < size());
     return data_[i];
+  }
+
+  void save_cdf(const std::string &path) {
+    if (data_.size() == 0) {
+      return;
+    }
+    checkSort();
+
+    if (path.empty()) {
+      return;
+    }
+
+    std::ofstream cdf;
+    cdf.open(path);
+
+    cdf << "value\tcdf" << std::endl;
+
+    // output ~ 1k rows
+    auto step_size = std::max(1, int(data_.size() * 0.99 / 1000));
+
+    std::vector<element_type> cdf_result;
+
+    for (auto i = 0u; i < 0.99 * data_.size(); i += step_size) {
+      cdf_result.push_back(data_[i]);
+    }
+
+    for (auto i = 0u; i < cdf_result.size(); i++) {
+      cdf << cdf_result[i] << "\t" << 1.0 * i / cdf_result.size() << std::endl;
+    }
+
+    cdf.close();
   }
 
 private:

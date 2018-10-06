@@ -193,6 +193,7 @@ public:
         LOG(INFO) << "message stats, type: " << i
                   << " count: " << message_stats[i];
       }
+      write_latency.save_cdf(context.cdf_path);
     }
   }
 

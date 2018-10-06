@@ -21,6 +21,7 @@ public:
   std::size_t sleep_time = 50; // us
   std::string partitioner;
   std::size_t delay_time = 0;
+  std::string cdf_path;
 
   bool read_on_replica = false;
   bool local_validation = false;

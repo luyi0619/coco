@@ -25,6 +25,7 @@ DEFINE_int32(read_only_ratio, 0, "read only transaction ratio");
 DEFINE_int32(cross_ratio, 0, "cross partition transaction ratio");
 DEFINE_int32(delay, 0, "delay time in us.");
 DEFINE_double(zipf, 0, "skew factor");
+DEFINE_string(cdf_path, "", "path to cdf");
 
 // ./main --logtostderr=1 --id=1 --servers="127.0.0.1:10010;127.0.0.1:10011"
 // cmake -DCMAKE_BUILD_TYPE=Release
@@ -58,6 +59,7 @@ int main(int argc, char *argv[]) {
   context.rts_sync = FLAGS_rts_sync;
   context.crossPartitionProbability = FLAGS_cross_ratio;
   context.delay_time = FLAGS_delay;
+  context.cdf_path = FLAGS_cdf_path;
 
   if (FLAGS_zipf > 0) {
     context.isUniform = false;
