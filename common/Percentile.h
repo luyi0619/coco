@@ -72,7 +72,8 @@ public:
     }
 
     for (auto i = 0u; i < cdf_result.size(); i++) {
-      cdf << cdf_result[i] << "\t" << 1.0 * (i + 1) / cdf_result.size() << std::endl;
+      cdf << cdf_result[i] << "\t" << 1.0 * (i + 1) / cdf_result.size()
+          << std::endl;
     }
 
     cdf.close();
