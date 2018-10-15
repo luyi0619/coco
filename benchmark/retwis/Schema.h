@@ -13,7 +13,7 @@
 namespace scar {
 namespace retwis {
 static constexpr auto __BASE_COUNTER__ = __COUNTER__ + 1;
-static constexpr auto RETWIS_SIZE = 100;
+static constexpr auto RETWIS_SIZE = 400;
 } // namespace retwis
 } // namespace scar
 
