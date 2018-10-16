@@ -342,6 +342,9 @@ public:
     } else if (part == "hash2") {
       return std::make_unique<HashReplicatedPartitioner<2>>(coordinator_id,
                                                             coordinator_num);
+    } else if (part == "hash4") {
+      return std::make_unique<HashReplicatedPartitioner<4>>(coordinator_id,
+                                                            coordinator_num);
     } else if (part == "pb") {
       return std::make_unique<PrimaryBackupPartitioner>(coordinator_id,
                                                         coordinator_num);

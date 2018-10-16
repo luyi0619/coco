@@ -23,6 +23,7 @@ public:
 
     YCSBQuery<N> query;
     int readOnly = random.uniform_dist(1, 100);
+    int crossPartition = random.uniform_dist(1, 100);
     for (auto i = 0u; i < N; i++) {
 
       int32_t key;
@@ -39,8 +40,6 @@ public:
         } else {
           key = Zipf::globalZipf().value(random.next_double());
         }
-
-        int crossPartition = random.uniform_dist(1, 100);
 
         if (crossPartition <= context.crossPartitionProbability &&
             context.partition_num > 1) {
