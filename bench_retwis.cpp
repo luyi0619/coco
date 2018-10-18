@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
   context.delay_time = FLAGS_delay;
   context.cdf_path = FLAGS_cdf_path;
   context.keysPerPartition = FLAGS_keys;
-  
+
   if (FLAGS_zipf > 0) {
     context.isUniform = false;
     scar::Zipf::globalZipf().init(context.keysPerPartition, FLAGS_zipf);

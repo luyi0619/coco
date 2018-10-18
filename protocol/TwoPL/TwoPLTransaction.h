@@ -34,6 +34,7 @@ public:
     network_size = 0;
     abort_lock = false;
     abort_read_validation = false;
+    local_validated = false;
     si_in_serializable = false;
     operation.clear();
     readSet.clear();
@@ -190,7 +191,7 @@ public:
   std::chrono::steady_clock::time_point startTime;
   std::size_t pendingResponses;
   std::size_t network_size;
-  bool abort_lock, abort_read_validation, si_in_serializable;
+  bool abort_lock, abort_read_validation, local_validated, si_in_serializable;
 
   // table id, partition id, key, value, local_index_read?, write_lock?,
   // success?, remote?

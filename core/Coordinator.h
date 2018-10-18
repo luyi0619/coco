@@ -60,16 +60,16 @@ public:
     auto startTime = std::chrono::steady_clock::now();
 
     uint64_t total_commit = 0, total_abort_no_retry = 0, total_abort_lock = 0,
-             total_abort_read_validation = 0, total_si_in_serializable = 0,
-             total_network_size = 0;
+             total_abort_read_validation = 0, total_local = 0,
+             total_si_in_serializable = 0, total_network_size = 0;
     int count = 0;
 
     do {
       std::this_thread::sleep_for(std::chrono::seconds(1));
 
       uint64_t n_commit = 0, n_abort_no_retry = 0, n_abort_lock = 0,
-               n_abort_read_validation = 0, n_si_in_serializable = 0,
-               n_network_size = 0;
+               n_abort_read_validation = 0, n_local = 0,
+               n_si_in_serializable = 0, n_network_size = 0;
 
       for (auto i = 0u; i < workers.size(); i++) {
 
@@ -85,6 +85,9 @@ public:
         n_abort_read_validation += workers[i]->n_abort_read_validation.load();
         workers[i]->n_abort_read_validation.store(0);
 
+        n_local += workers[i]->n_local.load();
+        workers[i]->n_local.store(0);
+
         n_si_in_serializable += workers[i]->n_si_in_serializable.load();
         workers[i]->n_si_in_serializable.store(0);
 
@@ -99,13 +102,15 @@ public:
                 << "), network size: " << n_network_size
                 << ", avg network size: " << 1.0 * n_network_size / n_commit
                 << ", si_in_serializable: " << n_si_in_serializable << " "
-                << 100.0 * n_si_in_serializable / n_commit << " %";
+                << 100.0 * n_si_in_serializable / n_commit << " %"
+                << ", local: " << 100.0 * n_local / n_commit << " %";
       count++;
       if (count > warmup && count <= timeToRun - cooldown) {
         total_commit += n_commit;
         total_abort_no_retry += n_abort_no_retry;
         total_abort_lock += n_abort_lock;
         total_abort_read_validation += n_abort_read_validation;
+        total_local += n_local;
         total_si_in_serializable += n_si_in_serializable;
         total_network_size += n_network_size;
       }
@@ -128,7 +133,8 @@ public:
               << ", avg network size: "
               << 1.0 * total_network_size / total_commit
               << ", si_in_serializable: " << total_si_in_serializable << " "
-              << 100.0 * total_si_in_serializable / total_commit << " %";
+              << 100.0 * total_si_in_serializable / total_commit << " %"
+              << ", local: " << 100.0 * total_local / total_commit << " %";
 
     workerStopFlag.store(true);
 

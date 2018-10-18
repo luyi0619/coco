@@ -204,6 +204,10 @@ private:
       }
     }
 
+    if (txn.pendingResponses == 0) {
+      txn.local_validated = true;
+    }
+
     sync_messages(txn);
 
     return !txn.abort_read_validation;

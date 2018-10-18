@@ -32,6 +32,7 @@ public:
     abort_lock = false;
     abort_no_retry = false;
     abort_read_validation = false;
+    local_validated = false;
     si_in_serializable = false;
     pendingResponses = 0;
     execution_phase = false;
@@ -200,7 +201,8 @@ public:
   int32_t pendingResponses; // could be negative
   std::size_t network_size;
 
-  bool abort_lock, abort_no_retry, abort_read_validation, si_in_serializable;
+  bool abort_lock, abort_no_retry, abort_read_validation, local_validated,
+      si_in_serializable;
   bool execution_phase;
 
   std::function<bool(void)> process_requests;

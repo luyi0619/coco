@@ -126,6 +126,9 @@ public:
               if (transaction->si_in_serializable) {
                 n_si_in_serializable.fetch_add(1);
               }
+              if (transaction->local_validated) {
+                n_local.fetch_add(1);
+              }
               auto latency =
                   std::chrono::duration_cast<std::chrono::microseconds>(
                       std::chrono::steady_clock::now() - transaction->startTime)

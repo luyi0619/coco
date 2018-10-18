@@ -102,6 +102,9 @@ public:
             if (transaction->si_in_serializable) {
               n_si_in_serializable.fetch_add(1);
             }
+            if (transaction->local_validated) {
+              n_local.fetch_add(1);
+            }
             retry_transaction = false;
             auto latency =
                 std::chrono::duration_cast<std::chrono::microseconds>(
@@ -150,8 +153,8 @@ public:
   void onExit() override {
 
     LOG(INFO) << "Worker " << id << " latency: " << percentile.nth(50)
-              << " us (50%) " << percentile.nth(75) << " us (75%) " <<  percentile.nth(95) << " us (95%) "
-              << percentile.nth(99)
+              << " us (50%) " << percentile.nth(75) << " us (75%) "
+              << percentile.nth(95) << " us (95%) " << percentile.nth(99)
               << " us (99%), size: " << percentile.size() * sizeof(int64_t)
               << " bytes.";
 
