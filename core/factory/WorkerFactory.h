@@ -25,6 +25,8 @@
 #include "core/group_commit/Manager.h"
 #include "protocol/SiloGC/SiloGC.h"
 #include "protocol/SiloGC/SiloGCExecutor.h"
+#include "protocol/SiloRC/SiloRC.h"
+#include "protocol/SiloRC/SiloRCExecutor.h"
 #include "protocol/TwoPLGC/TwoPLGC.h"
 #include "protocol/TwoPLGC/TwoPLGCExecutor.h"
 
@@ -73,8 +75,8 @@ public:
                  const Context &context, std::atomic<bool> &stop_flag) {
 
     std::unordered_set<std::string> protocols = {
-        "Silo",     "SiloGC", "Scar",    "ScarSI", "RStore",
-        "RStoreNC", "TwoPL",  "TwoPLGC", "Calvin"};
+        "Silo",   "SiloGC",   "SiloRC", "Scar",    "ScarSI",
+        "RStore", "RStoreNC", "TwoPL",  "TwoPLGC", "Calvin"};
     CHECK(protocols.count(context.protocol) == 1);
 
     std::vector<std::shared_ptr<Worker>> workers;
@@ -107,6 +109,22 @@ public:
 
       for (auto i = 0u; i < context.worker_num; i++) {
         workers.push_back(std::make_shared<SiloGCExecutor<WorkloadType>>(
+            coordinator_id, i, db, context, manager->worker_status,
+            manager->n_completed_workers, manager->n_started_workers));
+      }
+      workers.push_back(manager);
+
+    } else if (context.protocol == "SiloRC") {
+
+      using TransactionType = scar::SiloTransaction;
+      using WorkloadType =
+          typename InferType<Context>::template WorkloadType<TransactionType>;
+
+      auto manager = std::make_shared<group_commit::Manager>(
+          coordinator_id, context.worker_num, context, stop_flag);
+
+      for (auto i = 0u; i < context.worker_num; i++) {
+        workers.push_back(std::make_shared<SiloRCExecutor<WorkloadType>>(
             coordinator_id, i, db, context, manager->worker_status,
             manager->n_completed_workers, manager->n_started_workers));
       }

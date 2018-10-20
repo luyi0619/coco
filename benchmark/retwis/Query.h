@@ -27,7 +27,7 @@ public:
       bool retry;
       do {
         retry = false;
-        if(write || context.isUniform){
+        if (write || context.isUniform) {
           key = random.uniform_dist(
               0, static_cast<int>(context.keysPerPartition) - 1);
         } else {
