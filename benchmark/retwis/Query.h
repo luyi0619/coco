@@ -15,7 +15,7 @@ class makeNRandomKey {
 public:
   template <std::size_t N>
   void operator()(const Context &context, uint32_t partitionID, Random &random,
-                  int32_t (&keys)[N]) {
+                  int32_t (&keys)[N], bool write) {
 
     int crossPartition = random.uniform_dist(1, 100);
 
@@ -24,11 +24,10 @@ public:
       int32_t key;
 
       // generate a key in a partition
-
       bool retry;
       do {
         retry = false;
-        if (context.isUniform) {
+        if(write || context.isUniform){
           key = random.uniform_dist(
               0, static_cast<int>(context.keysPerPartition) - 1);
         } else {
@@ -66,7 +65,7 @@ public:
   AddUserQuery operator()(const Context &context, uint32_t partitionID,
                           Random &random) const {
     AddUserQuery query;
-    makeNRandomKey()(context, partitionID, random, query.KEY);
+    makeNRandomKey()(context, partitionID, random, query.KEY, true);
     return query;
   }
 };
@@ -80,7 +79,7 @@ public:
   FollowUnfollowQuery operator()(const Context &context, uint32_t partitionID,
                                  Random &random) const {
     FollowUnfollowQuery query;
-    makeNRandomKey()(context, partitionID, random, query.KEY);
+    makeNRandomKey()(context, partitionID, random, query.KEY, true);
     return query;
   }
 };
@@ -94,7 +93,7 @@ public:
   PostTweetQuery operator()(const Context &context, uint32_t partitionID,
                             Random &random) const {
     PostTweetQuery query;
-    makeNRandomKey()(context, partitionID, random, query.KEY);
+    makeNRandomKey()(context, partitionID, random, query.KEY, true);
     return query;
   }
 };
@@ -110,7 +109,7 @@ public:
                               Random &random) const {
     GetTimelineQuery query;
     query.N = random.uniform_dist(1, 10);
-    makeNRandomKey()(context, partitionID, random, query.KEY);
+    makeNRandomKey()(context, partitionID, random, query.KEY, false);
     return query;
   }
 };

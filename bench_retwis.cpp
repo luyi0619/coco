@@ -25,6 +25,7 @@ DEFINE_bool(read_on_replica, false, "read from replicas");
 DEFINE_bool(local_validation, false, "local validation");
 DEFINE_bool(rts_sync, false, "rts sync");
 DEFINE_int32(cross_ratio, 0, "cross partition transaction ratio");
+DEFINE_int32(read_only_ratio, 80, "read only transaction ratio");
 DEFINE_int32(delay, 0, "delay time in us.");
 DEFINE_double(zipf, 0, "skew factor");
 DEFINE_string(cdf_path, "", "path to cdf");
@@ -58,6 +59,7 @@ int main(int argc, char *argv[]) {
   context.local_validation = FLAGS_local_validation;
   context.rts_sync = FLAGS_rts_sync;
   context.crossPartitionProbability = FLAGS_cross_ratio;
+  context.readOnlyTransaction = FLAGS_read_only_ratio;
   context.delay_time = FLAGS_delay;
   context.cdf_path = FLAGS_cdf_path;
   context.keysPerPartition = FLAGS_keys;

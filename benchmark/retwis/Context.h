@@ -52,7 +52,7 @@ public:
 
 public:
   int crossPartitionProbability = 0; // out of 100
-
+  int readOnlyTransaction = 0;       //  out of 100
   std::size_t keysPerPartition = 200000;
 
   bool isUniform = true;

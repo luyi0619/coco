@@ -34,23 +34,14 @@ public:
 
     int x = random.uniform_dist(1, 100);
     std::unique_ptr<TransactionType> p;
-
-    if (x <= 5) {
-      p = std::make_unique<AddUser<Transaction>>(coordinator_id, partition_id,
-                                                 db, context, random,
-                                                 partitioner, storage);
-    } else if (x <= 10) {
-      p = std::make_unique<FollowUnfollow<Transaction>>(
-          coordinator_id, partition_id, db, context, random, partitioner,
-          storage);
-    } else if (x <= 20) {
-      p = std::make_unique<PostTweet<Transaction>>(coordinator_id, partition_id,
-                                                   db, context, random,
-                                                   partitioner, storage);
-    } else {
+    if (x <= context.readOnlyTransaction) {
       p = std::make_unique<GetTimeline<Transaction>>(
           coordinator_id, partition_id, db, context, random, partitioner,
           storage);
+    } else {
+      p = std::make_unique<PostTweet<Transaction>>(coordinator_id, partition_id,
+                                                   db, context, random,
+                                                   partitioner, storage);
     }
     return p;
   }

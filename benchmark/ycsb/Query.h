@@ -25,16 +25,27 @@ public:
     int readOnly = random.uniform_dist(1, 100);
     int crossPartition = random.uniform_dist(1, 100);
     for (auto i = 0u; i < N; i++) {
+      // read or write
+
+      if (readOnly <= context.readOnlyTransaction) {
+        query.UPDATE[i] = false;
+      } else {
+        int readOrWrite = random.uniform_dist(1, 100);
+        if (readOrWrite <= context.readWriteRatio) {
+          query.UPDATE[i] = false;
+        } else {
+          query.UPDATE[i] = true;
+        }
+      }
 
       int32_t key;
 
       // generate a key in a partition
-
       bool retry;
       do {
         retry = false;
 
-        if (context.isUniform) {
+        if (query.UPDATE[i] || context.isUniform) {
           key = random.uniform_dist(
               0, static_cast<int>(context.keysPerPartition) - 1);
         } else {
@@ -59,19 +70,6 @@ public:
           }
         }
       } while (retry);
-
-      // read or write
-
-      if (readOnly <= context.readOnlyTransaction) {
-        query.UPDATE[i] = false;
-      } else {
-        int readOrWrite = random.uniform_dist(1, 100);
-        if (readOrWrite <= context.readWriteRatio) {
-          query.UPDATE[i] = false;
-        } else {
-          query.UPDATE[i] = true;
-        }
-      }
     }
     return query;
   }
