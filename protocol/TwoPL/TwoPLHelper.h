@@ -46,14 +46,16 @@ public:
 
   static uint64_t read_lock(std::atomic<uint64_t> &a, bool &success) {
     uint64_t old_value, new_value;
-    old_value = a.load();
-    if (is_write_locked(old_value) ||
-        read_lock_num(old_value) == read_lock_max()) {
-      success = false;
-      return remove_lock_bit(old_value);
-    }
-    new_value = old_value + (1ull << READ_LOCK_BIT_OFFSET);
-    success = a.compare_exchange_strong(old_value, new_value);
+    do{
+      old_value = a.load();
+      if (is_write_locked(old_value) ||
+          read_lock_num(old_value) == read_lock_max()){
+        success = false;
+        return remove_lock_bit(old_value);
+      }
+      new_value = old_value + (1ull << READ_LOCK_BIT_OFFSET);
+    }while (!a.compare_exchange_weak(old_value, new_value));
+    success = true;
     return remove_lock_bit(old_value);
   }
 
