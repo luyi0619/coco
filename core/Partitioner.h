@@ -283,7 +283,7 @@ public:
 
     std::size_t size = 0;
     for (auto i = 0u; i < replica_group_sizes.size(); i++) {
-      DCHECK(replica_group_sizes[i] > 0);
+      CHECK(replica_group_sizes[i] > 0);
       size += replica_group_sizes[i];
 
       if (coordinator_id < size) {
@@ -293,8 +293,8 @@ public:
         break;
       }
     }
-    DCHECK(std::accumulate(replica_group_sizes.begin(),
-                           replica_group_sizes.end(), 0u) == coordinator_num);
+    CHECK(std::accumulate(replica_group_sizes.begin(),
+                          replica_group_sizes.end(), 0u) == coordinator_num);
   }
 
   ~CalvinPartitioner() override = default;

@@ -5,7 +5,17 @@
 #pragma once
 
 namespace scar {
-enum class ExecutorStatus { START, CLEANUP, C_PHASE, S_PHASE, STOP, EXIT };
+
+enum class ExecutorStatus {
+  START,
+  CLEANUP,
+  C_PHASE,
+  S_PHASE,
+  Analysis,
+  Execute,
+  STOP,
+  EXIT
+};
 
 enum class TransactionResult { COMMIT, READY_TO_COMMIT, ABORT, ABORT_NORETRY };
 

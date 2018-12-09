@@ -15,6 +15,7 @@ DEFINE_string(servers, "127.0.0.1:10010",
               "semicolon-separated list of servers");
 DEFINE_string(protocol, "RStore", "transaction protocol");
 DEFINE_string(replica_group, "1,3", "calvin replica group");
+DEFINE_string(lock_manager, "1,1", "calvin lock manager");
 DEFINE_string(partitioner, "hash", "database partitioner (hash, hash2, pb)");
 DEFINE_bool(sleep_on_retry, true, "sleep when retry aborted transactions");
 DEFINE_bool(read_on_replica, false, "read from replicas");
@@ -51,6 +52,7 @@ int main(int argc, char *argv[]) {
   context.worker_num = n;
   context.partition_num = FLAGS_partition_num;
   context.replica_group = FLAGS_replica_group;
+  context.lock_manager = FLAGS_lock_manager;
   context.partitioner = FLAGS_partitioner;
   context.readWriteRatio = FLAGS_read_write_ratio;
   context.readOnlyTransaction = FLAGS_read_only_ratio;

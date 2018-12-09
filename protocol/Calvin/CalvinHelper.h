@@ -17,18 +17,21 @@ class CalvinHelper {
 public:
   using MetaDataType = std::atomic<uint64_t>;
 
-  static std::vector<std::size_t>
-  get_replica_group_sizes(const std::string &replica_group) {
-    std::vector<std::string> replica_group_sizes_string;
-    boost::algorithm::split(replica_group_sizes_string, replica_group,
-                            boost::is_any_of(","));
-    std::vector<std::size_t> replica_group_sizes;
-    for (auto i = 0u; i < replica_group_sizes_string.size(); i++) {
-      replica_group_sizes.push_back(
-          std::atoi(replica_group_sizes_string[i].c_str()));
+  static std::vector<std::size_t> string_to_vint(const std::string &str) {
+    std::vector<std::string> vstr;
+    boost::algorithm::split(vstr, str, boost::is_any_of(","));
+    std::vector<std::size_t> vint;
+    for (auto i = 0u; i < vstr.size(); i++) {
+      vint.push_back(std::atoi(vstr[i].c_str()));
     }
+    return vint;
+  }
 
-    return replica_group_sizes;
+  static std::size_t
+  n_lock_manager(std::size_t replica_group_id, std::size_t id,
+                 const std::vector<std::size_t> &lock_managers) {
+    CHECK(replica_group_id < lock_managers.size());
+    return lock_managers[replica_group_id];
   }
 
   static void read(const std::tuple<MetaDataType *, void *> &row, void *dest,

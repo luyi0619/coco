@@ -36,9 +36,8 @@ public:
                 const ContextType &context, std::atomic<bool> &stopFlag)
       : base_type(coordinator_id, id, context, stopFlag), db(db),
         workload_context(context),
-        partitioner(
-            coordinator_id, context.coordinator_num,
-            CalvinHelper::get_replica_group_sizes(context.replica_group)),
+        partitioner(coordinator_id, context.coordinator_num,
+                    CalvinHelper::string_to_vint(context.replica_group)),
         workload(coordinator_id, db, random, partitioner) {
 
     storages.resize(context.batch_size);
@@ -51,18 +50,37 @@ public:
 
     while (!stopFlag.load()) {
 
-      signal_worker(ExecutorStatus::START);
+      // the coordinator on each machine generates
+      // a batch of transactions using the same random seed.
 
       // LOG(INFO) << "Seed: " << random.get_seed();
-      complete_transaction_num.store(0);
-      prepare_read_write_set();
+      prepare_transactions();
 
+      n_started_workers.store(0);
+      n_completed_workers.store(0);
+      signal_worker(ExecutorStatus::Analysis);
+      // Allow each worker to analyse the read/write set
+      // each worker analyse i, i + n, i + 2n transaction
+      wait_all_workers_start();
+      wait_all_workers_finish();
+
+      // wait for all machines until they finish the analysis phase.
       wait4_ack();
-      signal_worker(ExecutorStatus::START);
 
+      // Allow each worker to run transactions
+      // DB is partitioned by the number of lock managers.
+      // The first k workers act as lock managers to grant locks to other
+      // workers The remaining workers run transactions upon assignment via the
+      // queue.
+      n_started_workers.store(0);
+      n_completed_workers.store(0);
       complete_transaction_num.store(0);
-      schedule_transactions();
+      signal_worker(ExecutorStatus::Execute);
+      wait_all_workers_start();
+      wait_all_workers_finish();
+      wait_transaction_complete();
 
+      // wait for all machines until they finish the execution phase.
       wait4_ack();
     }
 
@@ -82,18 +100,36 @@ public:
         break;
       }
 
-      DCHECK(status == ExecutorStatus::START);
-      set_worker_status(ExecutorStatus::START);
+      DCHECK(status == ExecutorStatus::Analysis);
+      // the coordinator on each machine generates
+      // a batch of transactions using the same random seed.
+      prepare_transactions();
 
-      complete_transaction_num.store(0);
-      prepare_read_write_set();
+      // Allow each worker to analyse the read/write set
+      // each worker analyse i, i + n, i + 2n transaction
+
+      n_started_workers.store(0);
+      n_completed_workers.store(0);
+      set_worker_status(ExecutorStatus::Analysis);
+      wait_all_workers_start();
+      wait_all_workers_finish();
 
       send_ack();
-      status = wait4_signal();
-      DCHECK(status == ExecutorStatus::START);
 
+      status = wait4_signal();
+      DCHECK(status == ExecutorStatus::Execute);
+      // Allow each worker to run transactions
+      // DB is partitioned by the number of lock managers.
+      // The first k workers act as lock managers to grant locks to other
+      // workers The remaining workers run transactions upon assignment via the
+      // queue.
+      n_started_workers.store(0);
+      n_completed_workers.store(0);
       complete_transaction_num.store(0);
-      schedule_transactions();
+      set_worker_status(ExecutorStatus::Execute);
+      wait_all_workers_start();
+      wait_all_workers_finish();
+      wait_transaction_complete();
 
       send_ack();
     }
@@ -103,7 +139,7 @@ public:
     workers.push_back(w);
   }
 
-  void prepare_read_write_set() {
+  void prepare_transactions() {
 
     transactions.clear();
 
@@ -113,53 +149,7 @@ public:
       transactions.push_back(workload.next_transaction(
           workload_context, partition_id, storages[i]));
       transactions[i]->set_id(i);
-      workers[i % workers.size()]->add_transaction_to_prepare(
-          transactions[i].get());
     }
-
-    wait_transaction_complete();
-  }
-
-  void schedule_transactions() {
-
-    // grant locks, once all locks are acquired, assign the transaction to
-    // a worker thread in a round-robin manner.
-
-    for (auto i = 0u; i < transactions.size(); i++) {
-      // do not grant locks to abort no retry transaction
-      if (!transactions[i]->abort_no_retry) {
-        auto &readSet = transactions[i]->readSet;
-        for (auto k = 0u; k < readSet.size(); k++) {
-          auto &readKey = readSet[k];
-          auto tableId = readKey.get_table_id();
-          auto partitionId = readKey.get_partition_id();
-
-          if (!partitioner.has_master_partition(partitionId)) {
-            continue;
-          }
-
-          auto table = db.find_table(tableId, partitionId);
-          auto key = readKey.get_key();
-
-          if (readKey.get_local_index_read_bit()) {
-            continue;
-          }
-
-          std::atomic<uint64_t> &tid = table->search_metadata(key);
-          if (readKey.get_write_lock_bit()) {
-            CalvinHelper::write_lock(tid);
-          } else if (readKey.get_read_lock_bit()) {
-            CalvinHelper::read_lock(tid);
-          } else {
-            CHECK(false);
-          }
-        }
-      }
-      workers[i % workers.size()]->add_transaction_to_execute(
-          transactions[i].get());
-    }
-
-    wait_transaction_complete();
   }
 
   void wait_transaction_complete() {

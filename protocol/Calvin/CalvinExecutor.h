@@ -45,14 +45,20 @@ public:
                  const ContextType &context,
                  std::vector<std::unique_ptr<TransactionType>> &transactions,
                  std::atomic<uint32_t> &complete_transaction_num,
-                 std::atomic<uint32_t> &worker_status)
+                 std::atomic<uint32_t> &worker_status,
+                 std::atomic<uint32_t> &n_complete_workers,
+                 std::atomic<uint32_t> &n_started_workers)
       : Worker(coordinator_id, id), db(db), context(context),
         transactions(transactions),
         complete_transaction_num(complete_transaction_num),
-        worker_status(worker_status),
-        partitioner(
-            coordinator_id, context.coordinator_num,
-            CalvinHelper::get_replica_group_sizes(context.replica_group)),
+        worker_status(worker_status), n_complete_workers(n_complete_workers),
+        n_started_workers(n_started_workers),
+        partitioner(coordinator_id, context.coordinator_num,
+                    CalvinHelper::string_to_vint(context.replica_group)),
+        n_lock_manager(CalvinHelper::n_lock_manager(
+            partitioner.replica_group_id, id,
+            CalvinHelper::string_to_vint(context.lock_manager))),
+        n_workers(context.worker_num - n_lock_manager),
         protocol(db, partitioner),
         delay(std::make_unique<SameDelay>(
             coordinator_id, context.coordinator_num, context.delay_time)) {
@@ -63,6 +69,7 @@ public:
     }
 
     messageHandlers = MessageHandlerType::get_message_handlers();
+    CHECK(n_workers > 0 && n_workers % n_lock_manager == 0);
   }
 
   ~CalvinExecutor() = default;
@@ -80,27 +87,33 @@ public:
           LOG(INFO) << "CalvinExecutor " << id << " exits. ";
           return;
         }
-      } while (status != ExecutorStatus::START);
+      } while (status != ExecutorStatus::Analysis);
 
-      while (!transaction_prepare_queue.empty()) {
-        TransactionType *transaction = transaction_prepare_queue.front();
-        bool ok = transaction_prepare_queue.pop();
-        DCHECK(ok);
-
-        prepare_transaction(*transaction);
+      n_started_workers.fetch_add(1);
+      for (auto i = 0u; i < transactions.size(); i += context.worker_num) {
+        prepare_transaction(*transactions[i]);
         complete_transaction_num.fetch_add(1);
       }
+      n_complete_workers.fetch_add(1);
 
-      while (!transaction_execute_queue.empty()) {
-        // process request
-        process_request();
+      // wait to START
 
-        TransactionType *transaction = transaction_execute_queue.front();
-        bool ok = transaction_execute_queue.pop();
-        DCHECK(ok);
-        run_transaction(*transaction);
-        complete_transaction_num.fetch_add(1);
+      while (static_cast<ExecutorStatus>(worker_status.load()) !=
+             ExecutorStatus::Execute) {
+        std::this_thread::yield();
       }
+
+      n_started_workers.fetch_add(1);
+      // work as lock manager
+      if (id < n_lock_manager) {
+        // schedule transactions
+        schedule_transactions();
+      } else {
+        // work as executor
+        run_transactions();
+      }
+
+      n_complete_workers.fetch_add(1);
     }
   }
 
@@ -154,14 +167,6 @@ public:
     message->set_worker_id(id);
   }
 
-  void add_transaction_to_prepare(TransactionType *transaction) {
-    transaction_prepare_queue.push(transaction);
-  }
-
-  void add_transaction_to_execute(TransactionType *transaction) {
-    transaction_execute_queue.push(transaction);
-  }
-
   void prepare_transaction(TransactionType &txn) {
     setup_prepare_handlers(txn);
     // run execute to prepare read/write set
@@ -170,7 +175,20 @@ public:
       txn.abort_no_retry = true;
     }
 
+    analyze_pending_request(txn);
     analyze_active_coordinator(txn);
+  }
+
+  void analyze_pending_request(TransactionType &transaction) {
+
+    transaction.pendingResponses = 0;
+    auto &readSet = transaction.readSet;
+    for (auto i = 0u; i < readSet.size(); i++) {
+
+      if (!partitioner.has_master_partition(readSet[i].get_partition_id())) {
+        transaction.pendingResponses++;
+      }
+    }
   }
 
   void analyze_active_coordinator(TransactionType &transaction) {
@@ -190,6 +208,79 @@ public:
       if (readkey.get_write_lock_bit()) {
         active_coordinators[partitioner.master_coordinator(partitionID)] = true;
       }
+    }
+  }
+
+  void schedule_transactions() {
+
+    // grant locks, once all locks are acquired, assign the transaction to
+    // a worker thread in a round-robin manner.
+
+    for (auto i = 0u; i < transactions.size(); i++) {
+      // do not grant locks to abort no retry transaction
+      if (!transactions[i]->abort_no_retry) {
+        auto &readSet = transactions[i]->readSet;
+        for (auto k = 0u; k < readSet.size(); k++) {
+          auto &readKey = readSet[k];
+          auto tableId = readKey.get_table_id();
+          auto partitionId = readKey.get_partition_id();
+
+          if (!partitioner.has_master_partition(partitionId)) {
+            continue;
+          }
+
+          auto table = db.find_table(tableId, partitionId);
+          auto key = readKey.get_key();
+
+          if (readKey.get_local_index_read_bit()) {
+            continue;
+          }
+
+          std::atomic<uint64_t> &tid = table->search_metadata(key);
+          if (readKey.get_write_lock_bit()) {
+            CalvinHelper::write_lock(tid);
+          } else if (readKey.get_read_lock_bit()) {
+            CalvinHelper::read_lock(tid);
+          } else {
+            CHECK(false);
+          }
+        }
+
+        auto worker = get_available_worker();
+        all_transaction_queues[worker]->push(transactions[i].get());
+      }
+    }
+  }
+
+  void run_transactions() {
+
+    while (complete_transaction_num.load() < context.batch_size) {
+
+      if (transaction_queue.empty()) {
+        std::this_thread::yield();
+        continue;
+      }
+
+      TransactionType *transaction = transaction_queue.front();
+      bool ok = transaction_queue.pop();
+      DCHECK(ok);
+
+      setup_execute_handlers(*transaction);
+      transaction->execution_phase = true;
+      auto result = transaction->execute();
+      n_network_size.fetch_add(transaction->network_size);
+      if (result == TransactionResult::READY_TO_COMMIT) {
+        protocol.commit(*transaction);
+        n_commit.fetch_add(1);
+      } else if (result == TransactionResult::ABORT) {
+        // non-active transactions, release lock
+        protocol.abort(*transaction);
+        n_commit.fetch_add(1);
+      } else {
+        n_abort_no_retry.fetch_add(1);
+      }
+
+      complete_transaction_num.fetch_add(1);
     }
   }
 
@@ -246,6 +337,23 @@ public:
     txn.setup_process_requests_in_prepare_phase();
   };
 
+  void set_all_transaction_queues(
+      const std::vector<LockfreeQueue<TransactionType *> *> &queues) {
+    all_transaction_queues = queues;
+  }
+
+  std::size_t get_available_worker() {
+    // assume there are n lock managers and m workers
+    // 0, 1, .. n-1 are lock managers
+    // n, n + 1, .., n + m -1 are workers
+
+    // the first lock managers assign transactions to n, .. , n + m/n - 1
+
+    auto start_worker_id = n_workers / n_lock_manager * id;
+    auto len = n_workers / n_lock_manager;
+    return random.uniform_dist(start_worker_id, start_worker_id + len - 1);
+  }
+
   std::size_t process_request() {
 
     std::size_t size = 0;
@@ -273,12 +381,17 @@ public:
     return size;
   }
 
+public:
+  LockfreeQueue<TransactionType *> transaction_queue;
+
 private:
   DatabaseType &db;
   const ContextType &context;
   std::vector<std::unique_ptr<TransactionType>> &transactions;
   std::atomic<uint32_t> &complete_transaction_num, &worker_status;
+  std::atomic<uint32_t> &n_complete_workers, &n_started_workers;
   CalvinPartitioner partitioner;
+  std::size_t n_lock_manager, n_workers;
   RandomType random;
   ProtocolType protocol;
   std::unique_ptr<Delay> delay;
@@ -289,7 +402,6 @@ private:
       messageHandlers;
   LockfreeQueue<Message *> in_queue, out_queue;
 
-  LockfreeQueue<TransactionType *> transaction_prepare_queue,
-      transaction_execute_queue;
+  std::vector<LockfreeQueue<TransactionType *> *> all_transaction_queues;
 };
 } // namespace scar

@@ -15,6 +15,7 @@ public:
   std::size_t coordinator_num = 0;
   std::string protocol;
   std::string replica_group;
+  std::string lock_manager;
   std::size_t batch_size = 240; // rstore or calvin batch size
   std::size_t batch_flush = 10;
   std::size_t group_time = 40; // ms
