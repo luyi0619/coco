@@ -14,6 +14,8 @@
 #include <glog/logging.h>
 #include <thread>
 
+// TODO no need to sync on every txn, add active_lock_managers?
+
 namespace scar {
 class CalvinTransaction {
 
@@ -46,7 +48,7 @@ public:
     writeSet.clear();
   }
 
-  virtual TransactionResult execute() = 0;
+  virtual TransactionResult execute(std::size_t worker_id) = 0;
 
   template <class KeyType, class ValueType>
   void search_local_index(std::size_t table_id, std::size_t partition_id,
@@ -114,7 +116,7 @@ public:
   void update(std::size_t table_id, std::size_t partition_id,
               const KeyType &key, const ValueType &value) {
 
-    if (!execution_phase) {
+    if (execution_phase) {
       return;
     }
 
@@ -147,7 +149,7 @@ public:
     // for general reads, increment the local_read and remote_read counter.
     // the function may be called multiple times, the keys are processed in
     // reverse order.
-    process_requests = [this]() {
+    process_requests = [this](std::size_t worker_id) {
       // cannot use unsigned type in reverse iteration
       for (int i = int(readSet.size()) - 1; i >= 0; i--) {
         // early return
@@ -172,17 +174,20 @@ public:
 
         readSet[i].set_prepare_processed_bit();
       }
-      return true;
+      return false;
     };
   }
 
   void
-  setup_process_requests_in_execution_phase(std::size_t lock_manager_id,
-                                            std::size_t n_lock_manager,
+  setup_process_requests_in_execution_phase(std::size_t n_lock_manager,
+                                            std::size_t n_worker,
                                             std::size_t replica_group_size) {
     // only read the keys with locks from the lock_manager_id
-    process_requests = [this, lock_manager_id, n_lock_manager,
-                        replica_group_size]() {
+    process_requests = [this, n_lock_manager, n_worker,
+                        replica_group_size](std::size_t worker_id) {
+      auto lock_manager_id = CalvinHelper::worker_id_to_lock_manager_id(
+          worker_id, n_lock_manager, n_worker);
+
       // cannot use unsigned type in reverse iteration
       for (int i = int(readSet.size()) - 1; i >= 0; i--) {
         // early return
@@ -239,7 +244,7 @@ public:
       si_in_serializable;
   bool execution_phase;
 
-  std::function<bool(void)> process_requests;
+  std::function<bool(std::size_t)> process_requests;
 
   // table id, partition id, key, value
   std::function<void(std::size_t, std::size_t, const void *, void *)>

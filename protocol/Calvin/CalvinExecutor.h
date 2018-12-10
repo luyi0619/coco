@@ -98,10 +98,10 @@ public:
       }
       n_complete_workers.fetch_add(1);
 
-      // wait to START
+      // wait to Execute
 
-      while (static_cast<ExecutorStatus>(worker_status.load()) !=
-             ExecutorStatus::Execute) {
+      while (static_cast<ExecutorStatus>(worker_status.load()) ==
+             ExecutorStatus::Analysis) {
         std::this_thread::yield();
       }
 
@@ -116,6 +116,13 @@ public:
       }
 
       n_complete_workers.fetch_add(1);
+
+      // wait to Analysis
+
+      while (static_cast<ExecutorStatus>(worker_status.load()) ==
+             ExecutorStatus::Execute) {
+        std::this_thread::yield();
+      }
     }
   }
 
@@ -172,12 +179,16 @@ public:
   void prepare_transaction(TransactionType &txn) {
     setup_prepare_handlers(txn);
     // run execute to prepare read/write set
-    auto result = txn.execute();
+    auto result = txn.execute(id);
     if (result == TransactionResult::ABORT_NORETRY) {
       txn.abort_no_retry = true;
     }
 
     analyze_active_coordinator(txn);
+
+    // setup handlers for execution
+    setup_execute_handlers(txn);
+    txn.execution_phase = true;
   }
 
   void analyze_active_coordinator(TransactionType &transaction) {
@@ -208,6 +219,7 @@ public:
     for (auto i = 0u; i < transactions.size(); i++) {
       // do not grant locks to abort no retry transaction
       if (!transactions[i]->abort_no_retry) {
+        bool grant_lock = false;
         auto &readSet = transactions[i]->readSet;
         for (auto k = 0u; k < readSet.size(); k++) {
           auto &readKey = readSet[k];
@@ -225,8 +237,19 @@ public:
             continue;
           }
 
+          if (CalvinHelper::partition_id_to_lock_manager_id(
+                  readKey.get_partition_id(), n_lock_manager,
+                  partitioner.replica_group_size) != lock_manager_id) {
+            continue;
+          }
+
+          grant_lock = true;
           std::atomic<uint64_t> &tid = table->search_metadata(key);
           if (readKey.get_write_lock_bit()) {
+            //            LOG(INFO) << "locker " << lock_manager_id << " txn "
+            //            << i
+            //                      << " locks " << partitionId << " "
+            //                      << *((int *)readKey.get_key());
             CalvinHelper::write_lock(tid);
           } else if (readKey.get_read_lock_bit()) {
             CalvinHelper::read_lock(tid);
@@ -234,9 +257,10 @@ public:
             CHECK(false);
           }
         }
-
-        auto worker = get_available_worker();
-        all_transaction_queues[worker]->push(transactions[i].get());
+        if (grant_lock) {
+          auto worker = get_available_worker();
+          all_transaction_queues[worker]->push(transactions[i].get());
+        }
       }
     }
   }
@@ -254,9 +278,7 @@ public:
       bool ok = transaction_queue.pop();
       DCHECK(ok);
 
-      setup_execute_handlers(*transaction);
-      transaction->execution_phase = true;
-      auto result = transaction->execute();
+      auto result = transaction->execute(id);
       n_network_size.fetch_add(transaction->network_size);
       if (result == TransactionResult::READY_TO_COMMIT) {
         protocol.commit(*transaction, lock_manager_id, n_lock_manager,
@@ -272,6 +294,7 @@ public:
       }
 
       complete_transaction_num.fetch_add(1);
+      // LOG(INFO) << "Worker " << id << " commit " << transaction->id;
     }
   }
 
@@ -297,7 +320,7 @@ public:
     };
 
     txn.setup_process_requests_in_execution_phase(
-        lock_manager_id, n_lock_manager, partitioner.replica_group_size);
+        n_lock_manager, n_workers, partitioner.replica_group_size);
     txn.remote_request_handler = [this]() { return this->process_request(); };
     txn.message_flusher = [this]() { this->flush_messages(); };
   };

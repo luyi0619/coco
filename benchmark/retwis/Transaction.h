@@ -42,7 +42,7 @@ public:
 
   virtual ~AddUser() override = default;
 
-  TransactionResult execute() override {
+  TransactionResult execute(std::size_t worker_id) override {
 
     RandomType random;
 
@@ -55,7 +55,7 @@ public:
                               storage.keys[i], storage.values[i]);
     }
 
-    if (this->process_requests()) {
+    if (this->process_requests(worker_id)) {
       return TransactionResult::ABORT;
     }
 
@@ -95,7 +95,7 @@ public:
 
   virtual ~FollowUnfollow() override = default;
 
-  TransactionResult execute() override {
+  TransactionResult execute(std::size_t worker_id) override {
 
     RandomType random;
 
@@ -108,7 +108,7 @@ public:
                               storage.keys[i], storage.values[i]);
     }
 
-    if (this->process_requests()) {
+    if (this->process_requests(worker_id)) {
       return TransactionResult::ABORT;
     }
 
@@ -148,7 +148,7 @@ public:
 
   virtual ~PostTweet() override = default;
 
-  TransactionResult execute() override {
+  TransactionResult execute(std::size_t worker_id) override {
 
     RandomType random;
 
@@ -161,7 +161,7 @@ public:
                               storage.keys[i], storage.values[i]);
     }
 
-    if (this->process_requests()) {
+    if (this->process_requests(worker_id)) {
       return TransactionResult::ABORT;
     }
 
@@ -201,7 +201,7 @@ public:
 
   virtual ~GetTimeline() override = default;
 
-  TransactionResult execute() override {
+  TransactionResult execute(std::size_t worker_id) override {
 
     int retwisTableID = retwis::tableID;
 
@@ -212,7 +212,7 @@ public:
                             storage.keys[i], storage.values[i]);
     }
 
-    if (this->process_requests()) {
+    if (this->process_requests(worker_id)) {
       return TransactionResult::ABORT;
     }
 

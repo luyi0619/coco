@@ -41,7 +41,7 @@ public:
     writeSet.clear();
   }
 
-  virtual TransactionResult execute() = 0;
+  virtual TransactionResult execute(std::size_t worker_id) = 0;
 
   template <class KeyType, class ValueType>
   void search_local_index(std::size_t table_id, std::size_t partition_id,
@@ -118,7 +118,7 @@ public:
     add_to_write_set(writeKey);
   }
 
-  bool process_requests() {
+  bool process_requests(std::size_t worker_id) {
 
     // cannot use unsigned type in reverse iteration
     for (int i = int(readSet.size()) - 1; i >= 0; i--) {

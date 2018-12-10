@@ -40,7 +40,7 @@ public:
 
   virtual ~ReadModifyWrite() override = default;
 
-  TransactionResult execute() override {
+  TransactionResult execute(std::size_t worker_id) override {
 
     RandomType random;
 
@@ -60,7 +60,7 @@ public:
       }
     }
 
-    if (this->process_requests()) {
+    if (this->process_requests(worker_id)) {
       return TransactionResult::ABORT;
     }
 

@@ -37,7 +37,7 @@ public:
 
   virtual ~NewOrder() override = default;
 
-  TransactionResult execute() override {
+  TransactionResult execute(std::size_t worker_id) override {
 
     int32_t W_ID = this->partition_id + 1;
 
@@ -111,7 +111,7 @@ public:
                               storage.stock_keys[i], storage.stock_values[i]);
     }
 
-    if (this->process_requests()) {
+    if (this->process_requests(worker_id)) {
       return TransactionResult::ABORT;
     }
 
@@ -283,7 +283,7 @@ public:
 
   virtual ~Payment() override = default;
 
-  TransactionResult execute() override {
+  TransactionResult execute(std::size_t worker_id) override {
 
     int32_t W_ID = this->partition_id + 1;
 
@@ -327,7 +327,7 @@ public:
                                storage.customer_name_idx_key,
                                storage.customer_name_idx_value);
 
-      this->process_requests();
+      this->process_requests(worker_id);
       C_ID = storage.customer_name_idx_value.C_ID;
     }
 
@@ -336,7 +336,7 @@ public:
     this->search_for_update(customerTableID, C_W_ID - 1, storage.customer_key,
                             storage.customer_value);
 
-    if (this->process_requests()) {
+    if (this->process_requests(worker_id)) {
       return TransactionResult::ABORT;
     }
 
