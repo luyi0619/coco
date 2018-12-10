@@ -59,6 +59,8 @@ public:
             partitioner.replica_group_id, id,
             CalvinHelper::string_to_vint(context.lock_manager))),
         n_workers(context.worker_num - n_lock_manager),
+        lock_manager_id(CalvinHelper::worker_id_to_lock_manager_id(
+            id, n_lock_manager, n_workers)),
         protocol(db, partitioner),
         delay(std::make_unique<SameDelay>(
             coordinator_id, context.coordinator_num, context.delay_time)) {
@@ -90,7 +92,7 @@ public:
       } while (status != ExecutorStatus::Analysis);
 
       n_started_workers.fetch_add(1);
-      for (auto i = 0u; i < transactions.size(); i += context.worker_num) {
+      for (auto i = id; i < transactions.size(); i += context.worker_num) {
         prepare_transaction(*transactions[i]);
         complete_transaction_num.fetch_add(1);
       }
@@ -175,20 +177,7 @@ public:
       txn.abort_no_retry = true;
     }
 
-    analyze_pending_request(txn);
     analyze_active_coordinator(txn);
-  }
-
-  void analyze_pending_request(TransactionType &transaction) {
-
-    transaction.pendingResponses = 0;
-    auto &readSet = transaction.readSet;
-    for (auto i = 0u; i < readSet.size(); i++) {
-
-      if (!partitioner.has_master_partition(readSet[i].get_partition_id())) {
-        transaction.pendingResponses++;
-      }
-    }
   }
 
   void analyze_active_coordinator(TransactionType &transaction) {
@@ -270,34 +259,19 @@ public:
       auto result = transaction->execute();
       n_network_size.fetch_add(transaction->network_size);
       if (result == TransactionResult::READY_TO_COMMIT) {
-        protocol.commit(*transaction);
+        protocol.commit(*transaction, lock_manager_id, n_lock_manager,
+                        partitioner.replica_group_size);
         n_commit.fetch_add(1);
       } else if (result == TransactionResult::ABORT) {
         // non-active transactions, release lock
-        protocol.abort(*transaction);
+        protocol.abort(*transaction, lock_manager_id, n_lock_manager,
+                       partitioner.replica_group_size);
         n_commit.fetch_add(1);
       } else {
         n_abort_no_retry.fetch_add(1);
       }
 
       complete_transaction_num.fetch_add(1);
-    }
-  }
-
-  void run_transaction(TransactionType &txn) {
-    setup_execute_handlers(txn);
-    txn.execution_phase = true;
-    auto result = txn.execute();
-    n_network_size.fetch_add(txn.network_size);
-    if (result == TransactionResult::READY_TO_COMMIT) {
-      protocol.commit(txn);
-      n_commit.fetch_add(1);
-    } else if (result == TransactionResult::ABORT) {
-      // non-active transactions, release lock
-      protocol.abort(txn);
-      n_commit.fetch_add(1);
-    } else {
-      n_abort_no_retry.fetch_add(1);
     }
   }
 
@@ -318,11 +292,12 @@ public:
                                                          id, key_offset, value);
           txn.network_size += sz;
         }
-      } else {
-        txn.pendingResponses++;
+        txn.local_read.fetch_add(-1);
       }
     };
-    txn.setup_process_requests_in_execution_phase();
+
+    txn.setup_process_requests_in_execution_phase(
+        lock_manager_id, n_lock_manager, partitioner.replica_group_size);
     txn.remote_request_handler = [this]() { return this->process_request(); };
     txn.message_flusher = [this]() { this->flush_messages(); };
   };
@@ -349,7 +324,7 @@ public:
 
     // the first lock managers assign transactions to n, .. , n + m/n - 1
 
-    auto start_worker_id = n_workers / n_lock_manager * id;
+    auto start_worker_id = n_lock_manager + n_workers / n_lock_manager * id;
     auto len = n_workers / n_lock_manager;
     return random.uniform_dist(start_worker_id, start_worker_id + len - 1);
   }
@@ -392,6 +367,7 @@ private:
   std::atomic<uint32_t> &n_complete_workers, &n_started_workers;
   CalvinPartitioner partitioner;
   std::size_t n_lock_manager, n_workers;
+  std::size_t lock_manager_id;
   RandomType random;
   ProtocolType protocol;
   std::unique_ptr<Delay> delay;

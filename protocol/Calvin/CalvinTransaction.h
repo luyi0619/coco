@@ -8,9 +8,11 @@
 #include "core/Defs.h"
 #include "core/Partitioner.h"
 #include "core/Table.h"
+#include "protocol/Calvin/CalvinHelper.h"
 #include "protocol/Calvin/CalvinRWKey.h"
 #include <chrono>
 #include <glog/logging.h>
+#include <thread>
 
 namespace scar {
 class CalvinTransaction {
@@ -34,7 +36,8 @@ public:
     abort_read_validation = false;
     local_validated = false;
     si_in_serializable = false;
-    pendingResponses = 0;
+    local_read.store(0);
+    remote_read.store(0);
     execution_phase = false;
     network_size = 0;
     active_coordinators.clear();
@@ -140,6 +143,10 @@ public:
   void set_id(std::size_t id) { this->id = id; }
 
   void setup_process_requests_in_prepare_phase() {
+    // process the reads in read-only index
+    // for general reads, increment the local_read and remote_read counter.
+    // the function may be called multiple times, the keys are processed in
+    // reverse order.
     process_requests = [this]() {
       // cannot use unsigned type in reverse iteration
       for (int i = int(readSet.size()) - 1; i >= 0; i--) {
@@ -154,6 +161,13 @@ public:
           local_index_read_handler(readKey.get_table_id(),
                                    readKey.get_partition_id(),
                                    readKey.get_key(), readKey.get_value());
+        } else {
+
+          if (partitioner.has_master_partition(readSet[i].get_partition_id())) {
+            local_read.fetch_add(1);
+          } else {
+            remote_read.fetch_add(1);
+          }
         }
 
         readSet[i].set_prepare_processed_bit();
@@ -162,8 +176,13 @@ public:
     };
   }
 
-  void setup_process_requests_in_execution_phase() {
-    process_requests = [this]() {
+  void
+  setup_process_requests_in_execution_phase(std::size_t lock_manager_id,
+                                            std::size_t n_lock_manager,
+                                            std::size_t replica_group_size) {
+    // only read the keys with locks from the lock_manager_id
+    process_requests = [this, lock_manager_id, n_lock_manager,
+                        replica_group_size]() {
       // cannot use unsigned type in reverse iteration
       for (int i = int(readSet.size()) - 1; i >= 0; i--) {
         // early return
@@ -171,12 +190,19 @@ public:
           break;
         }
 
-        if (!readSet[i].get_local_index_read_bit()) {
-          // this is a local index read
-          auto &readKey = readSet[i];
-          read_handler(readKey.get_table_id(), readKey.get_partition_id(), id,
-                       i, readKey.get_key(), readKey.get_value());
+        if (readSet[i].get_local_index_read_bit()) {
+          continue;
         }
+
+        if (CalvinHelper::partition_id_to_lock_manager_id(
+                readSet[i].get_partition_id(), n_lock_manager,
+                replica_group_size) != lock_manager_id) {
+          continue;
+        }
+
+        auto &readKey = readSet[i];
+        read_handler(readKey.get_table_id(), readKey.get_partition_id(), id, i,
+                     readKey.get_key(), readKey.get_value());
 
         readSet[i].set_execution_processed_bit();
       }
@@ -184,7 +210,15 @@ public:
       message_flusher();
 
       if (active_coordinators[coordinator_id]) {
-        while (pendingResponses != 0) {
+
+        // spin on local_read
+        while (local_read.load() > 0) {
+          std::this_thread::yield();
+        }
+
+        // spin on remote read
+
+        while (remote_read.load() > 0) {
           remote_request_handler();
         }
         return false;
@@ -198,8 +232,8 @@ public:
 public:
   std::size_t coordinator_id, partition_id, id;
   std::chrono::steady_clock::time_point startTime;
-  int32_t pendingResponses; // could be negative
   std::size_t network_size;
+  std::atomic<int32_t> local_read, remote_read;
 
   bool abort_lock, abort_no_retry, abort_read_validation, local_validated,
       si_in_serializable;

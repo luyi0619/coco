@@ -85,7 +85,7 @@ public:
     DCHECK(key_offset < txns[tid]->readSet.size());
     CalvinRWKey &readKey = txns[tid]->readSet[key_offset];
     dec.read_n_bytes(readKey.get_value(), value_size);
-    txns[tid]->pendingResponses--;
+    txns[tid]->remote_read.fetch_add(-1);
   }
 
   static std::vector<

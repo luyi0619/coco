@@ -34,6 +34,36 @@ public:
     return lock_managers[replica_group_id];
   }
 
+  // assume there are n = 2 lock managers and m = 4 workers
+  // the following function maps
+  // (2, 2, 4) => 0
+  // (3, 2, 4) => 0
+  // (4, 2, 4) => 1
+  // (5, 2, 4) => 1
+
+  static std::size_t worker_id_to_lock_manager_id(std::size_t id,
+                                                  std::size_t n_lock_manager,
+                                                  std::size_t n_worker) {
+    if (id < n_lock_manager) {
+      return id;
+    }
+    return (id - n_lock_manager) / (n_worker / n_lock_manager);
+  }
+
+  // assume the replication group size is 3 and we have partitions 0..8
+  // the 1st coordinator has partition 0, 3, 6.
+  // the 2nd coordinator has partition 1, 4, 7.
+  // the 3rd coordinator has partition 2, 5, 8.
+  // the function first maps all partition id to 0, 1, 2 and then use % hash to
+  // assign each partition to a lock manager.
+
+  static std::size_t
+  partition_id_to_lock_manager_id(std::size_t partition_id,
+                                  std::size_t n_lock_manager,
+                                  std::size_t replica_group_size) {
+    return partition_id / replica_group_size % n_lock_manager;
+  }
+
   static void read(const std::tuple<MetaDataType *, void *> &row, void *dest,
                    std::size_t size) {
 
