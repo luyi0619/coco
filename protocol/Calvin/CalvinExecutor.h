@@ -294,7 +294,7 @@ public:
       }
 
       complete_transaction_num.fetch_add(1);
-      // LOG(INFO) << "Worker " << id << " commit " << transaction->id;
+      //LOG(INFO) << "Worker " << id << " commit " << transaction->id;
     }
   }
 

@@ -190,19 +190,20 @@ public:
 
       // cannot use unsigned type in reverse iteration
       for (int i = int(readSet.size()) - 1; i >= 0; i--) {
-        // early return
-        if (readSet[i].get_execution_processed_bit()) {
-          break;
-        }
 
         if (readSet[i].get_local_index_read_bit()) {
           continue;
         }
 
         if (CalvinHelper::partition_id_to_lock_manager_id(
-                readSet[i].get_partition_id(), n_lock_manager,
-                replica_group_size) != lock_manager_id) {
+            readSet[i].get_partition_id(), n_lock_manager,
+            replica_group_size) != lock_manager_id) {
           continue;
+        }
+
+        // early return
+        if (readSet[i].get_execution_processed_bit()) {
+          break;
         }
 
         auto &readKey = readSet[i];
