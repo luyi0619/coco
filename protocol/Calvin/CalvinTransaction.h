@@ -196,8 +196,8 @@ public:
         }
 
         if (CalvinHelper::partition_id_to_lock_manager_id(
-            readSet[i].get_partition_id(), n_lock_manager,
-            replica_group_size) != lock_manager_id) {
+                readSet[i].get_partition_id(), n_lock_manager,
+                replica_group_size) != lock_manager_id) {
           continue;
         }
 

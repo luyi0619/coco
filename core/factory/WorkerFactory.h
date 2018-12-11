@@ -243,7 +243,7 @@ public:
 
       // create worker
 
-      std::vector<LockfreeQueue<TransactionType *> *> all_transaction_queues;
+      std::vector<CalvinExecutor<WorkloadType> *> all_executors;
 
       for (auto i = 0u; i < context.worker_num; i++) {
 
@@ -253,14 +253,14 @@ public:
             manager->n_completed_workers, manager->n_started_workers);
         workers.push_back(w);
         manager->add_worker(w);
-        all_transaction_queues.push_back(&w->transaction_queue);
+        all_executors.push_back(w.get());
       }
       // push manager to workers
       workers.push_back(manager);
 
       for (auto i = 0u; i < context.worker_num; i++) {
         static_cast<CalvinExecutor<WorkloadType> *>(workers[i].get())
-            ->set_all_transaction_queues(all_transaction_queues);
+            ->set_all_executors(all_executors);
       }
     }
 

@@ -135,9 +135,7 @@ public:
     workers.push_back(w);
   }
 
-  void clear_lock_manager_status(){
-    lock_manager_status.store(0);
-  }
+  void clear_lock_manager_status() { lock_manager_status.store(0); }
 
   void prepare_transactions() {
 

@@ -49,8 +49,7 @@ public:
                  std::atomic<uint32_t> &n_complete_workers,
                  std::atomic<uint32_t> &n_started_workers)
       : Worker(coordinator_id, id), db(db), context(context),
-        transactions(transactions),
-        lock_manager_status(lock_manager_status),
+        transactions(transactions), lock_manager_status(lock_manager_status),
         worker_status(worker_status), n_complete_workers(n_complete_workers),
         n_started_workers(n_started_workers),
         partitioner(coordinator_id, context.coordinator_num,
@@ -217,6 +216,8 @@ public:
     // grant locks, once all locks are acquired, assign the transaction to
     // a worker thread in a round-robin manner.
 
+    std::size_t request_id = 0;
+
     for (auto i = 0u; i < transactions.size(); i++) {
       // do not grant locks to abort no retry transaction
       if (!transactions[i]->abort_no_retry) {
@@ -247,10 +248,10 @@ public:
           grant_lock = true;
           std::atomic<uint64_t> &tid = table->search_metadata(key);
           if (readKey.get_write_lock_bit()) {
-                        //LOG(INFO) << "locker " << lock_manager_id << " txn "
-                        //<< i
-                         //         << " locks " << partitionId << " "
-                         //         << *((int *)readKey.get_key());
+            // LOG(INFO) << "locker " << lock_manager_id << " txn "
+            //<< i
+            //         << " locks " << partitionId << " "
+            //         << *((int *)readKey.get_key());
             CalvinHelper::write_lock(tid);
           } else if (readKey.get_read_lock_bit()) {
             CalvinHelper::read_lock(tid);
@@ -259,8 +260,8 @@ public:
           }
         }
         if (grant_lock) {
-          auto worker = get_available_worker();
-          all_transaction_queues[worker]->push(transactions[i].get());
+          auto worker = get_available_worker(request_id++);
+          all_executors[worker]->transaction_queue.push(transactions[i].get());
         }
       }
     }
@@ -269,7 +270,8 @@ public:
 
   void run_transactions() {
 
-    while (!get_lock_manager_bit(lock_manager_id) || !transaction_queue.empty()) {
+    while (!get_lock_manager_bit(lock_manager_id) ||
+           !transaction_queue.empty()) {
 
       if (transaction_queue.empty()) {
         std::this_thread::yield();
@@ -293,7 +295,7 @@ public:
         n_abort_no_retry.fetch_add(1);
       }
 
-      //LOG(INFO) << "Worker " << id << " commit " << transaction->id;
+      // LOG(INFO) << "Worker " << id << " commit " << transaction->id;
     }
   }
 
@@ -334,12 +336,11 @@ public:
     txn.setup_process_requests_in_prepare_phase();
   };
 
-  void set_all_transaction_queues(
-      const std::vector<LockfreeQueue<TransactionType *> *> &queues) {
-    all_transaction_queues = queues;
+  void set_all_executors(const std::vector<CalvinExecutor *> &executors) {
+    all_executors = executors;
   }
 
-  std::size_t get_available_worker() {
+  std::size_t get_available_worker(std::size_t request_id) {
     // assume there are n lock managers and m workers
     // 0, 1, .. n-1 are lock managers
     // n, n + 1, .., n + m -1 are workers
@@ -348,21 +349,19 @@ public:
 
     auto start_worker_id = n_lock_manager + n_workers / n_lock_manager * id;
     auto len = n_workers / n_lock_manager;
-    return random.uniform_dist(start_worker_id, start_worker_id + len - 1);
+    return request_id % len + start_worker_id;
   }
 
-  void set_lock_manager_bit(int id){
-    DCHECK(id < sizeof(uint32_t));
+  void set_lock_manager_bit(int id) {
     uint32_t old_value, new_value;
     do {
       old_value = lock_manager_status.load();
       DCHECK(((old_value >> id) & 1) == 0);
       new_value = old_value | (1 << id);
-    }while(!lock_manager_status.compare_exchange_weak(old_value, new_value));
+    } while (!lock_manager_status.compare_exchange_weak(old_value, new_value));
   }
 
-  bool get_lock_manager_bit(int id){
-    DCHECK(id < sizeof(uint32_t));
+  bool get_lock_manager_bit(int id) {
     return (lock_manager_status.load() >> id) & 1;
   }
 
@@ -393,9 +392,6 @@ public:
     return size;
   }
 
-public:
-  LockfreeQueue<TransactionType *> transaction_queue;
-
 private:
   DatabaseType &db;
   const ContextType &context;
@@ -414,7 +410,7 @@ private:
                          std::vector<std::unique_ptr<TransactionType>> &)>>
       messageHandlers;
   LockfreeQueue<Message *> in_queue, out_queue;
-
-  std::vector<LockfreeQueue<TransactionType *> *> all_transaction_queues;
+  LockfreeQueue<TransactionType *> transaction_queue;
+  std::vector<CalvinExecutor *> all_executors;
 };
 } // namespace scar
