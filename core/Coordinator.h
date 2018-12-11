@@ -56,7 +56,7 @@ public:
     }
 
     // run timeToRun seconds
-    auto timeToRun = 2500, warmup = 10, cooldown = 5;
+    auto timeToRun = 25, warmup = 10, cooldown = 5;
     auto startTime = std::chrono::steady_clock::now();
 
     uint64_t total_commit = 0, total_abort_no_retry = 0, total_abort_lock = 0,

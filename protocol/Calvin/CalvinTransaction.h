@@ -41,7 +41,7 @@ public:
     local_read.store(0);
     remote_read.store(0);
     execution_phase = false;
-    network_size = 0;
+    network_size.store(0);
     active_coordinators.clear();
     operation.clear();
     readSet.clear();
@@ -207,26 +207,23 @@ public:
         }
 
         auto &readKey = readSet[i];
-        read_handler(readKey.get_table_id(), readKey.get_partition_id(), id, i,
-                     readKey.get_key(), readKey.get_value());
+        read_handler(worker_id, readKey.get_table_id(),
+                     readKey.get_partition_id(), id, i, readKey.get_key(),
+                     readKey.get_value());
 
         readSet[i].set_execution_processed_bit();
       }
 
-      message_flusher();
+      message_flusher(worker_id);
 
       if (active_coordinators[coordinator_id]) {
 
-        // spin on local_read
-        while (local_read.load() > 0) {
-          std::this_thread::yield();
+        // spin on local & remote read
+        while (local_read.load() > 0 || remote_read.load() > 0) {
+          // process remote reads for other workers
+          remote_request_handler(worker_id);
         }
 
-        // spin on remote read
-
-        while (remote_read.load() > 0) {
-          remote_request_handler();
-        }
         return false;
       } else {
         // abort if not active
@@ -238,7 +235,7 @@ public:
 public:
   std::size_t coordinator_id, partition_id, id;
   std::chrono::steady_clock::time_point startTime;
-  std::size_t network_size;
+  std::atomic<int32_t> network_size;
   std::atomic<int32_t> local_read, remote_read;
 
   bool abort_lock, abort_no_retry, abort_read_validation, local_validated,
@@ -252,14 +249,14 @@ public:
       local_index_read_handler;
 
   // table id, partition id, id, key_offset, key, value
-  std::function<void(std::size_t, std::size_t, std::size_t, uint32_t,
-                     const void *, void *)>
+  std::function<void(std::size_t, std::size_t, std::size_t, std::size_t,
+                     uint32_t, const void *, void *)>
       read_handler;
 
   // processed a request?
-  std::function<std::size_t(void)> remote_request_handler;
+  std::function<std::size_t(std::size_t)> remote_request_handler;
 
-  std::function<void()> message_flusher;
+  std::function<void(std::size_t)> message_flusher;
 
   Partitioner &partitioner;
   std::vector<bool> active_coordinators;

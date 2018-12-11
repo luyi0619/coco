@@ -119,7 +119,7 @@ public:
 
       while (static_cast<ExecutorStatus>(worker_status.load()) ==
              ExecutorStatus::Execute) {
-        std::this_thread::yield();
+        process_request();
       }
     }
   }
@@ -248,10 +248,6 @@ public:
           grant_lock = true;
           std::atomic<uint64_t> &tid = table->search_metadata(key);
           if (readKey.get_write_lock_bit()) {
-            // LOG(INFO) << "locker " << lock_manager_id << " txn "
-            //<< i
-            //         << " locks " << partitionId << " "
-            //         << *((int *)readKey.get_key());
             CalvinHelper::write_lock(tid);
           } else if (readKey.get_read_lock_bit()) {
             CalvinHelper::read_lock(tid);
@@ -283,7 +279,7 @@ public:
       DCHECK(ok);
 
       auto result = transaction->execute(id);
-      n_network_size.fetch_add(transaction->network_size);
+      n_network_size.fetch_add(transaction->network_size.load());
       if (result == TransactionResult::READY_TO_COMMIT) {
         protocol.commit(*transaction, lock_manager_id, n_lock_manager,
                         partitioner.replica_group_size);
@@ -294,27 +290,26 @@ public:
       } else {
         n_abort_no_retry.fetch_add(1);
       }
-
-      // LOG(INFO) << "Worker " << id << " commit " << transaction->id;
     }
   }
 
   void setup_execute_handlers(TransactionType &txn) {
-    txn.read_handler = [this, &txn](std::size_t table_id,
+    txn.read_handler = [this, &txn](std::size_t worker_id, std::size_t table_id,
                                     std::size_t partition_id, std::size_t id,
                                     uint32_t key_offset, const void *key,
                                     void *value) {
-      if (partitioner.has_master_partition(partition_id)) {
-        TableType *table = this->db.find_table(table_id, partition_id);
+      auto *worker = this->all_executors[worker_id];
+      if (worker->partitioner.has_master_partition(partition_id)) {
+        TableType *table = worker->db.find_table(table_id, partition_id);
         CalvinHelper::read(table->search(key), value, table->value_size());
 
         auto &active_coordinators = txn.active_coordinators;
         for (auto i = 0u; i < active_coordinators.size(); i++) {
-          if (i == coordinator_id || !active_coordinators[i])
+          if (i == worker->coordinator_id || !active_coordinators[i])
             continue;
-          auto sz = MessageFactoryType::new_read_message(*messages[i], *table,
-                                                         id, key_offset, value);
-          txn.network_size += sz;
+          auto sz = MessageFactoryType::new_read_message(
+              *worker->messages[i], *table, id, key_offset, value);
+          txn.network_size.fetch_add(sz);
         }
         txn.local_read.fetch_add(-1);
       }
@@ -322,8 +317,14 @@ public:
 
     txn.setup_process_requests_in_execution_phase(
         n_lock_manager, n_workers, partitioner.replica_group_size);
-    txn.remote_request_handler = [this]() { return this->process_request(); };
-    txn.message_flusher = [this]() { this->flush_messages(); };
+    txn.remote_request_handler = [this](std::size_t worker_id) {
+      auto *worker = this->all_executors[worker_id];
+      return worker->process_request();
+    };
+    txn.message_flusher = [this](std::size_t worker_id) {
+      auto *worker = this->all_executors[worker_id];
+      worker->flush_messages();
+    };
   };
 
   void setup_prepare_handlers(TransactionType &txn) {

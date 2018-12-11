@@ -138,9 +138,6 @@ public:
       auto key = writeKey.get_key();
       auto value = writeKey.get_value();
       std::atomic<uint64_t> &tid = table->search_metadata(key);
-      //      LOG(INFO) << "locker " << lock_manager_id << " unlock " <<
-      //      partitionId
-      //      << " " << *((int *)writeKey.get_key());
       CalvinHelper::write_lock_release(tid);
     }
   }
