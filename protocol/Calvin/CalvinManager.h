@@ -74,12 +74,10 @@ public:
       // queue.
       n_started_workers.store(0);
       n_completed_workers.store(0);
-      complete_transaction_num.store(0);
+      clear_lock_manager_status();
       signal_worker(ExecutorStatus::Execute);
       wait_all_workers_start();
       wait_all_workers_finish();
-      wait_transaction_complete();
-
       // wait for all machines until they finish the execution phase.
       wait4_ack();
     }
@@ -125,18 +123,20 @@ public:
       // queue.
       n_started_workers.store(0);
       n_completed_workers.store(0);
-      complete_transaction_num.store(0);
+      clear_lock_manager_status();
       set_worker_status(ExecutorStatus::Execute);
       wait_all_workers_start();
       wait_all_workers_finish();
-      wait_transaction_complete();
-
       send_ack();
     }
   }
 
   void add_worker(const std::shared_ptr<CalvinExecutor<WorkloadType>> &w) {
     workers.push_back(w);
+  }
+
+  void clear_lock_manager_status(){
+    lock_manager_status.store(0);
   }
 
   void prepare_transactions() {
@@ -152,19 +152,13 @@ public:
     }
   }
 
-  void wait_transaction_complete() {
-    while (complete_transaction_num.load() < transactions.size()) {
-      std::this_thread::yield();
-    }
-  }
-
 public:
   RandomType random;
   DatabaseType &db;
   const ContextType &workload_context;
   CalvinPartitioner partitioner;
   WorkloadType workload;
-  std::atomic<uint32_t> complete_transaction_num;
+  std::atomic<uint32_t> lock_manager_status;
   std::vector<std::shared_ptr<CalvinExecutor<WorkloadType>>> workers;
   std::vector<StorageType> storages;
   std::vector<std::unique_ptr<TransactionType>> transactions;

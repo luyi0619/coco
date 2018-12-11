@@ -44,13 +44,13 @@ public:
   CalvinExecutor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
                  const ContextType &context,
                  std::vector<std::unique_ptr<TransactionType>> &transactions,
-                 std::atomic<uint32_t> &complete_transaction_num,
+                 std::atomic<uint32_t> &lock_manager_status,
                  std::atomic<uint32_t> &worker_status,
                  std::atomic<uint32_t> &n_complete_workers,
                  std::atomic<uint32_t> &n_started_workers)
       : Worker(coordinator_id, id), db(db), context(context),
         transactions(transactions),
-        complete_transaction_num(complete_transaction_num),
+        lock_manager_status(lock_manager_status),
         worker_status(worker_status), n_complete_workers(n_complete_workers),
         n_started_workers(n_started_workers),
         partitioner(coordinator_id, context.coordinator_num,
@@ -94,7 +94,6 @@ public:
       n_started_workers.fetch_add(1);
       for (auto i = id; i < transactions.size(); i += context.worker_num) {
         prepare_transaction(*transactions[i]);
-        complete_transaction_num.fetch_add(1);
       }
       n_complete_workers.fetch_add(1);
 
@@ -189,6 +188,8 @@ public:
     // setup handlers for execution
     setup_execute_handlers(txn);
     txn.execution_phase = true;
+
+    n_commit.fetch_add(1);
   }
 
   void analyze_active_coordinator(TransactionType &transaction) {
@@ -246,10 +247,10 @@ public:
           grant_lock = true;
           std::atomic<uint64_t> &tid = table->search_metadata(key);
           if (readKey.get_write_lock_bit()) {
-            //            LOG(INFO) << "locker " << lock_manager_id << " txn "
-            //            << i
-            //                      << " locks " << partitionId << " "
-            //                      << *((int *)readKey.get_key());
+                        //LOG(INFO) << "locker " << lock_manager_id << " txn "
+                        //<< i
+                         //         << " locks " << partitionId << " "
+                         //         << *((int *)readKey.get_key());
             CalvinHelper::write_lock(tid);
           } else if (readKey.get_read_lock_bit()) {
             CalvinHelper::read_lock(tid);
@@ -263,11 +264,12 @@ public:
         }
       }
     }
+    set_lock_manager_bit(id);
   }
 
   void run_transactions() {
 
-    while (complete_transaction_num.load() < context.batch_size) {
+    while (!get_lock_manager_bit(lock_manager_id) || !transaction_queue.empty()) {
 
       if (transaction_queue.empty()) {
         std::this_thread::yield();
@@ -283,17 +285,14 @@ public:
       if (result == TransactionResult::READY_TO_COMMIT) {
         protocol.commit(*transaction, lock_manager_id, n_lock_manager,
                         partitioner.replica_group_size);
-        n_commit.fetch_add(1);
       } else if (result == TransactionResult::ABORT) {
         // non-active transactions, release lock
         protocol.abort(*transaction, lock_manager_id, n_lock_manager,
                        partitioner.replica_group_size);
-        n_commit.fetch_add(1);
       } else {
         n_abort_no_retry.fetch_add(1);
       }
 
-      complete_transaction_num.fetch_add(1);
       //LOG(INFO) << "Worker " << id << " commit " << transaction->id;
     }
   }
@@ -352,6 +351,21 @@ public:
     return random.uniform_dist(start_worker_id, start_worker_id + len - 1);
   }
 
+  void set_lock_manager_bit(int id){
+    DCHECK(id < sizeof(uint32_t));
+    uint32_t old_value, new_value;
+    do {
+      old_value = lock_manager_status.load();
+      DCHECK(((old_value >> id) & 1) == 0);
+      new_value = old_value | (1 << id);
+    }while(!lock_manager_status.compare_exchange_weak(old_value, new_value));
+  }
+
+  bool get_lock_manager_bit(int id){
+    DCHECK(id < sizeof(uint32_t));
+    return (lock_manager_status.load() >> id) & 1;
+  }
+
   std::size_t process_request() {
 
     std::size_t size = 0;
@@ -386,7 +400,7 @@ private:
   DatabaseType &db;
   const ContextType &context;
   std::vector<std::unique_ptr<TransactionType>> &transactions;
-  std::atomic<uint32_t> &complete_transaction_num, &worker_status;
+  std::atomic<uint32_t> &lock_manager_status, &worker_status;
   std::atomic<uint32_t> &n_complete_workers, &n_started_workers;
   CalvinPartitioner partitioner;
   std::size_t n_lock_manager, n_workers;
