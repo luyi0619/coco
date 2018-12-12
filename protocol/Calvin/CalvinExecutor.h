@@ -270,7 +270,7 @@ public:
            !transaction_queue.empty()) {
 
       if (transaction_queue.empty()) {
-        std::this_thread::yield();
+        process_request();
         continue;
       }
 

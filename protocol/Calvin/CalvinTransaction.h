@@ -14,8 +14,6 @@
 #include <glog/logging.h>
 #include <thread>
 
-// TODO no need to sync on every txn, add active_lock_managers?
-
 namespace scar {
 class CalvinTransaction {
 
