@@ -35,12 +35,11 @@ public:
   CalvinManager(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
                 const ContextType &context, std::atomic<bool> &stopFlag)
       : base_type(coordinator_id, id, context, stopFlag), db(db),
-        workload_context(context),
         partitioner(coordinator_id, context.coordinator_num,
-                    CalvinHelper::string_to_vint(context.replica_group)),
-        workload(coordinator_id, db, random, partitioner) {
+                    CalvinHelper::string_to_vint(context.replica_group)) {
 
     storages.resize(context.batch_size);
+    transactions.resize(context.batch_size);
   }
 
   void coordinator_start() override {
@@ -54,8 +53,6 @@ public:
       // a batch of transactions using the same random seed.
 
       // LOG(INFO) << "Seed: " << random.get_seed();
-      prepare_transactions();
-
       n_started_workers.store(0);
       n_completed_workers.store(0);
       signal_worker(ExecutorStatus::Analysis);
@@ -101,8 +98,6 @@ public:
       DCHECK(status == ExecutorStatus::Analysis);
       // the coordinator on each machine generates
       // a batch of transactions using the same random seed.
-      prepare_transactions();
-
       // Allow each worker to analyse the read/write set
       // each worker analyse i, i + n, i + 2n transaction
 
@@ -137,25 +132,10 @@ public:
 
   void clear_lock_manager_status() { lock_manager_status.store(0); }
 
-  void prepare_transactions() {
-
-    transactions.clear();
-
-    // generate transactions
-    for (auto i = 0u; i < context.batch_size; i++) {
-      auto partition_id = random.uniform_dist(0, context.partition_num - 1);
-      transactions.push_back(workload.next_transaction(
-          workload_context, partition_id, storages[i]));
-      transactions[i]->set_id(i);
-    }
-  }
-
 public:
   RandomType random;
   DatabaseType &db;
-  const ContextType &workload_context;
   CalvinPartitioner partitioner;
-  WorkloadType workload;
   std::atomic<uint32_t> lock_manager_status;
   std::vector<std::shared_ptr<CalvinExecutor<WorkloadType>>> workers;
   std::vector<StorageType> storages;

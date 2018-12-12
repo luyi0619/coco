@@ -44,22 +44,26 @@ public:
   CalvinExecutor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
                  const ContextType &context,
                  std::vector<std::unique_ptr<TransactionType>> &transactions,
+                 std::vector<StorageType> &storages,
                  std::atomic<uint32_t> &lock_manager_status,
                  std::atomic<uint32_t> &worker_status,
                  std::atomic<uint32_t> &n_complete_workers,
                  std::atomic<uint32_t> &n_started_workers)
       : Worker(coordinator_id, id), db(db), context(context),
-        transactions(transactions), lock_manager_status(lock_manager_status),
-        worker_status(worker_status), n_complete_workers(n_complete_workers),
+        transactions(transactions), storages(storages),
+        lock_manager_status(lock_manager_status), worker_status(worker_status),
+        n_complete_workers(n_complete_workers),
         n_started_workers(n_started_workers),
         partitioner(coordinator_id, context.coordinator_num,
                     CalvinHelper::string_to_vint(context.replica_group)),
+        workload(coordinator_id, db, random, partitioner),
         n_lock_manager(CalvinHelper::n_lock_manager(
             partitioner.replica_group_id, id,
             CalvinHelper::string_to_vint(context.lock_manager))),
         n_workers(context.worker_num - n_lock_manager),
         lock_manager_id(CalvinHelper::worker_id_to_lock_manager_id(
             id, n_lock_manager, n_workers)),
+        random(id), // make sure each worker has a different seed.
         protocol(db, partitioner),
         delay(std::make_unique<SameDelay>(
             coordinator_id, context.coordinator_num, context.delay_time)) {
@@ -92,6 +96,11 @@ public:
 
       n_started_workers.fetch_add(1);
       for (auto i = id; i < transactions.size(); i += context.worker_num) {
+        // generate transaction
+        auto partition_id = random.uniform_dist(0, context.partition_num - 1);
+        transactions[i] =
+            workload.next_transaction(context, partition_id, storages[i]);
+        transactions[i]->set_id(i);
         prepare_transaction(*transactions[i]);
       }
       n_complete_workers.fetch_add(1);
@@ -175,6 +184,7 @@ public:
   }
 
   void prepare_transaction(TransactionType &txn) {
+
     setup_prepare_handlers(txn);
     // run execute to prepare read/write set
     auto result = txn.execute(id);
@@ -397,9 +407,11 @@ private:
   DatabaseType &db;
   const ContextType &context;
   std::vector<std::unique_ptr<TransactionType>> &transactions;
+  std::vector<StorageType> &storages;
   std::atomic<uint32_t> &lock_manager_status, &worker_status;
   std::atomic<uint32_t> &n_complete_workers, &n_started_workers;
   CalvinPartitioner partitioner;
+  WorkloadType workload;
   std::size_t n_lock_manager, n_workers;
   std::size_t lock_manager_id;
   RandomType random;
