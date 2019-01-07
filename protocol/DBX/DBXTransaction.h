@@ -1,41 +1,42 @@
 //
-// Created by Yi Lu on 9/19/18.
+// Created by Yi Lu on 1/7/19.
 //
 
 #pragma once
 
-#include "common/Message.h"
 #include "common/Operation.h"
 #include "core/Defs.h"
 #include "core/Partitioner.h"
 #include "core/Table.h"
-#include "protocol/Scar/ScarRWKey.h"
+#include "protocol/DBX/DBXHelper.h"
+#include "protocol/DBX/DBXRWKey.h"
 #include <chrono>
 #include <glog/logging.h>
-#include <vector>
+#include <thread>
 
 namespace scar {
 
-class ScarTransaction {
+class DBXTransaction {
+
 public:
   using MetaDataType = std::atomic<uint64_t>;
+  using TableType = ITable<MetaDataType>;
 
-  ScarTransaction(std::size_t coordinator_id, std::size_t partition_id,
-                  Partitioner &partitioner)
+  DBXTransaction(std::size_t coordinator_id, std::size_t partition_id,
+                 Partitioner &partitioner)
       : coordinator_id(coordinator_id), partition_id(partition_id),
         startTime(std::chrono::steady_clock::now()), partitioner(partitioner) {
     reset();
   }
 
-  virtual ~ScarTransaction() = default;
+  virtual ~DBXTransaction() = default;
 
   void reset() {
+    abort_lock = false;
+    abort_no_retry = false;
+    abort_read_validation = false;
     pendingResponses = 0;
     network_size = 0;
-    abort_lock = false;
-    abort_read_validation = false;
-    si_in_serializable = false;
-    local_validated = false;
     operation.clear();
     readSet.clear();
     writeSet.clear();
@@ -46,7 +47,7 @@ public:
   template <class KeyType, class ValueType>
   void search_local_index(std::size_t table_id, std::size_t partition_id,
                           const KeyType &key, ValueType &value) {
-    ScarRWKey readKey;
+    DBXRWKey readKey;
 
     readKey.set_table_id(table_id);
     readKey.set_partition_id(partition_id);
@@ -64,7 +65,7 @@ public:
   void search_for_read(std::size_t table_id, std::size_t partition_id,
                        const KeyType &key, ValueType &value) {
 
-    ScarRWKey readKey;
+    DBXRWKey readKey;
 
     readKey.set_table_id(table_id);
     readKey.set_partition_id(partition_id);
@@ -80,8 +81,7 @@ public:
   template <class KeyType, class ValueType>
   void search_for_update(std::size_t table_id, std::size_t partition_id,
                          const KeyType &key, ValueType &value) {
-
-    ScarRWKey readKey;
+    DBXRWKey readKey;
 
     readKey.set_table_id(table_id);
     readKey.set_partition_id(partition_id);
@@ -97,7 +97,8 @@ public:
   template <class KeyType, class ValueType>
   void update(std::size_t table_id, std::size_t partition_id,
               const KeyType &key, const ValueType &value) {
-    ScarRWKey writeKey;
+
+    DBXRWKey writeKey;
 
     writeKey.set_table_id(table_id);
     writeKey.set_partition_id(partition_id);
@@ -109,6 +110,20 @@ public:
     add_to_write_set(writeKey);
   }
 
+  std::size_t add_to_read_set(const DBXRWKey &key) {
+    readSet.push_back(key);
+    return readSet.size() - 1;
+  }
+
+  std::size_t add_to_write_set(const DBXRWKey &key) {
+    writeSet.push_back(key);
+    return writeSet.size() - 1;
+  }
+
+  void set_id(std::size_t id) { this->id = id; }
+
+  void set_epoch(std::size_t epoch) { this->epoch = epoch; }
+
   bool process_requests(std::size_t worker_id) {
 
     // cannot use unsigned type in reverse iteration
@@ -118,65 +133,40 @@ public:
         break;
       }
 
-      const ScarRWKey &readKey = readSet[i];
-      auto tid =
-          readRequestHandler(readKey.get_table_id(), readKey.get_partition_id(),
-                             i, readKey.get_key(), readKey.get_value(),
-                             readKey.get_local_index_read_bit());
+      const DBXRWKey &readKey = readSet[i];
+      readRequestHandler(readKey.get_table_id(), readKey.get_partition_id(), id,
+                         i, readKey.get_key(), readKey.get_value(),
+                         readKey.get_local_index_read_bit());
       readSet[i].clear_read_request_bit();
-      readSet[i].set_tid(tid);
     }
 
-    if (pendingResponses > 0) {
-      message_flusher();
-      while (pendingResponses > 0) {
-        remote_request_handler();
-      }
-    }
     return false;
   }
 
-  ScarRWKey *get_read_key(const void *key) {
-
-    for (auto i = 0u; i < readSet.size(); i++) {
-      if (readSet[i].get_key() == key) {
-        return &readSet[i];
-      }
-    }
-
-    return nullptr;
-  }
-
-  std::size_t add_to_read_set(const ScarRWKey &key) {
-    readSet.push_back(key);
-    return readSet.size() - 1;
-  }
-
-  std::size_t add_to_write_set(const ScarRWKey &key) {
-    writeSet.push_back(key);
-    return writeSet.size() - 1;
-  }
-
 public:
-  std::size_t coordinator_id, partition_id;
+  std::size_t coordinator_id, partition_id, id, epoch;
   std::chrono::steady_clock::time_point startTime;
   std::size_t pendingResponses;
   std::size_t network_size;
-  uint64_t commit_rts, commit_wts;
-  bool abort_lock, abort_read_validation, local_validated, si_in_serializable;
 
-  // table id, partition id, offset, key, value, local index read?
-  std::function<uint64_t(std::size_t, std::size_t, uint32_t, const void *,
-                         void *, bool)>
+  bool abort_lock, abort_no_retry, abort_read_validation;
+
+  // table id, partition id, key, value
+  std::function<void(std::size_t, std::size_t, const void *, void *)>
+      local_index_read_handler;
+
+  // table id, partition id, id, key_offset, key, value
+  std::function<void(std::size_t, std::size_t, std::size_t, std::size_t,
+                     const void *, void *, bool)>
       readRequestHandler;
+
   // processed a request?
-  std::function<std::size_t(void)> remote_request_handler;
+  std::function<std::size_t(std::size_t)> remote_request_handler;
 
   std::function<void()> message_flusher;
 
   Partitioner &partitioner;
-  Operation operation;
-  std::vector<ScarRWKey> readSet, writeSet;
+  Operation operation; // never used
+  std::vector<DBXRWKey> readSet, writeSet;
 };
-
 } // namespace scar

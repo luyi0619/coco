@@ -41,7 +41,11 @@
 #include "protocol/Calvin/CalvinManager.h"
 #include "protocol/Calvin/CalvinTransaction.h"
 
-#include <protocol/Calvin/CalvinTransaction.h>
+#include "protocol/DBX/DBX.h"
+#include "protocol/DBX/DBXExecutor.h"
+#include "protocol/DBX/DBXManager.h"
+#include "protocol/DBX/DBXTransaction.h"
+
 #include <unordered_set>
 
 namespace scar {
@@ -75,8 +79,8 @@ public:
                  const Context &context, std::atomic<bool> &stop_flag) {
 
     std::unordered_set<std::string> protocols = {
-        "Silo",   "SiloGC",   "SiloRC", "Scar",    "ScarSI",
-        "RStore", "RStoreNC", "TwoPL",  "TwoPLGC", "Calvin"};
+        "Silo",     "SiloGC", "SiloRC",  "Scar",   "ScarSI", "RStore",
+        "RStoreNC", "TwoPL",  "TwoPLGC", "Calvin", "DBX"};
     CHECK(protocols.count(context.protocol) == 1);
 
     std::vector<std::shared_ptr<Worker>> workers;
@@ -263,6 +267,27 @@ public:
         static_cast<CalvinExecutor<WorkloadType> *>(workers[i].get())
             ->set_all_executors(all_executors);
       }
+    } else if (context.protocol == "DBX") {
+
+      using TransactionType = scar::DBXTransaction;
+      using WorkloadType =
+          typename InferType<Context>::template WorkloadType<TransactionType>;
+
+      // create manager
+
+      auto manager = std::make_shared<DBXManager<WorkloadType>>(
+          coordinator_id, context.worker_num, db, context, stop_flag);
+
+      // create worker
+
+      for (auto i = 0u; i < context.worker_num; i++) {
+        workers.push_back(std::make_shared<DBXExecutor<WorkloadType>>(
+            coordinator_id, i, db, context, manager->transactions,
+            manager->storages, manager->worker_status,
+            manager->n_completed_workers, manager->n_started_workers));
+      }
+
+      workers.push_back(manager);
     }
 
     return workers;

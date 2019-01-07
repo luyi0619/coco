@@ -4,8 +4,8 @@
 
 #include "common/Random.h"
 #include <algorithm>
-#include <iostream>
 #include <gtest/gtest.h>
+#include <iostream>
 #include <unordered_map>
 #include <vector>
 
@@ -111,8 +111,7 @@ public:
 
   bool simple_commit(const Transaction &txn) {
     for (std::size_t i = 0; i < txn.records.size(); i++) {
-      if (writes.count(txn.records[i]) &&
-          writes[txn.records[i]] < txn.ts) {
+      if (writes.count(txn.records[i]) && writes[txn.records[i]] < txn.ts) {
         return false;
       }
     }
