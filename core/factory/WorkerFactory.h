@@ -283,7 +283,7 @@ public:
       for (auto i = 0u; i < context.worker_num; i++) {
         workers.push_back(std::make_shared<DBXExecutor<WorkloadType>>(
             coordinator_id, i, db, context, manager->transactions,
-            manager->storages, manager->worker_status,
+            manager->storages, manager->epoch, manager->worker_status,
             manager->n_completed_workers, manager->n_started_workers));
       }
 

@@ -25,6 +25,56 @@ public:
     return tid.load();
   }
 
+  static bool reserve_read(std::atomic<uint64_t> &a, uint64_t epoch,
+                           uint32_t tid) {
+    uint64_t old_value, new_value;
+    do {
+      old_value = a.load();
+      uint64_t old_epoch = get_epoch(old_value);
+      uint64_t old_rts = get_rts(old_value);
+
+      CHECK(epoch >= old_epoch);
+      if (epoch > old_epoch) {
+        new_value = set_epoch(0, epoch);
+        new_value = set_rts(new_value, tid);
+      } else {
+
+        if (old_rts < tid && old_rts != 0) {
+          return false;
+        }
+        // keep wts
+        new_value = old_value;
+        new_value = set_rts(new_value, tid);
+      }
+    } while (!a.compare_exchange_weak(old_value, new_value));
+    return true;
+  }
+
+  static bool reserve_write(std::atomic<uint64_t> &a, uint64_t epoch,
+                            uint32_t tid) {
+    uint64_t old_value, new_value;
+    do {
+      old_value = a.load();
+      uint64_t old_epoch = get_epoch(old_value);
+      uint64_t old_wts = get_wts(old_value);
+
+      CHECK(epoch >= old_epoch);
+      if (epoch > old_epoch) {
+        new_value = set_epoch(0, epoch);
+        new_value = set_wts(new_value, tid);
+      } else {
+
+        if (old_wts < tid && old_wts != 0) {
+          return false;
+        }
+        // keep rts
+        new_value = old_value;
+        new_value = set_wts(new_value, tid);
+      }
+    } while (!a.compare_exchange_weak(old_value, new_value));
+    return true;
+  }
+
   static uint64_t get_epoch(uint64_t value) {
     return (value >> EPOCH_OFFSET) & EPOCH_MASK;
   }

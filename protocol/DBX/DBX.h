@@ -32,10 +32,28 @@ public:
       : db(db), context(context), partitioner(partitioner) {}
 
   void abort(TransactionType &txn,
-             std::vector<std::unique_ptr<Message>> &messages) {}
+             std::vector<std::unique_ptr<Message>> &messages) {
+    // nothing needs to be done
+  }
 
   bool commit(TransactionType &txn,
               std::vector<std::unique_ptr<Message>> &messages) {
+
+    auto &writeSet = txn.writeSet;
+    for (auto i = 0u; i < writeSet.size(); i++) {
+      auto &writeKey = writeSet[i];
+      auto tableId = writeKey.get_table_id();
+      auto partitionId = writeKey.get_partition_id();
+      auto table = db.find_table(tableId, partitionId);
+
+      // assume a single node db
+      // TODO: change it to partitioned db later on
+      CHECK(partitioner.has_master_partition(partitionId));
+
+      auto key = writeKey.get_key();
+      auto value = writeKey.get_value();
+      table->update(key, value);
+    }
 
     return true;
   }

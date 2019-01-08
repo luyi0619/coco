@@ -122,7 +122,7 @@ public:
 
   void set_id(std::size_t id) { this->id = id; }
 
-  void set_epoch(std::size_t epoch) { this->epoch = epoch; }
+  void set_epoch(uint32_t epoch) { this->epoch = epoch; }
 
   bool process_requests(std::size_t worker_id) {
 
@@ -144,7 +144,8 @@ public:
   }
 
 public:
-  std::size_t coordinator_id, partition_id, id, epoch;
+  std::size_t coordinator_id, partition_id, id;
+  uint32_t epoch;
   std::chrono::steady_clock::time_point startTime;
   std::size_t pendingResponses;
   std::size_t network_size;
@@ -161,7 +162,7 @@ public:
       readRequestHandler;
 
   // processed a request?
-  std::function<std::size_t(std::size_t)> remote_request_handler;
+  std::function<std::size_t(void)> remote_request_handler;
 
   std::function<void()> message_flusher;
 

@@ -44,12 +44,12 @@ public:
   DBXExecutor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
               const ContextType &context,
               std::vector<std::unique_ptr<TransactionType>> &transactions,
-              std::vector<StorageType> &storages,
+              std::vector<StorageType> &storages, std::atomic<uint32_t> &epoch,
               std::atomic<uint32_t> &worker_status,
               std::atomic<uint32_t> &n_complete_workers,
               std::atomic<uint32_t> &n_started_workers)
       : Worker(coordinator_id, id), db(db), context(context),
-        transactions(transactions), storages(storages),
+        transactions(transactions), storages(storages), epoch(epoch),
         worker_status(worker_status), n_complete_workers(n_complete_workers),
         n_started_workers(n_started_workers),
         partitioner(PartitionerFactory::create_partitioner(
@@ -70,7 +70,227 @@ public:
 
   ~DBXExecutor() = default;
 
-  void start() override { LOG(INFO) << "DBXExecutor " << id << " started. "; }
+  void start() override {
+
+    LOG(INFO) << "DBXExecutor " << id << " started. ";
+
+    for (;;) {
+
+      ExecutorStatus status;
+      do {
+        status = static_cast<ExecutorStatus>(worker_status.load());
+
+        if (status == ExecutorStatus::EXIT) {
+          LOG(INFO) << "CalvinExecutor " << id << " exits. ";
+          return;
+        }
+      } while (status != ExecutorStatus::DBX_READ);
+
+      n_started_workers.fetch_add(1);
+      read_snapshot();
+      n_complete_workers.fetch_add(1);
+      // wait to DBX_READ
+      while (static_cast<ExecutorStatus>(worker_status.load()) ==
+             ExecutorStatus::DBX_READ) {
+        std::this_thread::yield();
+      }
+
+      n_started_workers.fetch_add(1);
+      reserve_transactions();
+      n_complete_workers.fetch_add(1);
+      // wait to DBX_COMMIT
+      while (static_cast<ExecutorStatus>(worker_status.load()) ==
+             ExecutorStatus::DBX_RESERVE) {
+        std::this_thread::yield();
+      }
+
+      n_started_workers.fetch_add(1);
+      commit_transactions();
+      n_complete_workers.fetch_add(1);
+      // wait to DBX_COMMIT
+      while (static_cast<ExecutorStatus>(worker_status.load()) ==
+             ExecutorStatus::DBX_COMMIT) {
+        std::this_thread::yield();
+      }
+    }
+  }
+
+  void read_snapshot() {
+    // load epoch
+    auto cur_epoch = epoch.load();
+    for (auto i = id; i < transactions.size(); i += context.worker_num) {
+
+      // if not null, then it's an aborted transaction from last batch.
+      // reset it.
+      // else generate a new transaction.
+
+      if (transactions[i] != nullptr) {
+        transactions[i]->reset();
+      } else {
+        auto partition_id = random.uniform_dist(0, context.partition_num - 1);
+        transactions[i] =
+            workload.next_transaction(context, partition_id, storages[i]);
+      }
+      transactions[i]->set_epoch(cur_epoch);
+      transactions[i]->set_id(i + 1); // tid starts from 1
+      setupHandlers(*transactions[i]);
+
+      // run transactions
+      auto result = transactions[i]->execute(id);
+      n_network_size.fetch_add(transactions[i]->network_size);
+      if (result == TransactionResult::ABORT_NORETRY) {
+        transactions[i]->abort_no_retry = true;
+      }
+    }
+  }
+
+  void reserve_transactions() {
+    for (auto k = id; k < transactions.size(); k += context.worker_num) {
+      // reserve reads and writes
+      const std::vector<DBXRWKey> &readSet = transactions[k]->readSet;
+      const std::vector<DBXRWKey> &writeSet = transactions[k]->writeSet;
+
+      // reserve reads;
+      for (std::size_t i = 0u; i < readSet.size(); i++) {
+        const DBXRWKey &readKey = readSet[i];
+        if (readKey.get_local_index_read_bit()) {
+          continue;
+        }
+
+        auto tableId = readKey.get_table_id();
+        auto partitionId = readKey.get_partition_id();
+        // assume a single node db
+        // TODO: change it to partitioned db later on
+        CHECK(partitioner->has_master_partition(partitionId));
+
+        auto table = db.find_table(tableId, partitionId);
+        std::atomic<uint64_t> &tid = table->search_metadata(readKey.get_key());
+        DBXHelper::reserve_read(tid, transactions[k]->epoch,
+                                transactions[k]->id);
+      }
+
+      // reserve writes
+      for (std::size_t i = 0u; i < writeSet.size(); i++) {
+        const DBXRWKey &writeKey = writeSet[i];
+        auto tableId = writeKey.get_table_id();
+        auto partitionId = writeKey.get_partition_id();
+        // assume a single node db
+        // TODO: change it to partitioned db later on
+        CHECK(partitioner->has_master_partition(partitionId));
+
+        auto table = db.find_table(tableId, partitionId);
+        std::atomic<uint64_t> &tid = table->search_metadata(writeKey.get_key());
+        DBXHelper::reserve_write(tid, transactions[k]->epoch,
+                                 transactions[k]->id);
+
+        // LOG(INFO) << "write key: " << *((int*)writeKey.get_key()) << " wts: "
+        // << DBXHelper::get_wts(tid.load()) << " rts: " <<
+        // DBXHelper::get_rts(tid.load()) << " epoch: " <<
+        // DBXHelper::get_epoch(tid.load());
+      }
+    }
+  }
+
+  void analyze_dependency(TransactionType &txn, bool &waw, bool &war,
+                          bool &raw) {
+
+    waw = false;
+    war = false;
+    raw = false;
+
+    const std::vector<DBXRWKey> &readSet = txn.readSet;
+    const std::vector<DBXRWKey> &writeSet = txn.writeSet;
+
+    // analyze raw
+
+    for (std::size_t i = 0u; i < readSet.size(); i++) {
+      const DBXRWKey &readKey = readSet[i];
+      if (readKey.get_local_index_read_bit()) {
+        continue;
+      }
+
+      auto tableId = readKey.get_table_id();
+      auto partitionId = readKey.get_partition_id();
+      // assume a single node db
+      // TODO: change it to partitioned db later on
+      CHECK(partitioner->has_master_partition(partitionId));
+
+      auto table = db.find_table(tableId, partitionId);
+      uint64_t tid = table->search_metadata(readKey.get_key()).load();
+      uint64_t epoch = DBXHelper::get_epoch(tid);
+      uint64_t wts = DBXHelper::get_wts(tid);
+      if (epoch == txn.epoch && wts < txn.id && wts != 0) {
+        raw = true;
+        break;
+      }
+    }
+
+    // analyze war and waw
+
+    for (std::size_t i = 0u; i < writeSet.size(); i++) {
+      const DBXRWKey &writeKey = writeSet[i];
+
+      auto tableId = writeKey.get_table_id();
+      auto partitionId = writeKey.get_partition_id();
+      // assume a single node db
+      // TODO: change it to partitioned db later on
+      CHECK(partitioner->has_master_partition(partitionId));
+
+      auto table = db.find_table(tableId, partitionId);
+      uint64_t tid = table->search_metadata(writeKey.get_key()).load();
+      uint64_t epoch = DBXHelper::get_epoch(tid);
+      uint64_t rts = DBXHelper::get_rts(tid);
+      uint64_t wts = DBXHelper::get_wts(tid);
+      if (epoch == txn.epoch && rts < txn.id && rts != 0) {
+        war = true;
+      }
+      if (epoch == txn.epoch && wts < txn.id && wts != 0) {
+        waw = true;
+      }
+    }
+  }
+
+  void commit_transactions() {
+    for (auto i = id; i < transactions.size(); i += context.worker_num) {
+      if (transactions[i]->abort_no_retry) {
+        n_abort_no_retry.fetch_add(1);
+        continue;
+      }
+
+      bool raw = false, war = false, waw = false;
+      analyze_dependency(*transactions[i], waw, war, raw);
+      if (waw) {
+        protocol.abort(*transactions[i], messages);
+        n_abort_lock.fetch_add(1);
+        continue;
+      }
+
+      if (war == false || raw == false) {
+        protocol.commit(*transactions[i], messages);
+        n_commit.fetch_add(1);
+      } else {
+        n_abort_lock.fetch_add(1);
+        protocol.abort(*transactions[i], messages);
+      }
+    }
+  }
+
+  void setupHandlers(TransactionType &txn) {
+
+    txn.readRequestHandler = [this](std::size_t table_id,
+                                    std::size_t partition_id, std::size_t tid,
+                                    uint32_t key_offset, const void *key,
+                                    void *value, bool local_index_read) {
+      // assume a single node db
+      // TODO: change it to partitioned db later on
+      CHECK(this->partitioner->has_master_partition(partition_id));
+      TableType *table = db.find_table(table_id, partition_id);
+      DBXHelper::read(table->search(key), value, table->value_size());
+    };
+
+    txn.remote_request_handler = [this]() { return this->process_request(); };
+    txn.message_flusher = [this]() { this->flush_messages(); };
+  }
 
   void onExit() override {}
 
@@ -154,7 +374,7 @@ private:
   const ContextType &context;
   std::vector<std::unique_ptr<TransactionType>> &transactions;
   std::vector<StorageType> &storages;
-  std::atomic<uint32_t> &worker_status;
+  std::atomic<uint32_t> &epoch, &worker_status;
   std::atomic<uint32_t> &n_complete_workers, &n_started_workers;
   std::unique_ptr<Partitioner> partitioner;
   WorkloadType workload;
@@ -162,8 +382,9 @@ private:
   ProtocolType protocol;
   std::unique_ptr<Delay> delay;
   std::vector<std::unique_ptr<Message>> messages;
-  std::vector<std::function<void(MessagePiece, Message &, TableType &,
-                                 TransactionType &)>>
+  std::vector<
+      std::function<void(MessagePiece, Message &, TableType &,
+                         std::vector<std::unique_ptr<TransactionType>> &)>>
       messageHandlers;
   LockfreeQueue<Message *> in_queue, out_queue;
 };

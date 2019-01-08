@@ -35,17 +35,21 @@ class DBXMessageHandler {
   using Transaction = DBXTransaction;
 
 public:
-  static void read_request_handler(MessagePiece inputPiece,
-                                   Message &responseMessage, Table &table,
-                                   Transaction &) {}
+  static void
+  read_request_handler(MessagePiece inputPiece, Message &responseMessage,
+                       Table &table,
+                       std::vector<std::unique_ptr<Transaction>> &txns) {}
 
   static std::vector<
-      std::function<void(MessagePiece, Message &, Table &, Transaction &)>>
+      std::function<void(MessagePiece, Message &, Table &,
+                         std::vector<std::unique_ptr<Transaction>> &)>>
   get_message_handlers() {
     std::vector<
-        std::function<void(MessagePiece, Message &, Table &, Transaction &)>>
+        std::function<void(MessagePiece, Message &, Table &,
+                           std::vector<std::unique_ptr<Transaction>> &)>>
         v;
     v.resize(static_cast<int>(ControlMessage::NFIELDS));
+    v.push_back(read_request_handler);
     return v;
   }
 };

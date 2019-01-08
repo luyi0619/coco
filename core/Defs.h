@@ -13,6 +13,9 @@ enum class ExecutorStatus {
   S_PHASE,
   Analysis,
   Execute,
+  DBX_READ,
+  DBX_RESERVE,
+  DBX_COMMIT,
   STOP,
   EXIT
 };

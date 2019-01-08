@@ -11,6 +11,7 @@
 #include "protocol/DBX/DBXHelper.h"
 #include "protocol/DBX/DBXTransaction.h"
 
+#include <atomic>
 #include <thread>
 #include <vector>
 
@@ -44,17 +45,121 @@ public:
 
     std::size_t n_workers = context.worker_num;
     std::size_t n_coordinators = context.coordinator_num;
+
+    while (!stopFlag.load()) {
+
+      // the coordinator on each machine first moves the aborted transactions
+      // from the last batch earlier to the next batch and set remaining
+      // transaction slots to null.
+
+      // then, each worker threads generates a transaction using the same seed.
+      epoch.fetch_add(1);
+      cleanup_batch();
+
+      // LOG(INFO) << "Seed: " << random.get_seed();
+      n_started_workers.store(0);
+      n_completed_workers.store(0);
+      signal_worker(ExecutorStatus::DBX_READ);
+      wait_all_workers_start();
+      wait_all_workers_finish();
+
+      // wait for all machines until they finish the DBX_READ phase.
+      wait4_ack();
+
+      // LOG(INFO) << "Seed: " << random.get_seed();
+      n_started_workers.store(0);
+      n_completed_workers.store(0);
+      signal_worker(ExecutorStatus::DBX_RESERVE);
+      wait_all_workers_start();
+      wait_all_workers_finish();
+
+      // wait for all machines until they finish the DBX_READ phase.
+      wait4_ack();
+
+      // Allow each worker to commit transactions
+      n_started_workers.store(0);
+      n_completed_workers.store(0);
+      signal_worker(ExecutorStatus::DBX_COMMIT);
+      wait_all_workers_start();
+      wait_all_workers_finish();
+      // wait for all machines until they finish the DBX_COMMIT phase.
+      wait4_ack();
+    }
+
+    signal_worker(ExecutorStatus::EXIT);
   }
 
   void non_coordinator_start() override {
 
     std::size_t n_workers = context.worker_num;
     std::size_t n_coordinators = context.coordinator_num;
+
+    for (;;) {
+      // LOG(INFO) << "Seed: " << random.get_seed();
+      ExecutorStatus status = wait4_signal();
+      if (status == ExecutorStatus::EXIT) {
+        set_worker_status(ExecutorStatus::EXIT);
+        break;
+      }
+
+      DCHECK(status == ExecutorStatus::DBX_READ);
+      // the coordinator on each machine first moves the aborted transactions
+      // from the last batch earlier to the next batch and set remaining
+      // transaction slots to null.
+
+      epoch.fetch_add(1);
+      cleanup_batch();
+
+      n_started_workers.store(0);
+      n_completed_workers.store(0);
+      set_worker_status(ExecutorStatus::DBX_READ);
+      wait_all_workers_start();
+      wait_all_workers_finish();
+
+      send_ack();
+
+      status = wait4_signal();
+      DCHECK(status == ExecutorStatus::DBX_RESERVE);
+
+      n_started_workers.store(0);
+      n_completed_workers.store(0);
+      set_worker_status(ExecutorStatus::DBX_RESERVE);
+      wait_all_workers_start();
+      wait_all_workers_finish();
+      send_ack();
+
+      status = wait4_signal();
+      DCHECK(status == ExecutorStatus::DBX_COMMIT);
+
+      n_started_workers.store(0);
+      n_completed_workers.store(0);
+      set_worker_status(ExecutorStatus::DBX_COMMIT);
+      wait_all_workers_start();
+      wait_all_workers_finish();
+      send_ack();
+    }
+  }
+
+  // move aborted - (abort_lock) - transactions earlier
+  void cleanup_batch() {
+    std::size_t it = 0;
+    for (auto i = 0u; i < transactions.size(); i++) {
+      if (transactions[i] == nullptr) {
+        break;
+      }
+      if (transactions[i]->abort_lock) {
+        transactions[it++] = std::move(transactions[i]);
+      }
+    }
+    for (auto i = 0u; i < transactions.size(); i++) {
+      transactions[i] = nullptr;
+    }
   }
 
 public:
   RandomType random;
   DatabaseType &db;
+  std::atomic<uint32_t> epoch;
   std::vector<StorageType> storages;
   std::vector<std::unique_ptr<TransactionType>> transactions;
 };
