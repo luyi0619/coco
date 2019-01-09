@@ -46,11 +46,13 @@ public:
               std::vector<std::unique_ptr<TransactionType>> &transactions,
               std::vector<StorageType> &storages, std::atomic<uint32_t> &epoch,
               std::atomic<uint32_t> &worker_status,
+              std::atomic<uint32_t> &total_abort,
               std::atomic<uint32_t> &n_complete_workers,
               std::atomic<uint32_t> &n_started_workers)
       : Worker(coordinator_id, id), db(db), context(context),
         transactions(transactions), storages(storages), epoch(epoch),
-        worker_status(worker_status), n_complete_workers(n_complete_workers),
+        worker_status(worker_status), total_abort(total_abort),
+        n_complete_workers(n_complete_workers),
         n_started_workers(n_started_workers),
         partitioner(PartitionerFactory::create_partitioner(
             context.partitioner, coordinator_id, context.coordinator_num)),
@@ -118,19 +120,21 @@ public:
   void read_snapshot() {
     // load epoch
     auto cur_epoch = epoch.load();
+    auto n_abort = total_abort.load();
     for (auto i = id; i < transactions.size(); i += context.worker_num) {
 
       // if not null, then it's an aborted transaction from last batch.
       // reset it.
       // else generate a new transaction.
 
-      if (transactions[i] != nullptr) {
-        transactions[i]->reset();
-      } else {
+      if (transactions[i] == nullptr || i >= n_abort) {
         auto partition_id = random.uniform_dist(0, context.partition_num - 1);
         transactions[i] =
             workload.next_transaction(context, partition_id, storages[i]);
+      } else {
+        transactions[i]->reset();
       }
+
       transactions[i]->set_epoch(cur_epoch);
       transactions[i]->set_id(i + 1); // tid starts from 1
       setupHandlers(*transactions[i]);
@@ -374,7 +378,7 @@ private:
   const ContextType &context;
   std::vector<std::unique_ptr<TransactionType>> &transactions;
   std::vector<StorageType> &storages;
-  std::atomic<uint32_t> &epoch, &worker_status;
+  std::atomic<uint32_t> &epoch, &worker_status, &total_abort;
   std::atomic<uint32_t> &n_complete_workers, &n_started_workers;
   std::unique_ptr<Partitioner> partitioner;
   WorkloadType workload;

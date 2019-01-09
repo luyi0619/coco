@@ -284,7 +284,8 @@ public:
         workers.push_back(std::make_shared<DBXExecutor<WorkloadType>>(
             coordinator_id, i, db, context, manager->transactions,
             manager->storages, manager->epoch, manager->worker_status,
-            manager->n_completed_workers, manager->n_started_workers));
+            manager->total_abort, manager->n_completed_workers,
+            manager->n_started_workers));
       }
 
       workers.push_back(manager);

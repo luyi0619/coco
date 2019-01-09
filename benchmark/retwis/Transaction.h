@@ -205,7 +205,7 @@ public:
 
     int retwisTableID = retwis::tableID;
 
-    for (auto i = 0u; i < query.N; i++) {
+    for (auto i = 0; i < query.N; i++) {
       auto key = query.KEY[i];
       storage.keys[i].KEY = key;
       this->search_for_read(retwisTableID, context.getPartitionID(key),

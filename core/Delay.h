@@ -21,7 +21,7 @@ public:
 
   virtual ~Delay() = default;
 
-  virtual uint64_t message_delay() const = 0;
+  virtual int64_t message_delay() const = 0;
 
   virtual bool delay_enabled() const = 0;
 
@@ -34,12 +34,14 @@ class SameDelay : public Delay {
 
 public:
   SameDelay(std::size_t coordinator_id, std::size_t coordinator_num,
-            uint64_t delay_time)
-      : Delay(coordinator_id, coordinator_num), delay_time(delay_time) {}
+            int64_t delay_time)
+      : Delay(coordinator_id, coordinator_num), delay_time(delay_time) {
+    DCHECK(delay_time >= 0);
+  }
 
   virtual ~SameDelay() = default;
 
-  uint64_t message_delay() const override { return delay_time; }
+  int64_t message_delay() const override { return delay_time; }
 
   bool delay_enabled() const override { return delay_time != 0; }
 
