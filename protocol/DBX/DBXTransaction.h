@@ -44,6 +44,8 @@ public:
 
   virtual TransactionResult execute(std::size_t worker_id) = 0;
 
+  virtual void reset_query() = 0;
+
   template <class KeyType, class ValueType>
   void search_local_index(std::size_t table_id, std::size_t partition_id,
                           const KeyType &key, ValueType &value) {

@@ -36,6 +36,7 @@ public:
                   Storage &storage)
       : Transaction(coordinator_id, partition_id, partitioner), db(db),
         context(context), random(random), storage(storage),
+        partition_id(partition_id),
         query(makeYCSBQuery<keys_num>()(context, partition_id, random)) {}
 
   virtual ~ReadModifyWrite() override = default;
@@ -95,11 +96,16 @@ public:
     return TransactionResult::READY_TO_COMMIT;
   }
 
+  void reset_query() override {
+    query = makeYCSBQuery<keys_num>()(context, partition_id, random);
+  }
+
 private:
   DatabaseType &db;
   const ContextType &context;
   RandomType &random;
   Storage &storage;
+  std::size_t partition_id;
   YCSBQuery<keys_num> query;
 };
 } // namespace ycsb

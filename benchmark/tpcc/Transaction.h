@@ -33,6 +33,7 @@ public:
            Partitioner &partitioner, Storage &storage)
       : Transaction(coordinator_id, partition_id, partitioner), db(db),
         context(context), random(random), storage(storage),
+        partition_id(partition_id),
         query(makeNewOrderQuery()(context, partition_id + 1, random)) {}
 
   virtual ~NewOrder() override = default;
@@ -257,11 +258,16 @@ public:
     return TransactionResult::READY_TO_COMMIT;
   }
 
+  void reset_query() override {
+    query = makeNewOrderQuery()(context, partition_id, random);
+  }
+
 private:
   DatabaseType &db;
   const ContextType &context;
   RandomType &random;
   Storage &storage;
+  std::size_t partition_id;
   NewOrderQuery query;
 };
 
@@ -279,6 +285,7 @@ public:
           Partitioner &partitioner, Storage &storage)
       : Transaction(coordinator_id, partition_id, partitioner), db(db),
         context(context), random(random), storage(storage),
+        partition_id(partition_id),
         query(makePaymentQuery()(context, partition_id + 1, random)) {}
 
   virtual ~Payment() override = default;
@@ -428,11 +435,16 @@ public:
     return TransactionResult::READY_TO_COMMIT;
   }
 
+  void reset_query() override {
+    query = makePaymentQuery()(context, partition_id, random);
+  }
+
 private:
   DatabaseType &db;
   const ContextType &context;
   RandomType &random;
   Storage &storage;
+  std::size_t partition_id;
   PaymentQuery query;
 };
 

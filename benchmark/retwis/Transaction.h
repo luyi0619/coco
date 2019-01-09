@@ -38,6 +38,7 @@ public:
           Partitioner &partitioner, Storage &storage)
       : Transaction(coordinator_id, partition_id, partitioner), db(db),
         context(context), random(random), storage(storage),
+        partition_id(partition_id),
         query(makeAddUserQuery()(context, partition_id, random)) {}
 
   virtual ~AddUser() override = default;
@@ -69,11 +70,16 @@ public:
     return TransactionResult::READY_TO_COMMIT;
   }
 
+  void reset_query() override {
+    query = makeAddUserQuery()(context, partition_id, random);
+  }
+
 private:
   DatabaseType &db;
   const ContextType &context;
   RandomType &random;
   Storage &storage;
+  std::size_t partition_id;
   AddUserQuery query;
 };
 
@@ -91,6 +97,7 @@ public:
                  RandomType &random, Partitioner &partitioner, Storage &storage)
       : Transaction(coordinator_id, partition_id, partitioner), db(db),
         context(context), random(random), storage(storage),
+        partition_id(partition_id),
         query(makeFollowUnfollowQuery()(context, partition_id, random)) {}
 
   virtual ~FollowUnfollow() override = default;
@@ -122,11 +129,16 @@ public:
     return TransactionResult::READY_TO_COMMIT;
   }
 
+  void reset_query() override {
+    query = makeFollowUnfollowQuery()(context, partition_id, random);
+  }
+
 private:
   DatabaseType &db;
   const ContextType &context;
   RandomType &random;
   Storage &storage;
+  std::size_t partition_id;
   FollowUnfollowQuery query;
 };
 
@@ -144,6 +156,7 @@ public:
             Partitioner &partitioner, Storage &storage)
       : Transaction(coordinator_id, partition_id, partitioner), db(db),
         context(context), random(random), storage(storage),
+        partition_id(partition_id),
         query(makePostTweetQuery()(context, partition_id, random)) {}
 
   virtual ~PostTweet() override = default;
@@ -175,11 +188,16 @@ public:
     return TransactionResult::READY_TO_COMMIT;
   }
 
+  void reset_query() override {
+    query = makePostTweetQuery()(context, partition_id, random);
+  }
+
 private:
   DatabaseType &db;
   const ContextType &context;
   RandomType &random;
   Storage &storage;
+  std::size_t partition_id;
   PostTweetQuery query;
 };
 
@@ -197,6 +215,7 @@ public:
               Partitioner &partitioner, Storage &storage)
       : Transaction(coordinator_id, partition_id, partitioner), db(db),
         context(context), random(random), storage(storage),
+        partition_id(partition_id),
         query(makeGetTimelineQuery()(context, partition_id, random)) {}
 
   virtual ~GetTimeline() override = default;
@@ -219,11 +238,16 @@ public:
     return TransactionResult::READY_TO_COMMIT;
   }
 
+  void reset_query() override {
+    query = makeGetTimelineQuery()(context, partition_id, random);
+  }
+
 private:
   DatabaseType &db;
   const ContextType &context;
   RandomType &random;
   Storage &storage;
+  std::size_t partition_id;
   GetTimelineQuery query;
 };
 

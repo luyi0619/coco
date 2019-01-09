@@ -48,8 +48,6 @@ public:
 
     while (!stopFlag.load()) {
 
-      auto t0 = std::chrono::steady_clock::now();
-
       // the coordinator on each machine first moves the aborted transactions
       // from the last batch earlier to the next batch and set remaining
       // transaction slots to null.
@@ -58,16 +56,12 @@ public:
       epoch.fetch_add(1);
       cleanup_batch();
 
-      auto t1 = std::chrono::steady_clock::now();
-
       // LOG(INFO) << "Seed: " << random.get_seed();
       n_started_workers.store(0);
       n_completed_workers.store(0);
       signal_worker(ExecutorStatus::DBX_READ);
       wait_all_workers_start();
       wait_all_workers_finish();
-
-      auto t2 = std::chrono::steady_clock::now();
 
       // wait for all machines until they finish the DBX_READ phase.
       wait4_ack();
@@ -79,8 +73,6 @@ public:
       wait_all_workers_start();
       wait_all_workers_finish();
 
-      auto t3 = std::chrono::steady_clock::now();
-
       // wait for all machines until they finish the DBX_READ phase.
       wait4_ack();
 
@@ -91,23 +83,8 @@ public:
       wait_all_workers_start();
       wait_all_workers_finish();
 
-      auto t4 = std::chrono::steady_clock::now();
       // wait for all machines until they finish the DBX_COMMIT phase.
       wait4_ack();
-
-      LOG(INFO)
-          << "t1-t0: "
-          << std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0)
-                 .count()
-          << " t2-t1: "
-          << std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1)
-                 .count()
-          << " t3-t2: "
-          << std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2)
-                 .count()
-          << " t4-t3: "
-          << std::chrono::duration_cast<std::chrono::microseconds>(t4 - t3)
-                 .count();
     }
 
     signal_worker(ExecutorStatus::EXIT);

@@ -123,9 +123,8 @@ public:
     auto n_abort = total_abort.load();
     for (auto i = id; i < transactions.size(); i += context.worker_num) {
 
-      // if not null, then it's an aborted transaction from last batch.
-      // reset it.
-      // else generate a new transaction.
+      // if null, generate a new transaction.
+      // else only reset the query
 
       if (transactions[i] == nullptr || i >= n_abort) {
         auto partition_id = random.uniform_dist(0, context.partition_num - 1);
