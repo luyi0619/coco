@@ -9,6 +9,7 @@
 #include "core/Manager.h"
 
 #include "benchmark/retwis/Workload.h"
+#include "benchmark/scaled_tpcc/Workload.h"
 #include "benchmark/tpcc/Workload.h"
 #include "benchmark/ycsb/Workload.h"
 
@@ -56,6 +57,12 @@ template <> class InferType<scar::tpcc::Context> {
 public:
   template <class Transaction>
   using WorkloadType = scar::tpcc::Workload<Transaction>;
+};
+
+template <> class InferType<scar::scaled_tpcc::Context> {
+public:
+  template <class Transaction>
+  using WorkloadType = scar::scaled_tpcc::Workload<Transaction>;
 };
 
 template <> class InferType<scar::ycsb::Context> {
