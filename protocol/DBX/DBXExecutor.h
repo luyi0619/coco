@@ -185,11 +185,6 @@ public:
         std::atomic<uint64_t> &tid = table->search_metadata(writeKey.get_key());
         DBXHelper::reserve_write(tid, transactions[k]->epoch,
                                  transactions[k]->id);
-
-        // LOG(INFO) << "write key: " << *((int*)writeKey.get_key()) << " wts: "
-        // << DBXHelper::get_wts(tid.load()) << " rts: " <<
-        // DBXHelper::get_rts(tid.load()) << " epoch: " <<
-        // DBXHelper::get_epoch(tid.load());
       }
     }
   }
@@ -260,15 +255,15 @@ public:
         continue;
       }
 
-      bool raw = false, war = false, waw = false;
-      analyze_dependency(*transactions[i], waw, war, raw);
-      if (waw) {
+      analyze_dependency(*transactions[i], transactions[i]->waw,
+                         transactions[i]->war, transactions[i]->raw);
+      if (transactions[i]->waw) {
         protocol.abort(*transactions[i], messages);
         n_abort_lock.fetch_add(1);
         continue;
       }
 
-      if (war == false || raw == false) {
+      if (transactions[i]->war == false || transactions[i]->raw == false) {
         protocol.commit(*transactions[i], messages);
         n_commit.fetch_add(1);
       } else {

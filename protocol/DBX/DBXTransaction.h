@@ -35,6 +35,9 @@ public:
     abort_lock = false;
     abort_no_retry = false;
     abort_read_validation = false;
+    waw = false;
+    war = false;
+    raw = false;
     pendingResponses = 0;
     network_size = 0;
     operation.clear();
@@ -153,6 +156,7 @@ public:
   std::size_t network_size;
 
   bool abort_lock, abort_no_retry, abort_read_validation;
+  bool waw, war, raw;
 
   // table id, partition id, key, value
   std::function<void(std::size_t, std::size_t, const void *, void *)>
