@@ -146,9 +146,9 @@ public:
     if (x <= context.paymentCrossPartitionProbability &&
         context.partition_num > 1) {
       // If x <= 15 a customer is selected from a random district number (C_D_ID
-      // is randomly selected within [1 .. 10]), and a random remote warehouse
-      // number (C_W_ID is randomly selected within the range of active
-      // warehouses (see Clause 4.2.2), and C_W_ID ≠ W_ID).
+      // is randomly selected within [1 .. context.n_district]), and a random
+      // remote warehouse number (C_W_ID is randomly selected within the range
+      // of active warehouses (see Clause 4.2.2), and C_W_ID ≠ W_ID).
 
       int32_t C_W_ID = W_ID;
 
@@ -157,7 +157,7 @@ public:
       }
 
       query.C_W_ID = C_W_ID;
-      query.C_D_ID = random.uniform_dist(1, 10);
+      query.C_D_ID = random.uniform_dist(1, context.n_district);
     } else {
       // If x > 15 a customer is selected from the selected district number
       // (C_D_ID = D_ID) and the home warehouse number (C_W_ID = W_ID).

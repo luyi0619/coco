@@ -379,7 +379,8 @@ private:
     Random random;
     TableType *table = tbl_district_vec[partitionID].get();
 
-    // For each row in the WAREHOUSE table, 10 rows in the DISTRICT table
+    // For each row in the WAREHOUSE table, context.n_district rows in the
+    // DISTRICT table
 
     for (int i = 1; i <= context.n_district; i++) {
 
@@ -407,10 +408,11 @@ private:
     Random random;
     TableType *table = tbl_customer_vec[partitionID].get();
 
-    // For each row in the WAREHOUSE table, 10 rows in the DISTRICT table
-    // For each row in the DISTRICT table, 3,000 rows in the CUSTOMER table
+    // For each row in the WAREHOUSE table, context.n_district rows in the
+    // DISTRICT table For each row in the DISTRICT table, 3,000 rows in the
+    // CUSTOMER table
 
-    for (int i = 1; i <= 10; i++) {
+    for (int i = 1; i <= context.n_district; i++) {
       for (int j = 1; j <= 3000; j++) {
 
         customer::key key;
@@ -467,8 +469,9 @@ private:
     Random random;
     TableType *table = tbl_customer_name_idx_vec[partitionID].get();
 
-    // For each row in the WAREHOUSE table, 10 rows in the DISTRICT table
-    // For each row in the DISTRICT table, 3,000 rows in the CUSTOMER table
+    // For each row in the WAREHOUSE table, context.n_district rows in the
+    // DISTRICT table For each row in the DISTRICT table, 3,000 rows in the
+    // CUSTOMER table
 
     TableType *customer_table = find_table(customer::tableID, partitionID);
 
@@ -476,7 +479,7 @@ private:
                        std::vector<std::pair<FixedString<16>, int32_t>>>
         last_name_to_first_names_and_c_ids;
 
-    for (int i = 1; i <= 10; i++) {
+    for (int i = 1; i <= context.n_district; i++) {
       for (int j = 1; j <= 3000; j++) {
         customer::key customer_key;
         customer_key.C_W_ID = partitionID + 1;
@@ -509,11 +512,12 @@ private:
     Random random;
     TableType *table = tbl_history_vec[partitionID].get();
 
-    // For each row in the WAREHOUSE table, 10 rows in the DISTRICT table
-    // For each row in the DISTRICT table, 3,000 rows in the CUSTOMER table
-    // For each row in the CUSTOMER table, 1 row in the HISTORY table
+    // For each row in the WAREHOUSE table, context.n_district rows in the
+    // DISTRICT table For each row in the DISTRICT table, 3,000 rows in the
+    // CUSTOMER table For each row in the CUSTOMER table, 1 row in the HISTORY
+    // table
 
-    for (int i = 1; i <= 10; i++) {
+    for (int i = 1; i <= context.n_district; i++) {
       for (int j = 1; j <= 3000; j++) {
 
         history::key key;
@@ -539,12 +543,12 @@ private:
     Random random;
     TableType *table = tbl_new_order_vec[partitionID].get();
 
-    // For each row in the WAREHOUSE table, 10 rows in the DISTRICT table
-    // For each row in the DISTRICT table, 3,000 rows in the ORDER table
-    // For each row in the ORDER table from 2101 to 3000, 1 row in the NEW_ORDER
-    // table
+    // For each row in the WAREHOUSE table, context.n_district rows in the
+    // DISTRICT table For each row in the DISTRICT table, 3,000 rows in the
+    // ORDER table For each row in the ORDER table from 2101 to 3000, 1 row in
+    // the NEW_ORDER table
 
-    for (int i = 1; i <= 10; i++) {
+    for (int i = 1; i <= context.n_district; i++) {
       for (int j = 2101; j <= 3000; j++) {
 
         new_order::key key;
@@ -564,8 +568,9 @@ private:
     Random random;
     TableType *table = tbl_order_vec[partitionID].get();
 
-    // For each row in the WAREHOUSE table, 10 rows in the DISTRICT table
-    // For each row in the DISTRICT table, 3,000 rows in the ORDER table
+    // For each row in the WAREHOUSE table, context.n_district rows in the
+    // DISTRICT table For each row in the DISTRICT table, 3,000 rows in the
+    // ORDER table
 
     std::vector<int> perm;
 
@@ -573,7 +578,7 @@ private:
       perm.push_back(i);
     }
 
-    for (int i = 1; i <= 10; i++) {
+    for (int i = 1; i <= context.n_district; i++) {
 
       std::random_shuffle(perm.begin(), perm.end());
 
@@ -606,13 +611,14 @@ private:
     Random random;
     TableType *table = tbl_order_line_vec[partitionID].get();
 
-    // For each row in the WAREHOUSE table, 10 rows in the DISTRICT table
-    // For each row in the DISTRICT table, 3,000 rows in the ORDER table
-    // For each row in the ORDER table, O_OL_CNT rows in the ORDER_LINE table
+    // For each row in the WAREHOUSE table, context.n_district rows in the
+    // DISTRICT table For each row in the DISTRICT table, 3,000 rows in the
+    // ORDER table For each row in the ORDER table, O_OL_CNT rows in the
+    // ORDER_LINE table
 
     TableType *order_table = find_table(order::tableID, partitionID);
 
-    for (int i = 1; i <= 10; i++) {
+    for (int i = 1; i <= context.n_district; i++) {
 
       order::key order_key;
       order_key.O_W_ID = partitionID + 1;
