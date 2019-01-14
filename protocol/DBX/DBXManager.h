@@ -62,17 +62,11 @@ public:
       signal_worker(ExecutorStatus::DBX_READ);
       wait_all_workers_start();
       wait_all_workers_finish();
-
-      // wait for all machines until they finish the DBX_READ phase.
-      wait4_ack();
-
-      // LOG(INFO) << "Seed: " << random.get_seed();
-      n_started_workers.store(0);
+      broadcast_stop();
+      wait4_stop(n_coordinators - 1);
       n_completed_workers.store(0);
-      signal_worker(ExecutorStatus::DBX_RESERVE);
-      wait_all_workers_start();
+      set_worker_status(ExecutorStatus::STOP);
       wait_all_workers_finish();
-
       // wait for all machines until they finish the DBX_READ phase.
       wait4_ack();
 
@@ -82,7 +76,11 @@ public:
       signal_worker(ExecutorStatus::DBX_COMMIT);
       wait_all_workers_start();
       wait_all_workers_finish();
-
+      broadcast_stop();
+      wait4_stop(n_coordinators - 1);
+      n_completed_workers.store(0);
+      set_worker_status(ExecutorStatus::STOP);
+      wait_all_workers_finish();
       // wait for all machines until they finish the DBX_COMMIT phase.
       wait4_ack();
     }
@@ -116,26 +114,24 @@ public:
       set_worker_status(ExecutorStatus::DBX_READ);
       wait_all_workers_start();
       wait_all_workers_finish();
-
-      send_ack();
-
-      status = wait4_signal();
-      DCHECK(status == ExecutorStatus::DBX_RESERVE);
-
-      n_started_workers.store(0);
+      broadcast_stop();
+      wait4_stop(n_coordinators - 1);
       n_completed_workers.store(0);
-      set_worker_status(ExecutorStatus::DBX_RESERVE);
-      wait_all_workers_start();
+      set_worker_status(ExecutorStatus::STOP);
       wait_all_workers_finish();
       send_ack();
 
       status = wait4_signal();
       DCHECK(status == ExecutorStatus::DBX_COMMIT);
-
       n_started_workers.store(0);
       n_completed_workers.store(0);
       set_worker_status(ExecutorStatus::DBX_COMMIT);
       wait_all_workers_start();
+      wait_all_workers_finish();
+      broadcast_stop();
+      wait4_stop(n_coordinators - 1);
+      n_completed_workers.store(0);
+      set_worker_status(ExecutorStatus::STOP);
       wait_all_workers_finish();
       send_ack();
     }

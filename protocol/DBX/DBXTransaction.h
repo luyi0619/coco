@@ -35,6 +35,7 @@ public:
     abort_lock = false;
     abort_no_retry = false;
     abort_read_validation = false;
+    execution_phase = false;
     waw = false;
     war = false;
     raw = false;
@@ -52,6 +53,10 @@ public:
   template <class KeyType, class ValueType>
   void search_local_index(std::size_t table_id, std::size_t partition_id,
                           const KeyType &key, ValueType &value) {
+    if (execution_phase) {
+      return;
+    }
+
     DBXRWKey readKey;
 
     readKey.set_table_id(table_id);
@@ -69,7 +74,9 @@ public:
   template <class KeyType, class ValueType>
   void search_for_read(std::size_t table_id, std::size_t partition_id,
                        const KeyType &key, ValueType &value) {
-
+    if (execution_phase) {
+      return;
+    }
     DBXRWKey readKey;
 
     readKey.set_table_id(table_id);
@@ -86,6 +93,9 @@ public:
   template <class KeyType, class ValueType>
   void search_for_update(std::size_t table_id, std::size_t partition_id,
                          const KeyType &key, ValueType &value) {
+    if (execution_phase) {
+      return;
+    }
     DBXRWKey readKey;
 
     readKey.set_table_id(table_id);
@@ -102,7 +112,9 @@ public:
   template <class KeyType, class ValueType>
   void update(std::size_t table_id, std::size_t partition_id,
               const KeyType &key, const ValueType &value) {
-
+    if (execution_phase) {
+      return;
+    }
     DBXRWKey writeKey;
 
     writeKey.set_table_id(table_id);
@@ -156,6 +168,7 @@ public:
   std::size_t network_size;
 
   bool abort_lock, abort_no_retry, abort_read_validation;
+  bool execution_phase;
   bool waw, war, raw;
 
   // table id, partition id, key, value

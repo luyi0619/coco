@@ -20,6 +20,7 @@ enum class DBXMessage {
   RESERVE_REQUEST,
   CHECK_REQUEST,
   CHECK_RESPONSE,
+  WRITE_REQUEST,
   NFIELDS
 };
 
@@ -92,6 +93,29 @@ public:
     encoder << message_piece_header;
     encoder.write_n_bytes(key, key_size);
     encoder << tid << epoch << is_write;
+    message.flush();
+    return message_size;
+  }
+
+  static std::size_t new_write_message(Message &message, Table &table,
+                                       const void *key, const void *value) {
+
+    /*
+     * The structure of a write request: (primary key, field value)
+     */
+
+    auto key_size = table.key_size();
+    auto field_size = table.field_size();
+
+    auto message_size = MessagePiece::get_header_size() + key_size + field_size;
+    auto message_piece_header = MessagePiece::construct_message_piece_header(
+        static_cast<uint32_t>(DBXMessage ::WRITE_REQUEST), message_size,
+        table.tableID(), table.partitionID());
+
+    Encoder encoder(message.data);
+    encoder << message_piece_header;
+    encoder.write_n_bytes(key, key_size);
+    table.serialize_value(encoder, value);
     message.flush();
     return message_size;
   }
@@ -368,6 +392,37 @@ public:
     txns[tid]->network_size += inputPiece.get_message_length();
   }
 
+  static void
+  write_request_handler(MessagePiece inputPiece, Message &responseMessage,
+                        Table &table,
+                        std::vector<std::unique_ptr<Transaction>> &txns) {
+    DCHECK(inputPiece.get_message_type() ==
+           static_cast<uint32_t>(DBXMessage::WRITE_REQUEST));
+    auto table_id = inputPiece.get_table_id();
+    auto partition_id = inputPiece.get_partition_id();
+    DCHECK(table_id == table.tableID());
+    DCHECK(partition_id == table.partitionID());
+    auto key_size = table.key_size();
+    auto field_size = table.field_size();
+
+    /*
+     * The structure of a write request: (primary key, field value)
+     * The structure of a write response: null
+     */
+
+    DCHECK(inputPiece.get_message_length() ==
+           MessagePiece::get_header_size() + key_size + field_size);
+
+    auto stringPiece = inputPiece.toStringPiece();
+
+    const void *key = stringPiece.data();
+    stringPiece.remove_prefix(key_size);
+    auto valueStringPiece = stringPiece;
+    stringPiece.remove_prefix(field_size);
+
+    table.deserialize_value(key, valueStringPiece);
+  }
+
   static std::vector<
       std::function<void(MessagePiece, Message &, Table &,
                          std::vector<std::unique_ptr<Transaction>> &)>>
@@ -382,6 +437,7 @@ public:
     v.push_back(reserve_request_handler);
     v.push_back(check_request_handler);
     v.push_back(check_response_handler);
+    v.push_back(write_request_handler);
     return v;
   }
 };

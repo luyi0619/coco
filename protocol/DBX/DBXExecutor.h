@@ -94,26 +94,26 @@ public:
       // wait to DBX_READ
       while (static_cast<ExecutorStatus>(worker_status.load()) ==
              ExecutorStatus::DBX_READ) {
-        std::this_thread::yield();
+        process_request();
       }
-
-      n_started_workers.fetch_add(1);
-      reserve_transactions();
+      process_request();
       n_complete_workers.fetch_add(1);
-      // wait to DBX_COMMIT
-      while (static_cast<ExecutorStatus>(worker_status.load()) ==
-             ExecutorStatus::DBX_RESERVE) {
+
+      // wait till DBX_COMMIT
+      while (static_cast<ExecutorStatus>(worker_status.load()) !=
+             ExecutorStatus::DBX_COMMIT) {
         std::this_thread::yield();
       }
-
       n_started_workers.fetch_add(1);
       commit_transactions();
       n_complete_workers.fetch_add(1);
       // wait to DBX_COMMIT
       while (static_cast<ExecutorStatus>(worker_status.load()) ==
              ExecutorStatus::DBX_COMMIT) {
-        std::this_thread::yield();
+        process_request();
       }
+      process_request();
+      n_complete_workers.fetch_add(1);
     }
   }
 
@@ -122,6 +122,8 @@ public:
     auto cur_epoch = epoch.load();
     auto n_abort = total_abort.load();
     for (auto i = id; i < transactions.size(); i += context.worker_num) {
+
+      process_request();
 
       // if null, generate a new transaction.
       // else only reset the query
@@ -136,6 +138,7 @@ public:
 
       transactions[i]->set_epoch(cur_epoch);
       transactions[i]->set_id(i + 1); // tid starts from 1
+      transactions[i]->execution_phase = false;
       setupHandlers(*transactions[i]);
 
       // run transactions
@@ -145,56 +148,75 @@ public:
         transactions[i]->abort_no_retry = true;
       }
     }
-  }
 
-  void reserve_transactions() {
-    for (auto k = id; k < transactions.size(); k += context.worker_num) {
-      // reserve reads and writes
-      const std::vector<DBXRWKey> &readSet = transactions[k]->readSet;
-      const std::vector<DBXRWKey> &writeSet = transactions[k]->writeSet;
+    // reserve
 
-      // reserve reads;
-      for (std::size_t i = 0u; i < readSet.size(); i++) {
-        const DBXRWKey &readKey = readSet[i];
-        if (readKey.get_local_index_read_bit()) {
-          continue;
-        }
+    for (auto i = id; i < transactions.size(); i += context.worker_num) {
 
-        auto tableId = readKey.get_table_id();
-        auto partitionId = readKey.get_partition_id();
-        // assume a single node db
-        // TODO: change it to partitioned db later on
-        CHECK(partitioner->has_master_partition(partitionId));
-
-        auto table = db.find_table(tableId, partitionId);
-        std::atomic<uint64_t> &tid = table->search_metadata(readKey.get_key());
-        DBXHelper::reserve_read(tid, transactions[k]->epoch,
-                                transactions[k]->id);
+      if (transactions[i]->abort_no_retry) {
+        continue;
       }
 
-      // reserve writes
-      for (std::size_t i = 0u; i < writeSet.size(); i++) {
-        const DBXRWKey &writeKey = writeSet[i];
-        auto tableId = writeKey.get_table_id();
-        auto partitionId = writeKey.get_partition_id();
-        // assume a single node db
-        // TODO: change it to partitioned db later on
-        CHECK(partitioner->has_master_partition(partitionId));
+      // wait till all reads are processed
+      while (transactions[i]->pendingResponses > 0) {
+        process_request();
+      }
 
-        auto table = db.find_table(tableId, partitionId);
+      transactions[i]->execution_phase = true;
+      // fill in writes in write set
+      transactions[i]->execute(id);
+
+      // start reservation
+      reserve_transaction(*transactions[i]);
+    }
+  }
+
+  void reserve_transaction(TransactionType &txn) {
+    const std::vector<DBXRWKey> &readSet = txn.readSet;
+    const std::vector<DBXRWKey> &writeSet = txn.writeSet;
+
+    // reserve reads;
+    for (std::size_t i = 0u; i < readSet.size(); i++) {
+      const DBXRWKey &readKey = readSet[i];
+      if (readKey.get_local_index_read_bit()) {
+        continue;
+      }
+
+      auto tableId = readKey.get_table_id();
+      auto partitionId = readKey.get_partition_id();
+      auto table = db.find_table(tableId, partitionId);
+      if (partitioner->has_master_partition(partitionId)) {
+        std::atomic<uint64_t> &tid = table->search_metadata(readKey.get_key());
+        DBXHelper::reserve_read(tid, txn.epoch, txn.id);
+      } else {
+        auto coordinatorID = this->partitioner->master_coordinator(partitionId);
+        txn.network_size += MessageFactoryType::new_reserve_message(
+            *(this->messages[coordinatorID]), *table, txn.id, readKey.get_key(),
+            txn.epoch, false);
+        txn.pendingResponses++;
+      }
+    }
+
+    // reserve writes
+    for (std::size_t i = 0u; i < writeSet.size(); i++) {
+      const DBXRWKey &writeKey = writeSet[i];
+      auto tableId = writeKey.get_table_id();
+      auto partitionId = writeKey.get_partition_id();
+      auto table = db.find_table(tableId, partitionId);
+      if (partitioner->has_master_partition(partitionId)) {
         std::atomic<uint64_t> &tid = table->search_metadata(writeKey.get_key());
-        DBXHelper::reserve_write(tid, transactions[k]->epoch,
-                                 transactions[k]->id);
+        DBXHelper::reserve_write(tid, txn.epoch, txn.id);
+      } else {
+        auto coordinatorID = this->partitioner->master_coordinator(partitionId);
+        txn.network_size += MessageFactoryType::new_reserve_message(
+            *(this->messages[coordinatorID]), *table, txn.id,
+            writeKey.get_key(), txn.epoch, true);
+        txn.pendingResponses++;
       }
     }
   }
 
-  void analyze_dependency(TransactionType &txn, bool &waw, bool &war,
-                          bool &raw) {
-
-    waw = false;
-    war = false;
-    raw = false;
+  void analyze_dependency(TransactionType &txn) {
 
     const std::vector<DBXRWKey> &readSet = txn.readSet;
     const std::vector<DBXRWKey> &writeSet = txn.writeSet;
@@ -209,17 +231,22 @@ public:
 
       auto tableId = readKey.get_table_id();
       auto partitionId = readKey.get_partition_id();
-      // assume a single node db
-      // TODO: change it to partitioned db later on
-      CHECK(partitioner->has_master_partition(partitionId));
-
       auto table = db.find_table(tableId, partitionId);
-      uint64_t tid = table->search_metadata(readKey.get_key()).load();
-      uint64_t epoch = DBXHelper::get_epoch(tid);
-      uint64_t wts = DBXHelper::get_wts(tid);
-      if (epoch == txn.epoch && wts < txn.id && wts != 0) {
-        raw = true;
-        break;
+
+      if (partitioner->has_master_partition(partitionId)) {
+        uint64_t tid = table->search_metadata(readKey.get_key()).load();
+        uint64_t epoch = DBXHelper::get_epoch(tid);
+        uint64_t wts = DBXHelper::get_wts(tid);
+        if (epoch == txn.epoch && wts < txn.id && wts != 0) {
+          txn.raw = true;
+          break;
+        }
+      } else {
+        auto coordinatorID = this->partitioner->master_coordinator(partitionId);
+        txn.network_size += MessageFactoryType::new_check_message(
+            *(this->messages[coordinatorID]), *table, txn.id, readKey.get_key(),
+            txn.epoch, false);
+        txn.pendingResponses++;
       }
     }
 
@@ -230,20 +257,25 @@ public:
 
       auto tableId = writeKey.get_table_id();
       auto partitionId = writeKey.get_partition_id();
-      // assume a single node db
-      // TODO: change it to partitioned db later on
-      CHECK(partitioner->has_master_partition(partitionId));
-
       auto table = db.find_table(tableId, partitionId);
-      uint64_t tid = table->search_metadata(writeKey.get_key()).load();
-      uint64_t epoch = DBXHelper::get_epoch(tid);
-      uint64_t rts = DBXHelper::get_rts(tid);
-      uint64_t wts = DBXHelper::get_wts(tid);
-      if (epoch == txn.epoch && rts < txn.id && rts != 0) {
-        war = true;
-      }
-      if (epoch == txn.epoch && wts < txn.id && wts != 0) {
-        waw = true;
+
+      if (partitioner->has_master_partition(partitionId)) {
+        uint64_t tid = table->search_metadata(writeKey.get_key()).load();
+        uint64_t epoch = DBXHelper::get_epoch(tid);
+        uint64_t rts = DBXHelper::get_rts(tid);
+        uint64_t wts = DBXHelper::get_wts(tid);
+        if (epoch == txn.epoch && rts < txn.id && rts != 0) {
+          txn.war = true;
+        }
+        if (epoch == txn.epoch && wts < txn.id && wts != 0) {
+          txn.waw = true;
+        }
+      } else {
+        auto coordinatorID = this->partitioner->master_coordinator(partitionId);
+        txn.network_size += MessageFactoryType::new_check_message(
+            *(this->messages[coordinatorID]), *table, txn.id,
+            writeKey.get_key(), txn.epoch, true);
+        txn.pendingResponses++;
       }
     }
   }
@@ -251,12 +283,23 @@ public:
   void commit_transactions() {
     for (auto i = id; i < transactions.size(); i += context.worker_num) {
       if (transactions[i]->abort_no_retry) {
+        continue;
+      }
+
+      analyze_dependency(*transactions[i]);
+    }
+
+    for (auto i = id; i < transactions.size(); i += context.worker_num) {
+      if (transactions[i]->abort_no_retry) {
         n_abort_no_retry.fetch_add(1);
         continue;
       }
 
-      analyze_dependency(*transactions[i], transactions[i]->waw,
-                         transactions[i]->war, transactions[i]->raw);
+      // wait till all checks are processed
+      while (transactions[i]->pendingResponses > 0) {
+        process_request();
+      }
+
       if (transactions[i]->waw) {
         protocol.abort(*transactions[i], messages);
         n_abort_lock.fetch_add(1);
@@ -275,16 +318,27 @@ public:
 
   void setupHandlers(TransactionType &txn) {
 
-    txn.readRequestHandler = [this](std::size_t table_id,
-                                    std::size_t partition_id, std::size_t tid,
-                                    uint32_t key_offset, const void *key,
-                                    void *value, bool local_index_read) {
-      // assume a single node db
-      // TODO: change it to partitioned db later on
-      CHECK(this->partitioner->has_master_partition(partition_id));
-      TableType *table = db.find_table(table_id, partition_id);
-      DBXHelper::read(table->search(key), value, table->value_size());
-    };
+    txn.readRequestHandler =
+        [this, &txn](std::size_t table_id, std::size_t partition_id,
+                     std::size_t tid, uint32_t key_offset, const void *key,
+                     void *value, bool local_index_read) {
+          bool local_read = false;
+
+          if (this->partitioner->has_master_partition(partition_id)) {
+            local_read = true;
+          }
+
+          TableType *table = db.find_table(table_id, partition_id);
+          if (local_read || local_index_read) {
+            DBXHelper::read(table->search(key), value, table->value_size());
+          } else {
+            auto coordinatorID =
+                this->partitioner->master_coordinator(partition_id);
+            txn.network_size += MessageFactoryType::new_search_message(
+                *(this->messages[coordinatorID]), *table, tid, key, key_offset);
+            txn.pendingResponses++;
+          }
+        };
 
     txn.remote_request_handler = [this]() { return this->process_request(); };
     txn.message_flusher = [this]() { this->flush_messages(); };
