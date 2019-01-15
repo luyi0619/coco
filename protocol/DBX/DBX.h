@@ -46,19 +46,20 @@ public:
       auto partitionId = writeKey.get_partition_id();
       auto table = db.find_table(tableId, partitionId);
 
-      // assume a single node db
-      // TODO: change it to partitioned db later on
-      CHECK(partitioner.has_master_partition(partitionId));
-
-      auto key = writeKey.get_key();
-      auto value = writeKey.get_value();
-      table->update(key, value);
+      if (partitioner.has_master_partition(partitionId)) {
+        auto key = writeKey.get_key();
+        auto value = writeKey.get_value();
+        table->update(key, value);
+      } else {
+        auto coordinatorID = partitioner.master_coordinator(partitionId);
+        txn.network_size += MessageFactoryType::new_write_message(
+            *messages[coordinatorID], *table, writeKey.get_key(),
+            writeKey.get_value());
+      }
     }
 
     return true;
   }
-
-  void sync_messages(TransactionType &txn) { txn.message_flusher(); }
 
 private:
   DatabaseType &db;

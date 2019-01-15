@@ -121,6 +121,7 @@ public:
     // load epoch
     auto cur_epoch = epoch.load();
     auto n_abort = total_abort.load();
+    std::size_t count = 0;
     for (auto i = id; i < transactions.size(); i += context.worker_num) {
 
       process_request();
@@ -141,21 +142,37 @@ public:
       transactions[i]->execution_phase = false;
       setupHandlers(*transactions[i]);
 
+      if (!partitioner->has_master_partition(transactions[i]->partition_id)) {
+        continue;
+      }
+
+      count++;
+
       // run transactions
       auto result = transactions[i]->execute(id);
       n_network_size.fetch_add(transactions[i]->network_size);
       if (result == TransactionResult::ABORT_NORETRY) {
         transactions[i]->abort_no_retry = true;
       }
+
+      if (count % context.batch_flush == 0) {
+        flush_messages();
+      }
     }
+    flush_messages();
 
     // reserve
-
+    count = 0;
     for (auto i = id; i < transactions.size(); i += context.worker_num) {
+      if (!partitioner->has_master_partition(transactions[i]->partition_id)) {
+        continue;
+      }
 
       if (transactions[i]->abort_no_retry) {
         continue;
       }
+
+      count++;
 
       // wait till all reads are processed
       while (transactions[i]->pendingResponses > 0) {
@@ -168,7 +185,11 @@ public:
 
       // start reservation
       reserve_transaction(*transactions[i]);
+      if (count % context.batch_flush == 0) {
+        flush_messages();
+      }
     }
+    flush_messages();
   }
 
   void reserve_transaction(TransactionType &txn) {
@@ -193,7 +214,6 @@ public:
         txn.network_size += MessageFactoryType::new_reserve_message(
             *(this->messages[coordinatorID]), *table, txn.id, readKey.get_key(),
             txn.epoch, false);
-        txn.pendingResponses++;
       }
     }
 
@@ -211,7 +231,6 @@ public:
         txn.network_size += MessageFactoryType::new_reserve_message(
             *(this->messages[coordinatorID]), *table, txn.id,
             writeKey.get_key(), txn.epoch, true);
-        txn.pendingResponses++;
       }
     }
   }
@@ -281,19 +300,34 @@ public:
   }
 
   void commit_transactions() {
+    std::size_t count = 0;
     for (auto i = id; i < transactions.size(); i += context.worker_num) {
+      if (!partitioner->has_master_partition(transactions[i]->partition_id)) {
+        continue;
+      }
       if (transactions[i]->abort_no_retry) {
         continue;
       }
 
-      analyze_dependency(*transactions[i]);
-    }
+      count++;
 
+      analyze_dependency(*transactions[i]);
+      if (count % context.batch_flush == 0) {
+        flush_messages();
+      }
+    }
+    flush_messages();
+
+    count = 0;
     for (auto i = id; i < transactions.size(); i += context.worker_num) {
+      if (!partitioner->has_master_partition(transactions[i]->partition_id)) {
+        continue;
+      }
       if (transactions[i]->abort_no_retry) {
         n_abort_no_retry.fetch_add(1);
         continue;
       }
+      count++;
 
       // wait till all checks are processed
       while (transactions[i]->pendingResponses > 0) {
@@ -313,7 +347,12 @@ public:
         n_abort_lock.fetch_add(1);
         protocol.abort(*transactions[i], messages);
       }
+
+      if (count % context.batch_flush == 0) {
+        flush_messages();
+      }
     }
+    flush_messages();
   }
 
   void setupHandlers(TransactionType &txn) {

@@ -210,13 +210,14 @@ public:
     Decoder dec(stringPiece);
     dec >> tid >> key_offset;
 
-    DCHECK(tid < txns.size());
-    DCHECK(key_offset < txns[tid]->readSet.size());
+    DCHECK(tid > 0 && tid <= txns.size());
+    DCHECK(key_offset < txns[tid - 1]->readSet.size());
 
-    DBXRWKey &readKey = txns[tid]->readSet[key_offset];
+    DBXRWKey &readKey = txns[tid - 1]->readSet[key_offset];
+    dec = Decoder(inputPiece.toStringPiece());
     dec.read_n_bytes(readKey.get_value(), value_size);
-    txns[tid]->pendingResponses--;
-    txns[tid]->network_size += inputPiece.get_message_length();
+    txns[tid - 1]->pendingResponses--;
+    txns[tid - 1]->network_size += inputPiece.get_message_length();
   }
 
   static void
@@ -345,13 +346,11 @@ public:
                          std::vector<std::unique_ptr<Transaction>> &txns) {
 
     DCHECK(inputPiece.get_message_type() ==
-           static_cast<uint32_t>(DBXMessage::SEARCH_RESPONSE));
+           static_cast<uint32_t>(DBXMessage::CHECK_RESPONSE));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     DCHECK(table_id == table.tableID());
     DCHECK(partition_id == table.partitionID());
-    auto key_size = table.key_size();
-    auto value_size = table.value_size();
 
     /*
      * The structure of a check response: (tid, is_write, waw, war, raw)
@@ -365,31 +364,30 @@ public:
            MessagePiece::get_header_size() + sizeof(tid) + 4 * sizeof(bool));
 
     StringPiece stringPiece = inputPiece.toStringPiece();
-    stringPiece.remove_prefix(value_size);
     Decoder dec(stringPiece);
     dec >> tid >> is_write >> waw >> war >> raw;
 
-    DCHECK(tid < txns.size());
+    DCHECK(tid > 0 && tid <= txns.size());
 
     if (is_write) {
 
       // analyze war and waw
       if (war) {
-        txns[tid]->war = true;
+        txns[tid - 1]->war = true;
       }
       if (waw) {
-        txns[tid]->waw = true;
+        txns[tid - 1]->waw = true;
       }
 
     } else {
       // analyze raw
       if (raw) {
-        txns[tid]->raw = true;
+        txns[tid - 1]->raw = true;
       }
     }
 
-    txns[tid]->pendingResponses--;
-    txns[tid]->network_size += inputPiece.get_message_length();
+    txns[tid - 1]->pendingResponses--;
+    txns[tid - 1]->network_size += inputPiece.get_message_length();
   }
 
   static void
