@@ -197,8 +197,6 @@ public:
     // setup handlers for execution
     setup_execute_handlers(txn);
     txn.execution_phase = true;
-
-    n_commit.fetch_add(1);
   }
 
   void analyze_active_coordinator(TransactionType &transaction) {
@@ -268,6 +266,7 @@ public:
         if (grant_lock) {
           auto worker = get_available_worker(request_id++);
           all_executors[worker]->transaction_queue.push(transactions[i].get());
+          n_commit.fetch_add(1);
         }
       }
     }

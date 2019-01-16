@@ -36,6 +36,7 @@ public:
     abort_read_validation = false;
     si_in_serializable = false;
     local_validated = false;
+    execution_phase = true;
     operation.clear();
     readSet.clear();
     writeSet.clear();
@@ -166,6 +167,7 @@ public:
   std::size_t network_size;
   uint64_t commit_rts, commit_wts;
   bool abort_lock, abort_read_validation, local_validated, si_in_serializable;
+  bool execution_phase;
 
   // table id, partition id, offset, key, value, local index read?
   std::function<uint64_t(std::size_t, std::size_t, uint32_t, const void *,

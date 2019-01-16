@@ -197,62 +197,64 @@ public:
                 << storage.stock_values[i].S_REMOTE_CNT;
       }
 
-      float OL_AMOUNT = I_PRICE * OL_QUANTITY;
-      storage.order_line_keys[i] =
-          order_line::key(W_ID, D_ID, D_NEXT_O_ID, i + 1);
+      if (this->execution_phase) {
+        float OL_AMOUNT = I_PRICE * OL_QUANTITY;
+        storage.order_line_keys[i] =
+            order_line::key(W_ID, D_ID, D_NEXT_O_ID, i + 1);
 
-      storage.order_line_values[i].OL_I_ID = OL_I_ID;
-      storage.order_line_values[i].OL_SUPPLY_W_ID = OL_SUPPLY_W_ID;
-      storage.order_line_values[i].OL_DELIVERY_D = 0;
-      storage.order_line_values[i].OL_QUANTITY = OL_QUANTITY;
-      storage.order_line_values[i].OL_AMOUNT = OL_AMOUNT;
+        storage.order_line_values[i].OL_I_ID = OL_I_ID;
+        storage.order_line_values[i].OL_SUPPLY_W_ID = OL_SUPPLY_W_ID;
+        storage.order_line_values[i].OL_DELIVERY_D = 0;
+        storage.order_line_values[i].OL_QUANTITY = OL_QUANTITY;
+        storage.order_line_values[i].OL_AMOUNT = OL_AMOUNT;
 
-      switch (D_ID) {
-      case 1:
-        storage.order_line_values[i].OL_DIST_INFO =
-            storage.stock_values[i].S_DIST_01;
-        break;
-      case 2:
-        storage.order_line_values[i].OL_DIST_INFO =
-            storage.stock_values[i].S_DIST_02;
-        break;
-      case 3:
-        storage.order_line_values[i].OL_DIST_INFO =
-            storage.stock_values[i].S_DIST_03;
-        break;
-      case 4:
-        storage.order_line_values[i].OL_DIST_INFO =
-            storage.stock_values[i].S_DIST_04;
-        break;
-      case 5:
-        storage.order_line_values[i].OL_DIST_INFO =
-            storage.stock_values[i].S_DIST_05;
-        break;
-      case 6:
-        storage.order_line_values[i].OL_DIST_INFO =
-            storage.stock_values[i].S_DIST_06;
-        break;
-      case 7:
-        storage.order_line_values[i].OL_DIST_INFO =
-            storage.stock_values[i].S_DIST_07;
-        break;
-      case 8:
-        storage.order_line_values[i].OL_DIST_INFO =
-            storage.stock_values[i].S_DIST_08;
-        break;
-      case 9:
-        storage.order_line_values[i].OL_DIST_INFO =
-            storage.stock_values[i].S_DIST_09;
-        break;
-      case 10:
-        storage.order_line_values[i].OL_DIST_INFO =
-            storage.stock_values[i].S_DIST_10;
-        break;
-      default:
-        DCHECK(false);
-        break;
+        switch (D_ID) {
+        case 1:
+          storage.order_line_values[i].OL_DIST_INFO =
+              storage.stock_values[i].S_DIST_01;
+          break;
+        case 2:
+          storage.order_line_values[i].OL_DIST_INFO =
+              storage.stock_values[i].S_DIST_02;
+          break;
+        case 3:
+          storage.order_line_values[i].OL_DIST_INFO =
+              storage.stock_values[i].S_DIST_03;
+          break;
+        case 4:
+          storage.order_line_values[i].OL_DIST_INFO =
+              storage.stock_values[i].S_DIST_04;
+          break;
+        case 5:
+          storage.order_line_values[i].OL_DIST_INFO =
+              storage.stock_values[i].S_DIST_05;
+          break;
+        case 6:
+          storage.order_line_values[i].OL_DIST_INFO =
+              storage.stock_values[i].S_DIST_06;
+          break;
+        case 7:
+          storage.order_line_values[i].OL_DIST_INFO =
+              storage.stock_values[i].S_DIST_07;
+          break;
+        case 8:
+          storage.order_line_values[i].OL_DIST_INFO =
+              storage.stock_values[i].S_DIST_08;
+          break;
+        case 9:
+          storage.order_line_values[i].OL_DIST_INFO =
+              storage.stock_values[i].S_DIST_09;
+          break;
+        case 10:
+          storage.order_line_values[i].OL_DIST_INFO =
+              storage.stock_values[i].S_DIST_10;
+          break;
+        default:
+          DCHECK(false);
+          break;
+        }
+        total_amount += OL_AMOUNT * (1 - C_DISCOUNT) * (1 + W_TAX + D_TAX);
       }
-      total_amount += OL_AMOUNT * (1 - C_DISCOUNT) * (1 + W_TAX + D_TAX);
     }
 
     return TransactionResult::READY_TO_COMMIT;
@@ -372,39 +374,40 @@ public:
 
     char C_DATA[501];
     int total_written = 0;
+    if (this->execution_phase) {
+      if (storage.customer_value.C_CREDIT == "BC") {
+        int written;
 
-    if (storage.customer_value.C_CREDIT == "BC") {
-      int written;
+        written = std::sprintf(C_DATA + total_written, "%d ", C_ID);
+        total_written += written;
 
-      written = std::sprintf(C_DATA + total_written, "%d ", C_ID);
-      total_written += written;
+        written = std::sprintf(C_DATA + total_written, "%d ", C_D_ID);
+        total_written += written;
 
-      written = std::sprintf(C_DATA + total_written, "%d ", C_D_ID);
-      total_written += written;
+        written = std::sprintf(C_DATA + total_written, "%d ", C_W_ID);
+        total_written += written;
 
-      written = std::sprintf(C_DATA + total_written, "%d ", C_W_ID);
-      total_written += written;
+        written = std::sprintf(C_DATA + total_written, "%d ", D_ID);
+        total_written += written;
 
-      written = std::sprintf(C_DATA + total_written, "%d ", D_ID);
-      total_written += written;
+        written = std::sprintf(C_DATA + total_written, "%d ", W_ID);
+        total_written += written;
 
-      written = std::sprintf(C_DATA + total_written, "%d ", W_ID);
-      total_written += written;
+        written = std::sprintf(C_DATA + total_written, "%.2f ", H_AMOUNT);
+        total_written += written;
 
-      written = std::sprintf(C_DATA + total_written, "%.2f ", H_AMOUNT);
-      total_written += written;
+        const char *old_C_DATA = storage.customer_value.C_DATA.c_str();
 
-      const char *old_C_DATA = storage.customer_value.C_DATA.c_str();
+        std::memcpy(C_DATA + total_written, old_C_DATA, 500 - total_written);
+        C_DATA[500] = 0;
 
-      std::memcpy(C_DATA + total_written, old_C_DATA, 500 - total_written);
-      C_DATA[500] = 0;
+        storage.customer_value.C_DATA.assign(C_DATA);
+      }
 
-      storage.customer_value.C_DATA.assign(C_DATA);
+      storage.customer_value.C_BALANCE -= H_AMOUNT;
+      storage.customer_value.C_YTD_PAYMENT += H_AMOUNT;
+      storage.customer_value.C_PAYMENT_CNT += 1;
     }
-
-    storage.customer_value.C_BALANCE -= H_AMOUNT;
-    storage.customer_value.C_YTD_PAYMENT += H_AMOUNT;
-    storage.customer_value.C_PAYMENT_CNT += 1;
 
     this->update(customerTableID, C_W_ID - 1, storage.customer_key,
                  storage.customer_value);
@@ -422,16 +425,17 @@ public:
 
     char H_DATA[25];
     int written;
+    if (this->execution_phase) {
+      written = std::sprintf(H_DATA, "%s    %s",
+                             storage.warehouse_value.W_NAME.c_str(),
+                             storage.district_value.D_NAME.c_str());
+      H_DATA[written] = 0;
 
-    written =
-        std::sprintf(H_DATA, "%s    %s", storage.warehouse_value.W_NAME.c_str(),
-                     storage.district_value.D_NAME.c_str());
-    H_DATA[written] = 0;
-
-    storage.h_key = history::key(W_ID, D_ID, C_W_ID, C_D_ID, C_ID, Time::now());
-    storage.h_value.H_AMOUNT = H_AMOUNT;
-    storage.h_value.H_DATA.assign(H_DATA, written);
-
+      storage.h_key =
+          history::key(W_ID, D_ID, C_W_ID, C_D_ID, C_ID, Time::now());
+      storage.h_value.H_AMOUNT = H_AMOUNT;
+      storage.h_value.H_DATA.assign(H_DATA, written);
+    }
     return TransactionResult::READY_TO_COMMIT;
   }
 

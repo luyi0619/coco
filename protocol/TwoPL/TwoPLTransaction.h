@@ -36,6 +36,7 @@ public:
     abort_read_validation = false;
     local_validated = false;
     si_in_serializable = false;
+    execution_phase = true;
     operation.clear();
     readSet.clear();
     writeSet.clear();
@@ -194,6 +195,7 @@ public:
   std::size_t pendingResponses;
   std::size_t network_size;
   bool abort_lock, abort_read_validation, local_validated, si_in_serializable;
+  bool execution_phase;
 
   // table id, partition id, key, value, local_index_read?, write_lock?,
   // success?, remote?

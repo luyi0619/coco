@@ -68,26 +68,29 @@ public:
     for (auto i = 0u; i < keys_num; i++) {
       auto key = query.Y_KEY[i];
       if (query.UPDATE[i]) {
-        storage.ycsb_values[i].Y_F01.assign(
-            random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        storage.ycsb_values[i].Y_F02.assign(
-            random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        storage.ycsb_values[i].Y_F03.assign(
-            random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        storage.ycsb_values[i].Y_F04.assign(
-            random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        storage.ycsb_values[i].Y_F05.assign(
-            random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        storage.ycsb_values[i].Y_F06.assign(
-            random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        storage.ycsb_values[i].Y_F07.assign(
-            random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        storage.ycsb_values[i].Y_F08.assign(
-            random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        storage.ycsb_values[i].Y_F09.assign(
-            random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
-        storage.ycsb_values[i].Y_F10.assign(
-            random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
+
+        if (this->execution_phase) {
+          storage.ycsb_values[i].Y_F01.assign(
+              random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
+          storage.ycsb_values[i].Y_F02.assign(
+              random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
+          storage.ycsb_values[i].Y_F03.assign(
+              random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
+          storage.ycsb_values[i].Y_F04.assign(
+              random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
+          storage.ycsb_values[i].Y_F05.assign(
+              random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
+          storage.ycsb_values[i].Y_F06.assign(
+              random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
+          storage.ycsb_values[i].Y_F07.assign(
+              random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
+          storage.ycsb_values[i].Y_F08.assign(
+              random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
+          storage.ycsb_values[i].Y_F09.assign(
+              random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
+          storage.ycsb_values[i].Y_F10.assign(
+              random.a_string(YCSB_FIELD_SIZE, YCSB_FIELD_SIZE));
+        }
 
         this->update(ycsbTableID, context.getPartitionID(key),
                      storage.ycsb_keys[i], storage.ycsb_values[i]);
