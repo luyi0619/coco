@@ -160,6 +160,8 @@ public:
     return false;
   }
 
+  bool is_read_only() { return writeSet.size() == 0; }
+
 public:
   std::size_t coordinator_id, partition_id, id;
   uint32_t epoch;

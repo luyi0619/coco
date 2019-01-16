@@ -25,6 +25,8 @@ DEFINE_bool(sleep_on_retry, true, "sleep when retry aborted transactions");
 DEFINE_bool(read_on_replica, false, "read from replicas");
 DEFINE_bool(local_validation, false, "local validation");
 DEFINE_bool(rts_sync, false, "rts sync");
+DEFINE_bool(dbx_read_only, true, "dbx read only optimization");
+DEFINE_bool(dbx_reordering, true, "dbx reordering optimization");
 DEFINE_int32(cross_ratio, 0, "cross partition transaction ratio");
 DEFINE_int32(read_only_ratio, 80, "read only transaction ratio");
 DEFINE_int32(delay, 0, "delay time in us.");
@@ -60,6 +62,8 @@ int main(int argc, char *argv[]) {
   context.read_on_replica = FLAGS_read_on_replica;
   context.local_validation = FLAGS_local_validation;
   context.rts_sync = FLAGS_rts_sync;
+  context.dbx_read_only_optmization = FLAGS_dbx_read_only;
+  context.dbx_reordering_optmization = FLAGS_dbx_reordering;
   context.crossPartitionProbability = FLAGS_cross_ratio;
   context.readOnlyTransaction = FLAGS_read_only_ratio;
   context.delay_time = FLAGS_delay;

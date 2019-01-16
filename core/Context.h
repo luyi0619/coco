@@ -16,7 +16,7 @@ public:
   std::string protocol;
   std::string replica_group;
   std::string lock_manager;
-  std::size_t batch_size = 240; // rstore or calvin batch size
+  std::size_t batch_size = 240; // rstore, calvin, dbx batch size
   std::size_t batch_flush = 10;
   std::size_t group_time = 40; // ms
   std::size_t sleep_time = 50; // us
@@ -28,6 +28,8 @@ public:
   bool local_validation = false;
   bool rts_sync = false;
   bool sleep_on_retry = true;
+  bool dbx_read_only_optmization = true;
+  bool dbx_reordering_optmization = true;
   bool operation_replication = false;
 };
 } // namespace scar

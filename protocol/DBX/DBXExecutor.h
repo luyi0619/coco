@@ -193,6 +193,11 @@ public:
   }
 
   void reserve_transaction(TransactionType &txn) {
+
+    if (context.dbx_read_only_optmization && txn.is_read_only()) {
+      return;
+    }
+
     const std::vector<DBXRWKey> &readSet = txn.readSet;
     const std::vector<DBXRWKey> &writeSet = txn.writeSet;
 
@@ -340,12 +345,22 @@ public:
         continue;
       }
 
-      if (transactions[i]->war == false || transactions[i]->raw == false) {
-        protocol.commit(*transactions[i], messages);
-        n_commit.fetch_add(1);
+      if (context.dbx_reordering_optmization) {
+        if (transactions[i]->war == false || transactions[i]->raw == false) {
+          protocol.commit(*transactions[i], messages);
+          n_commit.fetch_add(1);
+        } else {
+          n_abort_lock.fetch_add(1);
+          protocol.abort(*transactions[i], messages);
+        }
       } else {
-        n_abort_lock.fetch_add(1);
-        protocol.abort(*transactions[i], messages);
+        if (transactions[i]->raw) {
+          n_abort_lock.fetch_add(1);
+          protocol.abort(*transactions[i], messages);
+        } else {
+          protocol.commit(*transactions[i], messages);
+          n_commit.fetch_add(1);
+        }
       }
 
       if (count % context.batch_flush == 0) {
