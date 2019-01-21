@@ -266,8 +266,8 @@ public:
         if (grant_lock) {
           auto worker = get_available_worker(request_id++);
           all_executors[worker]->transaction_queue.push(transactions[i].get());
-          n_commit.fetch_add(1);
         }
+        n_commit.fetch_add(1);
       }
     }
     set_lock_manager_bit(id);
