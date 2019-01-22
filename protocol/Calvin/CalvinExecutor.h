@@ -267,7 +267,15 @@ public:
           auto worker = get_available_worker(request_id++);
           all_executors[worker]->transaction_queue.push(transactions[i].get());
         }
-        n_commit.fetch_add(1);
+        // only count once
+        if(i % n_lock_manager == id){
+          n_commit.fetch_add(1);
+        }
+      }else {
+        // only count once
+        if(i % n_lock_manager == id){
+          n_abort_no_retry.fetch_add(1);
+        }
       }
     }
     set_lock_manager_bit(id);
@@ -297,7 +305,7 @@ public:
         protocol.abort(*transaction, lock_manager_id, n_lock_manager,
                        partitioner.replica_group_size);
       } else {
-        n_abort_no_retry.fetch_add(1);
+        CHECK(false) << "abort no retry transaction should not be scheduled.";
       }
     }
   }

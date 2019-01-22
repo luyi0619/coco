@@ -61,7 +61,7 @@ public:
       auto retwisTableID = retwis::tableID;
       tbl_retwis_vec.push_back(
           std::make_unique<
-              Table<997, retwis::key, retwis::value, MetaDataType>>(
+              Table<9973, retwis::key, retwis::value, MetaDataType>>(
               retwisTableID, partitionID));
     }
 
