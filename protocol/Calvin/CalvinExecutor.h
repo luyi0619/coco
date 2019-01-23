@@ -268,12 +268,12 @@ public:
           all_executors[worker]->transaction_queue.push(transactions[i].get());
         }
         // only count once
-        if(i % n_lock_manager == id){
+        if (i % n_lock_manager == id) {
           n_commit.fetch_add(1);
         }
-      }else {
+      } else {
         // only count once
-        if(i % n_lock_manager == id){
+        if (i % n_lock_manager == id) {
           n_abort_no_retry.fetch_add(1);
         }
       }
