@@ -24,6 +24,7 @@ DEFINE_bool(local_validation, false, "local validation");
 DEFINE_bool(rts_sync, false, "rts sync");
 DEFINE_bool(dbx_read_only, true, "dbx read only optimization");
 DEFINE_bool(dbx_reordering, true, "dbx reordering optimization");
+DEFINE_bool(dbx_si, false, "dbx snapshot isolation");
 DEFINE_string(query, "neworder", "scaled_tpcc query, mixed, neworder, payment");
 DEFINE_int32(neworder_dist, 10, "new order distributed.");
 DEFINE_int32(payment_dist, 15, "payment distributed.");
@@ -60,6 +61,7 @@ int main(int argc, char *argv[]) {
   context.rts_sync = FLAGS_rts_sync;
   context.dbx_read_only_optmization = FLAGS_dbx_read_only;
   context.dbx_reordering_optmization = FLAGS_dbx_reordering;
+  context.dbx_snapshot_isolation = FLAGS_dbx_si;
   context.sleep_on_retry = FLAGS_sleep_on_retry;
   context.partitioner = FLAGS_partitioner;
   context.delay_time = FLAGS_delay;

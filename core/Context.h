@@ -30,6 +30,7 @@ public:
   bool sleep_on_retry = true;
   bool dbx_read_only_optmization = true;
   bool dbx_reordering_optmization = true;
+  bool dbx_snapshot_isolation = false;
   bool operation_replication = false;
 };
 } // namespace scar

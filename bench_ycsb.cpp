@@ -23,6 +23,7 @@ DEFINE_bool(local_validation, false, "local validation");
 DEFINE_bool(rts_sync, false, "rts sync");
 DEFINE_bool(dbx_read_only, true, "dbx read only optimization");
 DEFINE_bool(dbx_reordering, true, "dbx reordering optimization");
+DEFINE_bool(dbx_si, false, "dbx snapshot isolation");
 DEFINE_int32(read_write_ratio, 80, "read write ratio");
 DEFINE_int32(read_only_ratio, 0, "read only transaction ratio");
 DEFINE_int32(cross_ratio, 0, "cross partition transaction ratio");
@@ -64,6 +65,7 @@ int main(int argc, char *argv[]) {
   context.rts_sync = FLAGS_rts_sync;
   context.dbx_read_only_optmization = FLAGS_dbx_read_only;
   context.dbx_reordering_optmization = FLAGS_dbx_reordering;
+  context.dbx_snapshot_isolation = FLAGS_dbx_si;
   context.crossPartitionProbability = FLAGS_cross_ratio;
   context.delay_time = FLAGS_delay;
   context.cdf_path = FLAGS_cdf_path;

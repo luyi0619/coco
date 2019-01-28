@@ -345,21 +345,26 @@ public:
         continue;
       }
 
-      if (context.dbx_reordering_optmization) {
-        if (transactions[i]->war == false || transactions[i]->raw == false) {
-          protocol.commit(*transactions[i], messages);
-          n_commit.fetch_add(1);
-        } else {
-          n_abort_lock.fetch_add(1);
-          protocol.abort(*transactions[i], messages);
-        }
+      if (context.dbx_snapshot_isolation) {
+        protocol.commit(*transactions[i], messages);
+        n_commit.fetch_add(1);
       } else {
-        if (transactions[i]->raw) {
-          n_abort_lock.fetch_add(1);
-          protocol.abort(*transactions[i], messages);
+        if (context.dbx_reordering_optmization) {
+          if (transactions[i]->war == false || transactions[i]->raw == false) {
+            protocol.commit(*transactions[i], messages);
+            n_commit.fetch_add(1);
+          } else {
+            n_abort_lock.fetch_add(1);
+            protocol.abort(*transactions[i], messages);
+          }
         } else {
-          protocol.commit(*transactions[i], messages);
-          n_commit.fetch_add(1);
+          if (transactions[i]->raw) {
+            n_abort_lock.fetch_add(1);
+            protocol.abort(*transactions[i], messages);
+          } else {
+            protocol.commit(*transactions[i], messages);
+            n_commit.fetch_add(1);
+          }
         }
       }
 
