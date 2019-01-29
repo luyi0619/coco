@@ -148,24 +148,17 @@ public:
 
     for (auto i = 0u; i < n; i++) {
 
-      signal_in_queue.wait_till_non_empty();
+      stop_in_queue.wait_till_non_empty();
 
-      std::unique_ptr<Message> message(signal_in_queue.front());
-      bool ok = signal_in_queue.pop();
+      std::unique_ptr<Message> message(stop_in_queue.front());
+      bool ok = stop_in_queue.pop();
       CHECK(ok);
 
       CHECK(message->get_message_count() == 1);
 
       MessagePiece messagePiece = *(message->begin());
       auto type = static_cast<ControlMessage>(messagePiece.get_message_type());
-      CHECK(type == ControlMessage::SIGNAL);
-
-      uint32_t status;
-      StringPiece stringPiece = messagePiece.toStringPiece();
-      Decoder dec(stringPiece);
-      dec >> status;
-
-      CHECK(status == static_cast<uint32_t>(ExecutorStatus::STOP));
+      CHECK(type == ControlMessage::STOP);
     }
   }
 
@@ -190,6 +183,7 @@ public:
 
       MessagePiece messagePiece = *(message->begin());
       auto type = static_cast<ControlMessage>(messagePiece.get_message_type());
+      CHECK(type == ControlMessage::ACK);
     }
   }
 
@@ -197,8 +191,7 @@ public:
 
     DCHECK(node_id != coordinator_id);
 
-    ControlMessageFactory::new_signal_message(
-        *messages[node_id], static_cast<uint32_t>(ExecutorStatus::STOP));
+    ControlMessageFactory::new_stop_message(*messages[node_id]);
 
     flush_messages();
   }
@@ -210,8 +203,7 @@ public:
     for (auto i = 0u; i < n_coordinators; i++) {
       if (i == coordinator_id)
         continue;
-      ControlMessageFactory::new_signal_message(
-          *messages[i], static_cast<uint32_t>(ExecutorStatus::STOP));
+      ControlMessageFactory::new_stop_message(*messages[i]);
     }
 
     flush_messages();
@@ -260,6 +252,9 @@ public:
       break;
     case ControlMessage::ACK:
       ack_in_queue.push(message);
+      break;
+    case ControlMessage::STOP:
+      stop_in_queue.push(message);
       break;
     default:
       CHECK(false) << "Message type: " << static_cast<uint32_t>(message_type);
@@ -317,7 +312,8 @@ private:
 protected:
   const Context &context;
   std::atomic<bool> &stopFlag;
-  LockfreeQueue<Message *> ack_in_queue, signal_in_queue, out_queue;
+  LockfreeQueue<Message *> ack_in_queue, signal_in_queue, stop_in_queue,
+      out_queue;
   std::vector<std::unique_ptr<Message>> messages;
 
 public:
