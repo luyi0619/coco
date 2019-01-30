@@ -15,8 +15,8 @@
 #include "benchmark/tpcc/Schema.h"
 #include "common/Operation.h"
 #include "common/Time.h"
+#include "core/Partitioner.h"
 #include "core/Table.h"
-
 #include <glog/logging.h>
 
 namespace scar {
@@ -87,17 +87,29 @@ public:
 
   template <class InitFunc>
   void initTables(const std::string &name, InitFunc initFunc,
-                  std::size_t partitionNum, std::size_t threadsNum) {
+                  std::size_t partitionNum, std::size_t threadsNum,
+                  Partitioner *partitioner) {
+
+    std::vector<int> all_parts;
+
+    for (auto i = 0u; i < partitionNum; i++) {
+      if (partitioner == nullptr || partitioner->has_master_partition(i)) {
+        all_parts.push_back(i);
+      }
+    }
+
     std::vector<std::thread> v;
     auto now = std::chrono::steady_clock::now();
+
     for (auto threadID = 0u; threadID < threadsNum; threadID++) {
       v.emplace_back([=]() {
-        for (auto partitionID = threadID; partitionID < partitionNum;
-             partitionID += threadsNum) {
+        for (auto i = threadID; i < all_parts.size(); i += threadsNum) {
+          auto partitionID = all_parts[i];
           initFunc(partitionID);
         }
       });
     }
+
     for (auto &t : v) {
       t.join();
     }
@@ -108,8 +120,14 @@ public:
               << " milliseconds.";
   }
 
-  void initialize(const Context &context, std::size_t partitionNum,
-                  std::size_t threadsNum) {
+  void initialize(const Context &context) {
+
+    std::size_t coordinator_id = context.coordinator_id;
+    std::size_t partitionNum = context.partition_num;
+    std::size_t threadsNum = context.worker_num;
+
+    auto partitioner = PartitionerFactory::create_partitioner(
+        context.partitioner, coordinator_id, context.coordinator_num);
 
     auto now = std::chrono::steady_clock::now();
 
@@ -203,35 +221,35 @@ public:
     using std::placeholders::_1;
     initTables("warehouse",
                [this](std::size_t partitionID) { warehouseInit(partitionID); },
-               partitionNum, threadsNum);
+               partitionNum, threadsNum, partitioner.get());
     initTables("district",
                [this](std::size_t partitionID) { districtInit(partitionID); },
-               partitionNum, threadsNum);
+               partitionNum, threadsNum, partitioner.get());
     initTables("customer",
                [this](std::size_t partitionID) { customerInit(partitionID); },
-               partitionNum, threadsNum);
+               partitionNum, threadsNum, partitioner.get());
     initTables(
         "customer_name_idx",
         [this](std::size_t partitionID) { customerNameIdxInit(partitionID); },
-        partitionNum, threadsNum);
+        partitionNum, threadsNum, partitioner.get());
     initTables("history",
                [this](std::size_t partitionID) { historyInit(partitionID); },
-               partitionNum, threadsNum);
+               partitionNum, threadsNum, partitioner.get());
     initTables("new_order",
                [this](std::size_t partitionID) { newOrderInit(partitionID); },
-               partitionNum, threadsNum);
+               partitionNum, threadsNum, partitioner.get());
     initTables("order",
                [this](std::size_t partitionID) { orderInit(partitionID); },
-               partitionNum, threadsNum);
+               partitionNum, threadsNum, partitioner.get());
     initTables("order_line",
                [this](std::size_t partitionID) { orderLineInit(partitionID); },
-               partitionNum, threadsNum);
+               partitionNum, threadsNum, partitioner.get());
     initTables("item",
-               [this](std::size_t partitionID) { itemInit(partitionID); }, 1,
-               1);
+               [this](std::size_t partitionID) { itemInit(partitionID); }, 1, 1,
+               nullptr);
     initTables("stock",
                [this](std::size_t partitionID) { stockInit(partitionID); },
-               partitionNum, threadsNum);
+               partitionNum, threadsNum, partitioner.get());
   }
 
   void apply_operation(const Operation &operation) {

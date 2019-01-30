@@ -8,6 +8,7 @@
 #include "benchmark/retwis/Random.h"
 #include "benchmark/retwis/Schema.h"
 #include "common/Operation.h"
+#include "core/Partitioner.h"
 #include "core/Table.h"
 #include <algorithm>
 #include <chrono>
@@ -33,13 +34,24 @@ public:
 
   template <class InitFunc>
   void initTables(const std::string &name, InitFunc initFunc,
-                  std::size_t partitionNum, std::size_t threadsNum) {
+                  std::size_t partitionNum, std::size_t threadsNum,
+                  Partitioner *partitioner) {
+
+    std::vector<int> all_parts;
+
+    for (auto i = 0u; i < partitionNum; i++) {
+      if (partitioner == nullptr || partitioner->has_master_partition(i)) {
+        all_parts.push_back(i);
+      }
+    }
+
     std::vector<std::thread> v;
     auto now = std::chrono::steady_clock::now();
+
     for (auto threadID = 0u; threadID < threadsNum; threadID++) {
       v.emplace_back([=]() {
-        for (auto partitionID = threadID; partitionID < partitionNum;
-             partitionID += threadsNum) {
+        for (auto i = threadID; i < all_parts.size(); i += threadsNum) {
+          auto partitionID = all_parts[i];
           initFunc(partitionID);
         }
       });
@@ -54,8 +66,14 @@ public:
               << " milliseconds.";
   }
 
-  void initialize(const Context &context, std::size_t partitionNum,
-                  std::size_t threadsNum) {
+  void initialize(const Context &context) {
+
+    std::size_t coordinator_id = context.coordinator_id;
+    std::size_t partitionNum = context.partition_num;
+    std::size_t threadsNum = context.worker_num;
+
+    auto partitioner = PartitionerFactory::create_partitioner(
+        context.partitioner, coordinator_id, context.coordinator_num);
 
     for (auto partitionID = 0u; partitionID < partitionNum; partitionID++) {
       auto retwisTableID = retwis::tableID;
@@ -78,7 +96,7 @@ public:
                [&context, this](std::size_t partitionID) {
                  retwisInit(context, partitionID);
                },
-               partitionNum, threadsNum);
+               partitionNum, threadsNum, partitioner.get());
   }
 
   void apply_operation(const Operation &operation) {

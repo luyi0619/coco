@@ -45,6 +45,7 @@ int main(int argc, char *argv[]) {
 
   int n = FLAGS_threads;
   scar::scaled_tpcc::Context context;
+  context.coordinator_id = FLAGS_id;
   context.protocol = FLAGS_protocol;
   context.coordinator_num = peers.size();
   context.batch_size = FLAGS_batch_size;
@@ -84,7 +85,7 @@ int main(int argc, char *argv[]) {
 
   using MetaDataType = std::atomic<uint64_t>;
   scar::scaled_tpcc::Database<MetaDataType> db;
-  db.initialize(context, context.partition_num, n);
+  db.initialize(context);
 
   auto c = std::make_unique<scar::Coordinator>(FLAGS_id, peers, db, context);
   c->connectToPeers();

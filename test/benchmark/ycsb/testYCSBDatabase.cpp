@@ -12,8 +12,10 @@ TEST(TestYCSBDatabase, TestBasic) {
   context.strategy = scar::ycsb::PartitionStrategy::ROUND_ROBIN;
   context.keysPerPartition = 20;
   context.keysPerTransaction = 10;
+  context.partition_num = 4;
+  context.worker_num = 4;
 
   scar::ycsb::Database<DataT> db;
-  db.initialize(context, 4, 4);
+  db.initialize(context);
   EXPECT_EQ(true, true);
 }

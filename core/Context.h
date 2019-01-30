@@ -10,6 +10,7 @@
 namespace scar {
 class Context {
 public:
+  std::size_t coordinator_id = 0;
   std::size_t partition_num = 0;
   std::size_t worker_num = 0;
   std::size_t coordinator_num = 0;
