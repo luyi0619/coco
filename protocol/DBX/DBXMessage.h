@@ -29,16 +29,18 @@ class DBXMessageFactory {
 
 public:
   static std::size_t new_search_message(Message &message, Table &table,
-                                        uint32_t tid, const void *key,
-                                        uint32_t key_offset) {
+                                        uint32_t tid, uint32_t tid_offset,
+                                        const void *key, uint32_t key_offset) {
     /*
-     * The structure of a search request: (primary key, tid, read key offset)
+     * The structure of a search request: (primary key, tid, tid_offset, read
+     * key offset)
      */
 
     auto key_size = table.key_size();
 
     auto message_size = MessagePiece::get_header_size() + key_size +
-                        sizeof(uint32_t) + sizeof(key_offset);
+                        sizeof(uint32_t) + sizeof(uint32_t) +
+                        sizeof(key_offset);
     auto message_piece_header = MessagePiece::construct_message_piece_header(
         static_cast<uint32_t>(DBXMessage::SEARCH_REQUEST), message_size,
         table.tableID(), table.partitionID());
@@ -46,7 +48,7 @@ public:
     Encoder encoder(message.data);
     encoder << message_piece_header;
     encoder.write_n_bytes(key, key_size);
-    encoder << tid << key_offset;
+    encoder << tid << tid_offset << key_offset;
     message.flush();
     return message_size;
   }
@@ -75,16 +77,19 @@ public:
   }
 
   static std::size_t new_check_message(Message &message, Table &table,
-                                       uint32_t tid, const void *key,
-                                       uint32_t epoch, bool is_write) {
+                                       uint32_t tid, uint32_t tid_offset,
+                                       const void *key, uint32_t epoch,
+                                       bool is_write) {
     /*
-     * The structure of a check request: (primary key, tid, epoch, is_write)
+     * The structure of a check request: (primary key, tid, tid_offset, epoch,
+     * is_write)
      */
 
     auto key_size = table.key_size();
 
     auto message_size = MessagePiece::get_header_size() + key_size +
-                        sizeof(uint32_t) + sizeof(epoch) + sizeof(bool);
+                        sizeof(uint32_t) + sizeof(uint32_t) + sizeof(epoch) +
+                        sizeof(bool);
     auto message_piece_header = MessagePiece::construct_message_piece_header(
         static_cast<uint32_t>(DBXMessage::CHECK_REQUEST), message_size,
         table.tableID(), table.partitionID());
@@ -92,7 +97,7 @@ public:
     Encoder encoder(message.data);
     encoder << message_piece_header;
     encoder.write_n_bytes(key, key_size);
-    encoder << tid << epoch << is_write;
+    encoder << tid << tid_offset << epoch << is_write;
     message.flush();
     return message_size;
   }
@@ -141,16 +146,17 @@ public:
     auto value_size = table.value_size();
 
     /*
-     * The structure of a read request: (primary key, tid, read key offset)
-     * The structure of a read response: (value, tid, read key offset)
+     * The structure of a read request: (primary key, tid, tid_offset, read key
+     * offset) The structure of a read response: (value, tid, tid_offset, read
+     * key offset)
      */
 
     auto stringPiece = inputPiece.toStringPiece();
-    uint32_t tid, key_offset;
+    uint32_t tid, tid_offset, key_offset;
 
-    DCHECK(inputPiece.get_message_length() == MessagePiece::get_header_size() +
-                                                  key_size + sizeof(tid) +
-                                                  sizeof(key_offset));
+    DCHECK(inputPiece.get_message_length() ==
+           MessagePiece::get_header_size() + key_size + sizeof(tid) +
+               sizeof(tid_offset) + sizeof(key_offset));
 
     // get row, tid and offset
     const void *key = stringPiece.data();
@@ -158,13 +164,13 @@ public:
 
     stringPiece.remove_prefix(key_size);
     scar::Decoder dec(stringPiece);
-    dec >> tid >> key_offset;
+    dec >> tid >> tid_offset >> key_offset;
 
     DCHECK(dec.size() == 0);
 
     // prepare response message header
     auto message_size = MessagePiece::get_header_size() + value_size +
-                        sizeof(tid) + sizeof(key_offset);
+                        sizeof(tid) + sizeof(tid_offset) + sizeof(key_offset);
     auto message_piece_header = MessagePiece::construct_message_piece_header(
         static_cast<uint32_t>(DBXMessage ::SEARCH_RESPONSE), message_size,
         table_id, partition_id);
@@ -178,7 +184,7 @@ public:
         &responseMessage.data[0] + responseMessage.data.size() - value_size;
     // read to message buffer
     DBXHelper::read(row, dest, value_size);
-    encoder << tid << key_offset;
+    encoder << tid << tid_offset << key_offset;
     responseMessage.flush();
   }
   static void
@@ -196,28 +202,30 @@ public:
     auto value_size = table.value_size();
 
     /*
-     * The structure of a read response: (value, tid, read key offset)
+     * The structure of a read response: (value, tid, tid_offset, read key
+     * offset)
      */
 
-    uint32_t tid, key_offset;
+    uint32_t tid, tid_offset, key_offset;
 
-    DCHECK(inputPiece.get_message_length() == MessagePiece::get_header_size() +
-                                                  value_size + sizeof(tid) +
-                                                  sizeof(key_offset));
+    DCHECK(inputPiece.get_message_length() ==
+           MessagePiece::get_header_size() + value_size + sizeof(tid) +
+               sizeof(tid_offset) + sizeof(key_offset));
 
     StringPiece stringPiece = inputPiece.toStringPiece();
     stringPiece.remove_prefix(value_size);
     Decoder dec(stringPiece);
-    dec >> tid >> key_offset;
+    dec >> tid >> tid_offset >> key_offset;
 
-    DCHECK(tid > 0 && tid <= txns.size());
-    DCHECK(key_offset < txns[tid - 1]->readSet.size());
+    CHECK(tid_offset >= 0 && tid_offset < txns.size());
+    CHECK(txns[tid_offset]->id == tid);
+    CHECK(key_offset < txns[tid_offset]->readSet.size());
 
-    DBXRWKey &readKey = txns[tid - 1]->readSet[key_offset];
+    DBXRWKey &readKey = txns[tid_offset]->readSet[key_offset];
     dec = Decoder(inputPiece.toStringPiece());
     dec.read_n_bytes(readKey.get_value(), value_size);
-    txns[tid - 1]->pendingResponses--;
-    txns[tid - 1]->network_size += inputPiece.get_message_length();
+    txns[tid_offset]->pendingResponses--;
+    txns[tid_offset]->network_size += inputPiece.get_message_length();
   }
 
   static void
@@ -278,17 +286,18 @@ public:
     auto value_size = table.value_size();
 
     /*
-     * The structure of a check request: (primary key, tid, epoch, is_write)
-     * The structure of a check response: (tid, is_write, waw, war, raw)
+     * The structure of a check request: (primary key, tid, tid_offset,  epoch,
+     * is_write) The structure of a check response: (tid, tid_offset, is_write,
+     * waw, war, raw)
      */
 
     auto stringPiece = inputPiece.toStringPiece();
-    uint32_t tid, epoch;
+    uint32_t tid, tid_offset, epoch;
     bool is_write;
 
     DCHECK(inputPiece.get_message_length() ==
            MessagePiece::get_header_size() + key_size + sizeof(tid) +
-               sizeof(epoch) + sizeof(is_write));
+               sizeof(tid_offset) + sizeof(epoch) + sizeof(is_write));
 
     // get row, tid and offset
     const void *key = stringPiece.data();
@@ -296,7 +305,7 @@ public:
 
     stringPiece.remove_prefix(key_size);
     scar::Decoder dec(stringPiece);
-    dec >> tid >> epoch >> is_write;
+    dec >> tid >> tid_offset >> epoch >> is_write;
 
     DCHECK(dec.size() == 0);
 
@@ -328,15 +337,15 @@ public:
     }
 
     // prepare response message header
-    auto message_size =
-        MessagePiece::get_header_size() + sizeof(tid) + sizeof(bool) * 4;
+    auto message_size = MessagePiece::get_header_size() + sizeof(tid) +
+                        sizeof(tid_offset) + sizeof(bool) * 4;
     auto message_piece_header = MessagePiece::construct_message_piece_header(
         static_cast<uint32_t>(DBXMessage::CHECK_RESPONSE), message_size,
         table_id, partition_id);
 
     scar::Encoder encoder(responseMessage.data);
     encoder << message_piece_header;
-    encoder << tid << is_write << waw << war << raw;
+    encoder << tid << tid_offset << is_write << waw << war << raw;
     responseMessage.flush();
   }
 
@@ -353,41 +362,44 @@ public:
     DCHECK(partition_id == table.partitionID());
 
     /*
-     * The structure of a check response: (tid, is_write, waw, war, raw)
+     * The structure of a check response: (tid, tid_offset, is_write, waw, war,
+     * raw)
      */
 
-    uint32_t tid;
+    uint32_t tid, tid_offset;
     bool is_write;
     bool waw, war, raw;
 
     DCHECK(inputPiece.get_message_length() ==
-           MessagePiece::get_header_size() + sizeof(tid) + 4 * sizeof(bool));
+           MessagePiece::get_header_size() + sizeof(tid) + sizeof(tid_offset) +
+               4 * sizeof(bool));
 
     StringPiece stringPiece = inputPiece.toStringPiece();
     Decoder dec(stringPiece);
-    dec >> tid >> is_write >> waw >> war >> raw;
+    dec >> tid >> tid_offset >> is_write >> waw >> war >> raw;
 
-    DCHECK(tid > 0 && tid <= txns.size());
+    CHECK(tid_offset >= 0 && tid_offset < txns.size());
+    CHECK(txns[tid_offset]->id == tid);
 
     if (is_write) {
 
       // analyze war and waw
       if (war) {
-        txns[tid - 1]->war = true;
+        txns[tid_offset]->war = true;
       }
       if (waw) {
-        txns[tid - 1]->waw = true;
+        txns[tid_offset]->waw = true;
       }
 
     } else {
       // analyze raw
       if (raw) {
-        txns[tid - 1]->raw = true;
+        txns[tid_offset]->raw = true;
       }
     }
 
-    txns[tid - 1]->pendingResponses--;
-    txns[tid - 1]->network_size += inputPiece.get_message_length();
+    txns[tid_offset]->pendingResponses--;
+    txns[tid_offset]->network_size += inputPiece.get_message_length();
   }
 
   static void

@@ -139,6 +139,8 @@ public:
 
   void set_id(std::size_t id) { this->id = id; }
 
+  void set_tid_offset(std::size_t offset) { this->tid_offset = offset; }
+
   void set_epoch(uint32_t epoch) { this->epoch = epoch; }
 
   bool process_requests(std::size_t worker_id) {
@@ -163,7 +165,7 @@ public:
   bool is_read_only() { return writeSet.size() == 0; }
 
 public:
-  std::size_t coordinator_id, partition_id, id;
+  std::size_t coordinator_id, partition_id, id, tid_offset;
   uint32_t epoch;
   std::chrono::steady_clock::time_point startTime;
   std::size_t pendingResponses;

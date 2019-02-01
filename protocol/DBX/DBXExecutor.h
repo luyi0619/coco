@@ -155,6 +155,7 @@ public:
       transactions[i]->set_epoch(cur_epoch);
       transactions[i]->set_id(i * context.coordinator_num + coordinator_id +
                               1); // tid starts from 1
+      transactions[i]->set_tid_offset(i);
       transactions[i]->execution_phase = false;
       setupHandlers(*transactions[i]);
 
@@ -277,8 +278,8 @@ public:
       } else {
         auto coordinatorID = this->partitioner->master_coordinator(partitionId);
         txn.network_size += MessageFactoryType::new_check_message(
-            *(this->messages[coordinatorID]), *table, txn.id, readKey.get_key(),
-            txn.epoch, false);
+            *(this->messages[coordinatorID]), *table, txn.id, txn.tid_offset,
+            readKey.get_key(), txn.epoch, false);
         txn.pendingResponses++;
       }
     }
@@ -306,7 +307,7 @@ public:
       } else {
         auto coordinatorID = this->partitioner->master_coordinator(partitionId);
         txn.network_size += MessageFactoryType::new_check_message(
-            *(this->messages[coordinatorID]), *table, txn.id,
+            *(this->messages[coordinatorID]), *table, txn.id, txn.tid_offset,
             writeKey.get_key(), txn.epoch, true);
         txn.pendingResponses++;
       }
@@ -397,7 +398,8 @@ public:
             auto coordinatorID =
                 this->partitioner->master_coordinator(partition_id);
             txn.network_size += MessageFactoryType::new_search_message(
-                *(this->messages[coordinatorID]), *table, tid, key, key_offset);
+                *(this->messages[coordinatorID]), *table, tid, txn.tid_offset,
+                key, key_offset);
             txn.pendingResponses++;
           }
         };
