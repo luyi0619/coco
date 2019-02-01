@@ -117,6 +117,21 @@ public:
     }
   }
 
+  std::size_t get_partition_id() {
+
+    std::size_t partition_id;
+
+    CHECK(context.partition_num % context.coordinator_num == 0);
+
+    auto partition_num_per_node =
+        context.partition_num / context.coordinator_num;
+    partition_id = random.uniform_dist(0, partition_num_per_node - 1) *
+                       context.coordinator_num +
+                   coordinator_id;
+    CHECK(partitioner->has_master_partition(partition_id));
+    return partition_id;
+  }
+
   void read_snapshot() {
     // load epoch
     auto cur_epoch = epoch.load();
@@ -126,11 +141,11 @@ public:
 
       process_request();
 
-      // if null, generate a new transaction.
+      // if null, generate a new transaction, on this node.
       // else only reset the query
 
       if (transactions[i] == nullptr || i >= n_abort) {
-        auto partition_id = random.uniform_dist(0, context.partition_num - 1);
+        auto partition_id = get_partition_id();
         transactions[i] =
             workload.next_transaction(context, partition_id, storages[i]);
       } else {
@@ -138,13 +153,10 @@ public:
       }
 
       transactions[i]->set_epoch(cur_epoch);
-      transactions[i]->set_id(i + 1); // tid starts from 1
+      transactions[i]->set_id(i * context.coordinator_num + coordinator_id +
+                              1); // tid starts from 1
       transactions[i]->execution_phase = false;
       setupHandlers(*transactions[i]);
-
-      if (!partitioner->has_master_partition(transactions[i]->partition_id)) {
-        continue;
-      }
 
       count++;
 
@@ -164,9 +176,6 @@ public:
     // reserve
     count = 0;
     for (auto i = id; i < transactions.size(); i += context.worker_num) {
-      if (!partitioner->has_master_partition(transactions[i]->partition_id)) {
-        continue;
-      }
 
       if (transactions[i]->abort_no_retry) {
         continue;
@@ -307,9 +316,6 @@ public:
   void commit_transactions() {
     std::size_t count = 0;
     for (auto i = id; i < transactions.size(); i += context.worker_num) {
-      if (!partitioner->has_master_partition(transactions[i]->partition_id)) {
-        continue;
-      }
       if (transactions[i]->abort_no_retry) {
         continue;
       }
@@ -325,9 +331,6 @@ public:
 
     count = 0;
     for (auto i = id; i < transactions.size(); i += context.worker_num) {
-      if (!partitioner->has_master_partition(transactions[i]->partition_id)) {
-        continue;
-      }
       if (transactions[i]->abort_no_retry) {
         n_abort_no_retry.fetch_add(1);
         continue;

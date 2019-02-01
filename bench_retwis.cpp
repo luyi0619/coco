@@ -52,6 +52,9 @@ int main(int argc, char *argv[]) {
   context.protocol = FLAGS_protocol;
   context.coordinator_num = peers.size();
   context.batch_size = FLAGS_batch_size;
+  if (context.protocol == "DBX") {
+    context.batch_size = context.batch_size / context.coordinator_num;
+  }
   context.batch_flush = FLAGS_batch_flush;
   context.sleep_time = FLAGS_sleep_time;
   context.group_time = FLAGS_group_time;
