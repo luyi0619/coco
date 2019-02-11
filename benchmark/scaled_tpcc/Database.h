@@ -94,7 +94,8 @@ public:
     std::vector<int> all_parts;
 
     for (auto i = 0u; i < partitionNum; i++) {
-      if (partitioner == nullptr || partitioner->has_master_partition(i)) {
+      if (partitioner == nullptr ||
+          partitioner->is_partition_replicated_on_me(i)) {
         all_parts.push_back(i);
       }
     }

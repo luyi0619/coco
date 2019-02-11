@@ -34,6 +34,10 @@ public:
   virtual bool is_partition_replicated_on(std::size_t partition_id,
                                           std::size_t coordinator_id) const = 0;
 
+  bool is_partition_replicated_on_me(std::size_t partition_id) const {
+    return is_partition_replicated_on(partition_id, coordinator_id);
+  }
+
   virtual bool is_backup() const = 0;
 
 protected:
