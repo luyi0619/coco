@@ -45,7 +45,7 @@ public:
       do {
         retry = false;
 
-        if (context.isUniform) {
+        if (context.isUniform || query.UPDATE[i]) {
           key = random.uniform_dist(
               0, static_cast<int>(context.keysPerPartition) - 1);
         } else {

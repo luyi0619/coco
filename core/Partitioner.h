@@ -346,8 +346,23 @@ public:
     } else if (part == "hash2") {
       return std::make_unique<HashReplicatedPartitioner<2>>(coordinator_id,
                                                             coordinator_num);
+    } else if (part == "hash3") {
+      return std::make_unique<HashReplicatedPartitioner<3>>(coordinator_id,
+                                                            coordinator_num);
     } else if (part == "hash4") {
       return std::make_unique<HashReplicatedPartitioner<4>>(coordinator_id,
+                                                            coordinator_num);
+    } else if (part == "hash5") {
+      return std::make_unique<HashReplicatedPartitioner<5>>(coordinator_id,
+                                                            coordinator_num);
+    } else if (part == "hash6") {
+      return std::make_unique<HashReplicatedPartitioner<6>>(coordinator_id,
+                                                            coordinator_num);
+    } else if (part == "hash7") {
+      return std::make_unique<HashReplicatedPartitioner<7>>(coordinator_id,
+                                                            coordinator_num);
+    } else if (part == "hash8") {
+      return std::make_unique<HashReplicatedPartitioner<8>>(coordinator_id,
                                                             coordinator_num);
     } else if (part == "pb") {
       return std::make_unique<PrimaryBackupPartitioner>(coordinator_id,
