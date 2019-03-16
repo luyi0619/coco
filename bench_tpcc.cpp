@@ -1,8 +1,5 @@
 #include "benchmark/tpcc/Database.h"
 #include "core/Coordinator.h"
-#include <boost/algorithm/string.hpp>
-#include <gflags/gflags.h>
-#include <glog/logging.h>
 
 DEFINE_int32(id, 0, "coordinator id");
 DEFINE_int32(threads, 1, "the number of threads");
@@ -22,9 +19,9 @@ DEFINE_bool(sleep_on_retry, true, "sleep when retry aborted transactions");
 DEFINE_bool(read_on_replica, false, "read from replicas");
 DEFINE_bool(local_validation, false, "local validation");
 DEFINE_bool(rts_sync, false, "rts sync");
-DEFINE_bool(dbx_read_only, true, "dbx read only optimization");
-DEFINE_bool(dbx_reordering, true, "dbx reordering optimization");
-DEFINE_bool(dbx_si, false, "dbx snapshot isolation");
+DEFINE_bool(kiva_read_only, true, "kiva read only optimization");
+DEFINE_bool(kiva_reordering, true, "kiva reordering optimization");
+DEFINE_bool(kiva_si, false, "kiva snapshot isolation");
 DEFINE_string(query, "neworder", "tpcc query, mixed, neworder, payment");
 DEFINE_int32(neworder_dist, 10, "new order distributed.");
 DEFINE_int32(payment_dist, 15, "payment distributed.");
@@ -48,7 +45,7 @@ int main(int argc, char *argv[]) {
   context.protocol = FLAGS_protocol;
   context.coordinator_num = peers.size();
   context.batch_size = FLAGS_batch_size;
-  if (context.protocol == "DBX") {
+  if (context.protocol == "kiva") {
     context.batch_size = context.batch_size / context.coordinator_num;
   }
   context.batch_flush = FLAGS_batch_flush;
@@ -62,19 +59,19 @@ int main(int argc, char *argv[]) {
   context.read_on_replica = FLAGS_read_on_replica;
   context.local_validation = FLAGS_local_validation;
   context.rts_sync = FLAGS_rts_sync;
-  context.dbx_read_only_optmization = FLAGS_dbx_read_only;
-  context.dbx_reordering_optmization = FLAGS_dbx_reordering;
-  context.dbx_snapshot_isolation = FLAGS_dbx_si;
+  context.kiva_read_only_optmization = FLAGS_kiva_read_only;
+  context.kiva_reordering_optmization = FLAGS_kiva_reordering;
+  context.kiva_snapshot_isolation = FLAGS_kiva_si;
   context.sleep_on_retry = FLAGS_sleep_on_retry;
   context.partitioner = FLAGS_partitioner;
   context.delay_time = FLAGS_delay;
 
   if (FLAGS_query == "mixed") {
-    context.workloadType = scar::tpcc::TPCCWorkloadType ::MIXED;
+    context.workloadType = scar::tpcc::TPCCWorkloadType::MIXED;
   } else if (FLAGS_query == "neworder") {
-    context.workloadType = scar::tpcc::TPCCWorkloadType ::NEW_ORDER_ONLY;
+    context.workloadType = scar::tpcc::TPCCWorkloadType::NEW_ORDER_ONLY;
   } else if (FLAGS_query == "payment") {
-    context.workloadType = scar::tpcc::TPCCWorkloadType ::PAYMENT_ONLY;
+    context.workloadType = scar::tpcc::TPCCWorkloadType::PAYMENT_ONLY;
   } else {
     CHECK(false);
   }
@@ -82,8 +79,7 @@ int main(int argc, char *argv[]) {
   context.newOrderCrossPartitionProbability = FLAGS_neworder_dist;
   context.paymentCrossPartitionProbability = FLAGS_payment_dist;
 
-  using MetaDataType = std::atomic<uint64_t>;
-  scar::tpcc::Database<MetaDataType> db;
+  scar::tpcc::Database db;
   db.initialize(context);
 
   auto c = std::make_unique<scar::Coordinator>(FLAGS_id, peers, db, context);

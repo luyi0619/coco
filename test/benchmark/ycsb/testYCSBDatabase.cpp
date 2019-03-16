@@ -6,7 +6,6 @@
 #include <gtest/gtest.h>
 
 TEST(TestYCSBDatabase, TestBasic) {
-  using DataT = std::atomic<uint64_t>;
 
   scar::ycsb::Context context;
   context.strategy = scar::ycsb::PartitionStrategy::ROUND_ROBIN;
@@ -15,7 +14,7 @@ TEST(TestYCSBDatabase, TestBasic) {
   context.partition_num = 4;
   context.worker_num = 4;
 
-  scar::ycsb::Database<DataT> db;
+  scar::ycsb::Database db;
   db.initialize(context);
   EXPECT_EQ(true, true);
 }

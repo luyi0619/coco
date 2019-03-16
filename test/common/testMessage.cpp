@@ -4,8 +4,6 @@
 
 #include "common/Encoder.h"
 #include "common/Message.h"
-#include "common/MessagePiece.h"
-#include "common/StringPiece.h"
 #include <gtest/gtest.h>
 
 TEST(TestMessage, TestBasic) {

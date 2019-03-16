@@ -6,29 +6,24 @@
 
 #include "core/Partitioner.h"
 #include "core/Table.h"
-#include "protocol/DBX/DBXHelper.h"
-#include "protocol/DBX/DBXMessage.h"
-#include "protocol/DBX/DBXTransaction.h"
+#include "protocol/Kiva/KivaHelper.h"
+#include "protocol/Kiva/KivaMessage.h"
+#include "protocol/Kiva/KivaTransaction.h"
 
 namespace scar {
 
-template <class Database> class DBX {
+template <class Database> class Kiva {
 public:
   using DatabaseType = Database;
   using MetaDataType = std::atomic<uint64_t>;
   using ContextType = typename DatabaseType::ContextType;
-  using TableType = ITable<MetaDataType>;
-  using MessageType = DBXMessage;
-  using TransactionType = DBXTransaction;
+  using MessageType = KivaMessage;
+  using TransactionType = KivaTransaction;
 
-  using MessageFactoryType = DBXMessageFactory;
-  using MessageHandlerType = DBXMessageHandler;
+  using MessageFactoryType = KivaMessageFactory;
+  using MessageHandlerType = KivaMessageHandler;
 
-  static_assert(
-      std::is_same<typename DatabaseType::TableType, TableType>::value,
-      "The database table type is different from the one in protocol.");
-
-  DBX(DatabaseType &db, const ContextType &context, Partitioner &partitioner)
+  Kiva(DatabaseType &db, const ContextType &context, Partitioner &partitioner)
       : db(db), context(context), partitioner(partitioner) {}
 
   void abort(TransactionType &txn,

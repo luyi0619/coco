@@ -26,7 +26,6 @@ public:
   using DatabaseType = typename WorkloadType::DatabaseType;
   using StorageType = typename WorkloadType::StorageType;
 
-  using TableType = typename DatabaseType::TableType;
   using TransactionType = CalvinTransaction;
   static_assert(std::is_same<typename WorkloadType::TransactionType,
                              TransactionType>::value,
@@ -317,7 +316,7 @@ public:
                                     void *value) {
       auto *worker = this->all_executors[worker_id];
       if (worker->partitioner.has_master_partition(partition_id)) {
-        TableType *table = worker->db.find_table(table_id, partition_id);
+        ITable *table = worker->db.find_table(table_id, partition_id);
         CalvinHelper::read(table->search(key), value, table->value_size());
 
         auto &active_coordinators = txn.active_coordinators;
@@ -348,7 +347,7 @@ public:
     txn.local_index_read_handler = [this](std::size_t table_id,
                                           std::size_t partition_id,
                                           const void *key, void *value) {
-      TableType *table = this->db.find_table(table_id, partition_id);
+      ITable *table = this->db.find_table(table_id, partition_id);
       CalvinHelper::read(table->search(key), value, table->value_size());
     };
     txn.setup_process_requests_in_prepare_phase();
@@ -397,8 +396,8 @@ public:
         MessagePiece messagePiece = *it;
         auto type = messagePiece.get_message_type();
         DCHECK(type < messageHandlers.size());
-        TableType *table = db.find_table(messagePiece.get_table_id(),
-                                         messagePiece.get_partition_id());
+        ITable *table = db.find_table(messagePiece.get_table_id(),
+                                      messagePiece.get_partition_id());
         messageHandlers[type](messagePiece,
                               *messages[message->get_source_node_id()], *table,
                               transactions);
@@ -426,7 +425,7 @@ private:
   std::unique_ptr<Delay> delay;
   std::vector<std::unique_ptr<Message>> messages;
   std::vector<
-      std::function<void(MessagePiece, Message &, TableType &,
+      std::function<void(MessagePiece, Message &, ITable &,
                          std::vector<std::unique_ptr<TransactionType>> &)>>
       messageHandlers;
   LockfreeQueue<Message *> in_queue, out_queue;

@@ -21,11 +21,9 @@ namespace scaled_tpcc {
 
 template <class Transaction> class NewOrder : public Transaction {
 public:
-  using MetaDataType = typename Transaction::MetaDataType;
-  using DatabaseType = Database<MetaDataType>;
+  using DatabaseType = Database;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
-  using TableType = ITable<MetaDataType>;
   using StorageType = Storage;
 
   NewOrder(std::size_t coordinator_id, std::size_t partition_id,
@@ -274,11 +272,9 @@ private:
 
 template <class Transaction> class Payment : public Transaction {
 public:
-  using MetaDataType = typename Transaction::MetaDataType;
-  using DatabaseType = Database<MetaDataType>;
+  using DatabaseType = Database;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
-  using TableType = ITable<MetaDataType>;
   using StorageType = Storage;
 
   Payment(std::size_t coordinator_id, std::size_t partition_id,

@@ -12,13 +12,13 @@
 
 namespace scar {
 
-template <class MetaData> class ITable {
+class ITable {
 public:
-  using MetaDataType = MetaData;
+  using MetaDataType = std::atomic<uint64_t>;
 
   virtual ~ITable() = default;
 
-  virtual std::tuple<MetaData *, void *> search(const void *key) = 0;
+  virtual std::tuple<MetaDataType *, void *> search(const void *key) = 0;
 
   virtual void *search_value(const void *key) = 0;
 
@@ -43,17 +43,17 @@ public:
   virtual std::size_t partitionID() = 0;
 };
 
-template <std::size_t N, class KeyType, class ValueType, class MetaData>
-class Table : public ITable<MetaData> {
+template <std::size_t N, class KeyType, class ValueType>
+class Table : public ITable {
 public:
-  using MetaDataType = MetaData;
+  using MetaDataType = std::atomic<uint64_t>;
 
   virtual ~Table() override = default;
 
   Table(std::size_t tableID, std::size_t partitionID)
       : tableID_(tableID), partitionID_(partitionID) {}
 
-  std::tuple<MetaData *, void *> search(const void *key) override {
+  std::tuple<MetaDataType *, void *> search(const void *key) override {
     const auto &k = *static_cast<const KeyType *>(key);
     auto &v = map_[k];
     return std::make_tuple(&std::get<0>(v), &std::get<1>(v));
@@ -82,6 +82,7 @@ public:
     const auto &k = *static_cast<const KeyType *>(key);
     const auto &v = *static_cast<const ValueType *>(value);
     auto &row = map_[k];
+    std::get<0>(row).store(0);
     std::get<1>(row) = v;
   }
 

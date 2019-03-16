@@ -21,11 +21,9 @@ namespace ycsb {
 template <class Transaction> class ReadModifyWrite : public Transaction {
 
 public:
-  using MetaDataType = typename Transaction::MetaDataType;
-  using DatabaseType = Database<MetaDataType>;
+  using DatabaseType = Database;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
-  using TableType = ITable<MetaDataType>;
   using StorageType = Storage;
 
   static constexpr std::size_t keys_num = 4;

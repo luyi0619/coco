@@ -4,7 +4,6 @@
 #include "common/Random.h"
 #include "common/Zipf.h"
 #include <gtest/gtest.h>
-#include <numeric>
 
 TEST(TestZipf, TestBasic) {
 

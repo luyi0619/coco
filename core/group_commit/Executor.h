@@ -7,6 +7,7 @@
 #include "common/Percentile.h"
 #include "core/ControlMessage.h"
 #include "core/Defs.h"
+#include "core/Delay.h"
 #include "core/Partitioner.h"
 #include "core/Worker.h"
 #include "glog/logging.h"
@@ -21,7 +22,6 @@ public:
   using WorkloadType = Workload;
   using ProtocolType = Protocol;
   using DatabaseType = typename WorkloadType::DatabaseType;
-  using TableType = typename DatabaseType::TableType;
   using TransactionType = typename WorkloadType::TransactionType;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
@@ -254,8 +254,8 @@ public:
         MessagePiece messagePiece = *it;
         auto type = messagePiece.get_message_type();
         DCHECK(type < messageHandlers.size());
-        TableType *table = db.find_table(messagePiece.get_table_id(),
-                                         messagePiece.get_partition_id());
+        ITable *table = db.find_table(messagePiece.get_table_id(),
+                                      messagePiece.get_partition_id());
 
         messageHandlers[type](messagePiece,
                               *sync_messages[message->get_source_node_id()],
@@ -329,8 +329,8 @@ protected:
   Percentile<int64_t> commit_latency, write_latency;
   std::unique_ptr<TransactionType> transaction;
   std::vector<std::unique_ptr<Message>> sync_messages, async_messages;
-  std::vector<std::function<void(MessagePiece, Message &, TableType &,
-                                 TransactionType &)>>
+  std::vector<
+      std::function<void(MessagePiece, Message &, ITable &, TransactionType &)>>
       messageHandlers;
   std::vector<std::size_t> message_stats;
   LockfreeQueue<Message *> in_queue, out_queue;

@@ -18,7 +18,7 @@ namespace retwis {
 template <class Transaction> class Workload {
 public:
   using TransactionType = Transaction;
-  using DatabaseType = Database<typename TransactionType::MetaDataType>;
+  using DatabaseType = Database;
   using ContextType = Context;
   using RandomType = Random;
   using StorageType = Storage;

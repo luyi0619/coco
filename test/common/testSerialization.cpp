@@ -3,9 +3,7 @@
 //
 
 #include "common/FixedString.h"
-#include "common/Serialization.h"
 #include <gtest/gtest.h>
-#include <string>
 
 TEST(TestSerialization, TestBasic) {
   std::size_t size;

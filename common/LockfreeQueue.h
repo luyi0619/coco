@@ -27,6 +27,7 @@ public:
   using element_type = T;
   using base_type =
       boost::lockfree::spsc_queue<T, boost::lockfree::capacity<N>>;
+
   void push(const T &value) {
     while (base_type::write_available() == 0) {
       nop_pause();

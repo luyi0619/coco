@@ -6,16 +6,13 @@
 #include "benchmark/tpcc/Workload.h"
 #include "benchmark/ycsb/Database.h"
 #include "benchmark/ycsb/Workload.h"
-#include "core/Executor.h"
 #include "core/Manager.h"
 #include "protocol/Silo/Silo.h"
 #include "protocol/Silo/SiloExecutor.h"
-#include "protocol/Silo/SiloTransaction.h"
 #include <gtest/gtest.h>
 
 TEST(TestExecutor, TestTPCC) {
 
-  using MetaDataType = std::atomic<uint64_t>;
   using TransactionType = scar::SiloTransaction;
   using WorkloadType = scar::tpcc::Workload<TransactionType>;
 
@@ -26,7 +23,7 @@ TEST(TestExecutor, TestTPCC) {
   context.partitioner = "hash";
   scar::tpcc::Random random;
 
-  scar::tpcc::Database<MetaDataType> db;
+  scar::tpcc::Database db;
 
   std::atomic<bool> stopFlag;
   scar::Manager manager(0, 0, context, stopFlag);
@@ -39,7 +36,6 @@ TEST(TestExecutor, TestTPCC) {
 
 TEST(TestWorker, TestYCSB) {
 
-  using MetaDataType = std::atomic<uint64_t>;
   using TransactionType = scar::SiloTransaction;
   using WorkloadType = scar::ycsb::Workload<TransactionType>;
 
@@ -50,7 +46,7 @@ TEST(TestWorker, TestYCSB) {
   context.partitioner = "hash";
   scar::ycsb::Random random;
 
-  scar::ycsb::Database<MetaDataType> db;
+  scar::ycsb::Database db;
 
   std::atomic<bool> stopFlag;
   scar::Manager manager(0, 0, context, stopFlag);

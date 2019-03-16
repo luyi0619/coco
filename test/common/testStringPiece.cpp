@@ -5,8 +5,6 @@
 #include "common/StringPiece.h"
 
 #include <gtest/gtest.h>
-#include <map>
-#include <string>
 
 /*
  *  the test is adapted from

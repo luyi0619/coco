@@ -11,7 +11,9 @@ namespace scar {
 template <class Workload>
 class TwoPLGCExecutor
     : public group_commit::Executor<Workload,
-                                    TwoPLGC<typename Workload::DatabaseType>> {
+                                    TwoPLGC<typename Workload::DatabaseType>>
+
+{
 public:
   using base_type =
       group_commit::Executor<Workload,
@@ -20,7 +22,6 @@ public:
   using WorkloadType = Workload;
   using ProtocolType = TwoPLGC<typename Workload::DatabaseType>;
   using DatabaseType = typename WorkloadType::DatabaseType;
-  using TableType = typename DatabaseType::TableType;
   using TransactionType = typename WorkloadType::TransactionType;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
@@ -38,9 +39,13 @@ public:
       : base_type(coordinator_id, id, db, context, worker_status,
                   n_complete_workers, n_started_workers) {}
 
-  ~TwoPLGCExecutor() = default;
+  ~
 
-  void setupHandlers(TransactionType &txn) override {
+      TwoPLGCExecutor() = default;
+
+  void setupHandlers(TransactionType &txn)
+
+      override {
     txn.lock_request_handler =
         [this, &txn](std::size_t table_id, std::size_t partition_id,
                      uint32_t key_offset, const void *key, void *value,
@@ -52,7 +57,7 @@ public:
         return this->protocol.search(table_id, partition_id, key, value);
       }
 
-      TableType *table = this->db.find_table(table_id, partition_id);
+      ITable *table = this->db.find_table(table_id, partition_id);
 
       if (this->partitioner->has_master_partition(partition_id)) {
 

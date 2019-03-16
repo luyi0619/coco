@@ -141,14 +141,14 @@ public:
  *
  */
 
-class RStoreSPartitioner : public Partitioner {
+class StarSPartitioner : public Partitioner {
 public:
-  RStoreSPartitioner(std::size_t coordinator_id, std::size_t coordinator_num)
+  StarSPartitioner(std::size_t coordinator_id, std::size_t coordinator_num)
       : Partitioner(coordinator_id, coordinator_num) {
     CHECK(coordinator_num >= 2);
   }
 
-  ~RStoreSPartitioner() override = default;
+  ~StarSPartitioner() override = default;
 
   std::size_t replica_num() const override { return 2; }
 
@@ -177,81 +177,14 @@ public:
   bool is_backup() const override { return false; }
 };
 
-class RStoreCPartitioner : public Partitioner {
+class StarCPartitioner : public Partitioner {
 public:
-  RStoreCPartitioner(std::size_t coordinator_id, std::size_t coordinator_num)
+  StarCPartitioner(std::size_t coordinator_id, std::size_t coordinator_num)
       : Partitioner(coordinator_id, coordinator_num) {
     CHECK(coordinator_num >= 2);
   }
 
-  ~RStoreCPartitioner() override = default;
-
-  std::size_t replica_num() const override { return 2; }
-
-  bool is_replicated() const override { return true; }
-
-  bool has_master_partition(std::size_t partition_id) const override {
-    return coordinator_id == 0;
-  }
-
-  std::size_t master_coordinator(std::size_t partition_id) const override {
-    return 0;
-  }
-
-  bool is_partition_replicated_on(std::size_t partition_id,
-                                  std::size_t coordinator_id) const override {
-    DCHECK(coordinator_id < coordinator_num);
-
-    if (coordinator_id == 0)
-      return true;
-
-    return coordinator_id == (partition_id % (coordinator_num - 1)) + 1;
-  }
-
-  bool is_backup() const override { return coordinator_id != 0; }
-};
-
-class RStoreNCSPartitioner : public Partitioner {
-public:
-  RStoreNCSPartitioner(std::size_t coordinator_id, std::size_t coordinator_num)
-      : Partitioner(coordinator_id, coordinator_num) {
-    CHECK(coordinator_num >= 2);
-  }
-
-  ~RStoreNCSPartitioner() override = default;
-
-  std::size_t replica_num() const override { return 2; }
-
-  bool is_replicated() const override { return true; }
-
-  bool has_master_partition(std::size_t partition_id) const override {
-    return master_coordinator(partition_id) == coordinator_id;
-  }
-
-  std::size_t master_coordinator(std::size_t partition_id) const override {
-    return partition_id % (coordinator_num - 1) + 1;
-  }
-
-  bool is_partition_replicated_on(std::size_t partition_id,
-                                  std::size_t coordinator_id) const override {
-    DCHECK(coordinator_id < coordinator_num);
-
-    auto master_id = master_coordinator(partition_id);
-
-    return master_id == coordinator_id || coordinator_id == 0;
-  }
-
-  bool is_backup() const override { return coordinator_id == 0; }
-};
-
-class RStoreNCCPartitioner : public Partitioner {
-public:
-  RStoreNCCPartitioner(std::size_t coordinator_id, std::size_t coordinator_num)
-      : Partitioner(coordinator_id, coordinator_num) {
-    CHECK(coordinator_num >= 2);
-  }
-
-  ~RStoreNCCPartitioner() override = default;
+  ~StarCPartitioner() override = default;
 
   std::size_t replica_num() const override { return 2; }
 

@@ -11,40 +11,40 @@
 #include "core/Worker.h"
 #include "glog/logging.h"
 
-#include "protocol/RStore/RStore.h"
-#include "protocol/RStoreNC/RStoreNCQueryNum.h"
+#include "protocol/Star/Star.h"
+#include "protocol/Star/StarQueryNum.h"
 
 #include <chrono>
+#include <queue>
 
 namespace scar {
 
-template <class Workload> class RStoreNCExecutor : public Worker {
+template <class Workload> class StarExecutor : public Worker {
 public:
   using WorkloadType = Workload;
   using DatabaseType = typename WorkloadType::DatabaseType;
   using StorageType = typename WorkloadType::StorageType;
-  using TableType = typename DatabaseType::TableType;
   using TransactionType = typename WorkloadType::TransactionType;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
 
-  using ProtocolType = RStore<DatabaseType>;
+  using ProtocolType = Star<DatabaseType>;
 
-  using MessageType = RStoreMessage;
-  using MessageFactoryType = RStoreMessageFactory;
-  using MessageHandlerType = RStoreMessageHandler;
+  using MessageType = StarMessage;
+  using MessageFactoryType = StarMessageFactory;
+  using MessageHandlerType = StarMessageHandler;
 
-  RStoreNCExecutor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
-                   const ContextType &context,
-                   std::atomic<uint32_t> &worker_status,
-                   std::atomic<uint32_t> &n_complete_workers,
-                   std::atomic<uint32_t> &n_started_workers)
+  StarExecutor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
+               const ContextType &context, std::atomic<uint32_t> &worker_status,
+               std::atomic<uint32_t> &n_complete_workers,
+               std::atomic<uint32_t> &n_started_workers)
       : Worker(coordinator_id, id), db(db), context(context),
-        s_partitioner(std::make_unique<RStoreNCSPartitioner>(
+        s_partitioner(std::make_unique<StarSPartitioner>(
             coordinator_id, context.coordinator_num)),
-        c_partitioner(std::make_unique<RStoreNCCPartitioner>(
+        c_partitioner(std::make_unique<StarCPartitioner>(
             coordinator_id, context.coordinator_num)),
-        worker_status(worker_status), n_complete_workers(n_complete_workers),
+        random(reinterpret_cast<uint64_t>(this)), worker_status(worker_status),
+        n_complete_workers(n_complete_workers),
         n_started_workers(n_started_workers),
         delay(std::make_unique<SameDelay>(
             coordinator_id, context.coordinator_num, context.delay_time)) {
@@ -66,6 +66,7 @@ public:
     for (;;) {
 
       ExecutorStatus status;
+
       do {
         status = static_cast<ExecutorStatus>(worker_status.load());
 
@@ -113,24 +114,23 @@ public:
 
       // s_phase
 
-      if (coordinator_id == 0) {
-        n_started_workers.fetch_add(1);
+      n_started_workers.fetch_add(1);
 
-        while (static_cast<ExecutorStatus>(worker_status.load()) ==
-               ExecutorStatus::S_PHASE) {
-          process_request();
-        }
+      run_transaction(ExecutorStatus::S_PHASE);
 
-        // process replication request after all workers stop.
+      n_complete_workers.fetch_add(1);
+
+      // once all workers are stop, we need to process the replication
+      // requests
+
+      while (static_cast<ExecutorStatus>(worker_status.load()) ==
+             ExecutorStatus::S_PHASE) {
         process_request();
-        n_complete_workers.fetch_add(1);
-      } else {
-        n_started_workers.fetch_add(1);
-
-        run_transaction(ExecutorStatus::S_PHASE);
-
-        n_complete_workers.fetch_add(1);
       }
+
+      // n_complete_workers has been cleared
+      process_request();
+      n_complete_workers.fetch_add(1);
     }
   }
 
@@ -157,7 +157,7 @@ public:
       partition_id = id * partition_num_per_thread +
                      random.uniform_dist(0, partition_num_per_thread - 1);
     } else if (status == ExecutorStatus::S_PHASE) {
-      partition_id = id * (context.coordinator_num - 1) + coordinator_id - 1;
+      partition_id = id * context.coordinator_num + coordinator_id;
     } else {
       CHECK(false);
     }
@@ -174,14 +174,13 @@ public:
     ContextType phase_context;
 
     if (status == ExecutorStatus::C_PHASE) {
-      CHECK(coordinator_id == 0);
       partitioner = c_partitioner.get();
-      query_num = RStoreNCQueryNum<ContextType>::get_c_phase_query_num(context);
-      phase_context = this->context.get_cross_partition_context();
+      query_num = StarQueryNum<ContextType>::get_c_phase_query_num(context);
+      phase_context = context.get_cross_partition_context();
     } else if (status == ExecutorStatus::S_PHASE) {
       partitioner = s_partitioner.get();
-      query_num = RStoreNCQueryNum<ContextType>::get_s_phase_query_num(context);
-      phase_context = this->context.get_single_partition_context();
+      query_num = StarQueryNum<ContextType>::get_s_phase_query_num(context);
+      phase_context = context.get_single_partition_context();
     } else {
       CHECK(false);
     }
@@ -243,13 +242,10 @@ public:
   }
 
   void onExit() override {
-    if (percentile.size() > 0) {
-      LOG(INFO) << "Worker " << id << " latency: " << percentile.nth(50)
-                << "ms (50%) " << percentile.nth(75) << "ms (75%) "
-                << percentile.nth(99.9)
-                << "ms (99.9%), size: " << percentile.size() * sizeof(int64_t)
-                << " bytes.";
-    }
+    LOG(INFO) << "Worker " << id << " latency: " << percentile.nth(50)
+              << " us (50%) " << percentile.nth(75) << " us (75%) "
+              << percentile.nth(95) << " us (95%) " << percentile.nth(99)
+              << " us (99%).";
   }
 
   void push_message(Message *message) override { in_queue.push(message); }
@@ -290,8 +286,8 @@ private:
         MessagePiece messagePiece = *it;
         auto type = messagePiece.get_message_type();
         DCHECK(type < messageHandlers.size());
-        TableType *table = db.find_table(messagePiece.get_table_id(),
-                                         messagePiece.get_partition_id());
+        ITable *table = db.find_table(messagePiece.get_table_id(),
+                                      messagePiece.get_partition_id());
 
         if (type == static_cast<uint32_t>(
                         ControlMessage::OPERATION_REPLICATION_REQUEST)) {
@@ -346,15 +342,15 @@ private:
   DatabaseType &db;
   const ContextType &context;
   std::unique_ptr<Partitioner> s_partitioner, c_partitioner;
+  RandomType random;
   std::atomic<uint32_t> &worker_status;
   std::atomic<uint32_t> &n_complete_workers, &n_started_workers;
-  RandomType random;
   std::unique_ptr<Delay> delay;
   Percentile<int64_t> percentile;
   // transaction only commit in a single group
   std::queue<std::unique_ptr<TransactionType>> q;
   std::vector<std::unique_ptr<Message>> messages;
-  std::vector<std::function<void(MessagePiece, Message &, TableType &)>>
+  std::vector<std::function<void(MessagePiece, Message &, ITable &)>>
       messageHandlers;
   LockfreeQueue<Message *> in_queue, out_queue;
 };

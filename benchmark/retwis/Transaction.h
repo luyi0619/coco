@@ -26,11 +26,9 @@ namespace retwis {
 
 template <class Transaction> class AddUser : public Transaction {
 public:
-  using MetaDataType = typename Transaction::MetaDataType;
-  using DatabaseType = Database<MetaDataType>;
+  using DatabaseType = Database;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
-  using TableType = ITable<MetaDataType>;
   using StorageType = Storage;
 
   AddUser(std::size_t coordinator_id, std::size_t partition_id,
@@ -85,11 +83,9 @@ private:
 
 template <class Transaction> class FollowUnfollow : public Transaction {
 public:
-  using MetaDataType = typename Transaction::MetaDataType;
-  using DatabaseType = Database<MetaDataType>;
+  using DatabaseType = Database;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
-  using TableType = ITable<MetaDataType>;
   using StorageType = Storage;
 
   FollowUnfollow(std::size_t coordinator_id, std::size_t partition_id,
@@ -144,11 +140,9 @@ private:
 
 template <class Transaction> class PostTweet : public Transaction {
 public:
-  using MetaDataType = typename Transaction::MetaDataType;
-  using DatabaseType = Database<MetaDataType>;
+  using DatabaseType = Database;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
-  using TableType = ITable<MetaDataType>;
   using StorageType = Storage;
 
   PostTweet(std::size_t coordinator_id, std::size_t partition_id,
@@ -203,11 +197,9 @@ private:
 
 template <class Transaction> class GetTimeline : public Transaction {
 public:
-  using MetaDataType = typename Transaction::MetaDataType;
-  using DatabaseType = Database<MetaDataType>;
+  using DatabaseType = Database;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
-  using TableType = ITable<MetaDataType>;
   using StorageType = Storage;
 
   GetTimeline(std::size_t coordinator_id, std::size_t partition_id,

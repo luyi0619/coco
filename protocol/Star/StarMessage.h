@@ -14,18 +14,19 @@
 
 namespace scar {
 
-enum class RStoreMessage {
+enum class StarMessage {
   REPLICATION_VALUE_REQUEST = static_cast<int>(ControlMessage::NFIELDS),
   NFIELDS
 };
 
-class RStoreMessageFactory {
-  using Table = ITable<std::atomic<uint64_t>>;
+class StarMessageFactory {
 
 public:
-  static std::size_t
-  new_replication_value_message(Message &message, Table &table, const void *key,
-                                const void *value, uint64_t commit_tid) {
+  static std::size_t new_replication_value_message(Message &message,
+                                                   ITable &table,
+                                                   const void *key,
+                                                   const void *value,
+                                                   uint64_t commit_tid) {
 
     /*
      * The structure of a replication request: (primary key, field value,
@@ -38,7 +39,7 @@ public:
     auto message_size = MessagePiece::get_header_size() + key_size +
                         field_size + sizeof(commit_tid);
     auto message_piece_header = MessagePiece::construct_message_piece_header(
-        static_cast<uint32_t>(RStoreMessage::REPLICATION_VALUE_REQUEST),
+        static_cast<uint32_t>(StarMessage::REPLICATION_VALUE_REQUEST),
         message_size, table.tableID(), table.partitionID());
 
     Encoder encoder(message.data);
@@ -51,16 +52,15 @@ public:
   }
 };
 
-class RStoreMessageHandler {
-  using Table = ITable<std::atomic<uint64_t>>;
+class StarMessageHandler {
 
 public:
   static void replication_value_request_handler(MessagePiece inputPiece,
                                                 Message &responseMessage,
-                                                Table &table) {
+                                                ITable &table) {
 
     DCHECK(inputPiece.get_message_type() ==
-           static_cast<uint32_t>(RStoreMessage::REPLICATION_VALUE_REQUEST));
+           static_cast<uint32_t>(StarMessage::REPLICATION_VALUE_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     DCHECK(table_id == table.tableID());
@@ -103,11 +103,11 @@ public:
     }
   }
 
-  static std::vector<std::function<void(MessagePiece, Message &, Table &)>>
+  static std::vector<std::function<void(MessagePiece, Message &, ITable &)>>
   get_message_handlers() {
-    std::vector<std::function<void(MessagePiece, Message &, Table &)>> v;
+    std::vector<std::function<void(MessagePiece, Message &, ITable &)>> v;
     v.resize(static_cast<int>(ControlMessage::NFIELDS));
-    v.push_back(RStoreMessageHandler::replication_value_request_handler);
+    v.push_back(StarMessageHandler::replication_value_request_handler);
     return v;
   }
 };

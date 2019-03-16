@@ -17,6 +17,7 @@ public:
 
   // BufferedReader is not copyable
   BufferedReader(const BufferedReader &) = delete;
+
   BufferedReader &operator=(const BufferedReader &) = delete;
 
   // BufferedReader is movable
@@ -28,6 +29,7 @@ public:
     that.bytes_read = 0;
     that.bytes_total = 0;
   }
+
   BufferedReader &operator=(BufferedReader &&that) {
     socket = that.socket;
     bytes_read = that.bytes_read;

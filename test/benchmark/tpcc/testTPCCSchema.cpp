@@ -3,7 +3,6 @@
 //
 
 #include "common/Encoder.h"
-#include <string>
 
 #include "benchmark/tpcc/Schema.h"
 #include <gtest/gtest.h>

@@ -5,5 +5,5 @@
 #include "common/Time.h"
 
 namespace scar {
-    std::chrono::steady_clock::time_point Time::startTime = std::chrono::steady_clock::now();
+  std::chrono::steady_clock::time_point Time::startTime = std::chrono::steady_clock::now();
 }

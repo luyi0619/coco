@@ -11,6 +11,7 @@
 #include "core/Partitioner.h"
 #include "core/Table.h"
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <glog/logging.h>
 #include <thread>
@@ -19,14 +20,13 @@
 
 namespace scar {
 namespace retwis {
-template <class MetaData> class Database {
+class Database {
 public:
-  using MetaDataType = MetaData;
+  using MetaDataType = std::atomic<uint64_t>;
   using ContextType = Context;
   using RandomType = Random;
-  using TableType = ITable<MetaDataType>;
 
-  TableType *find_table(std::size_t table_id, std::size_t partition_id) {
+  ITable *find_table(std::size_t table_id, std::size_t partition_id) {
     DCHECK(table_id < tbl_vecs.size());
     DCHECK(partition_id < tbl_vecs[table_id].size());
     return tbl_vecs[table_id][partition_id];
@@ -79,15 +79,14 @@ public:
     for (auto partitionID = 0u; partitionID < partitionNum; partitionID++) {
       auto retwisTableID = retwis::tableID;
       tbl_retwis_vec.push_back(
-          std::make_unique<
-              Table<9973, retwis::key, retwis::value, MetaDataType>>(
+          std::make_unique<Table<9973, retwis::key, retwis::value>>(
               retwisTableID, partitionID));
     }
 
     // there is 1 table in retwis
     tbl_vecs.resize(1);
 
-    auto tFunc = [](std::unique_ptr<TableType> &table) { return table.get(); };
+    auto tFunc = [](std::unique_ptr<ITable> &table) { return table.get(); };
 
     std::transform(tbl_retwis_vec.begin(), tbl_retwis_vec.end(),
                    std::back_inserter(tbl_vecs[0]), tFunc);
@@ -108,7 +107,7 @@ private:
   void retwisInit(const Context &context, std::size_t partitionID) {
 
     Random random;
-    TableType *table = tbl_retwis_vec[partitionID].get();
+    ITable *table = tbl_retwis_vec[partitionID].get();
 
     std::size_t keysPerPartition =
         context.keysPerPartition; // 5M keys per partition
@@ -149,8 +148,8 @@ private:
   }
 
 private:
-  std::vector<std::vector<TableType *>> tbl_vecs;
-  std::vector<std::unique_ptr<TableType>> tbl_retwis_vec;
+  std::vector<std::vector<ITable *>> tbl_vecs;
+  std::vector<std::unique_ptr<ITable>> tbl_retwis_vec;
 };
 } // namespace retwis
 } // namespace scar

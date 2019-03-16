@@ -2,9 +2,10 @@
 // Created by Yi Lu on 7/22/18.
 //
 
+#include <thread>
+
 #include "common/Time.h"
 #include <gtest/gtest.h>
-#include <thread>
 
 TEST(TestZipf, TestBasic) {
   auto now1 = scar::Time::now();

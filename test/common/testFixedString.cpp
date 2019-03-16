@@ -5,8 +5,6 @@
 #include "common/FixedString.h"
 #include <gtest/gtest.h>
 
-#include "common/ClassOf.h"
-
 TEST(TestCommonFixedString, TestHashCode) {
   using namespace scar;
   FixedString<10> s1 = "123";

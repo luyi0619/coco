@@ -12,7 +12,7 @@
 
 namespace scar {
 
-class DBXHelper {
+class KivaHelper {
 
 public:
   using MetaDataType = std::atomic<uint64_t>;

@@ -34,10 +34,8 @@ enum class SiloMessage {
 
 class SiloMessageFactory {
 
-  using Table = ITable<std::atomic<uint64_t>>;
-
 public:
-  static std::size_t new_search_message(Message &message, Table &table,
+  static std::size_t new_search_message(Message &message, ITable &table,
                                         const void *key, uint32_t key_offset) {
 
     /*
@@ -60,7 +58,7 @@ public:
     return message_size;
   }
 
-  static std::size_t new_lock_message(Message &message, Table &table,
+  static std::size_t new_lock_message(Message &message, ITable &table,
                                       const void *key, uint32_t key_offset) {
 
     /*
@@ -83,8 +81,8 @@ public:
     return message_size;
   }
 
-  static std::size_t new_read_validation_message(Message &message, Table &table,
-                                                 const void *key,
+  static std::size_t new_read_validation_message(Message &message,
+                                                 ITable &table, const void *key,
                                                  uint32_t key_offset,
                                                  uint64_t tid) {
 
@@ -109,7 +107,7 @@ public:
     return message_size;
   }
 
-  static std::size_t new_abort_message(Message &message, Table &table,
+  static std::size_t new_abort_message(Message &message, ITable &table,
                                        const void *key) {
 
     /*
@@ -130,7 +128,7 @@ public:
     return message_size;
   }
 
-  static std::size_t new_write_message(Message &message, Table &table,
+  static std::size_t new_write_message(Message &message, ITable &table,
                                        const void *key, const void *value) {
 
     /*
@@ -153,7 +151,7 @@ public:
     return message_size;
   }
 
-  static std::size_t new_replication_message(Message &message, Table &table,
+  static std::size_t new_replication_message(Message &message, ITable &table,
                                              const void *key, const void *value,
                                              uint64_t commit_tid) {
 
@@ -180,7 +178,7 @@ public:
     return message_size;
   }
 
-  static std::size_t new_release_lock_message(Message &message, Table &table,
+  static std::size_t new_release_lock_message(Message &message, ITable &table,
                                               const void *key,
                                               uint64_t commit_tid) {
     /*
@@ -205,12 +203,11 @@ public:
 };
 
 class SiloMessageHandler {
-  using Table = ITable<std::atomic<uint64_t>>;
   using Transaction = SiloTransaction;
 
 public:
   static void search_request_handler(MessagePiece inputPiece,
-                                     Message &responseMessage, Table &table,
+                                     Message &responseMessage, ITable &table,
                                      Transaction &txn) {
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(SiloMessage::SEARCH_REQUEST));
@@ -264,7 +261,7 @@ public:
   }
 
   static void search_response_handler(MessagePiece inputPiece,
-                                      Message &responseMessage, Table &table,
+                                      Message &responseMessage, ITable &table,
                                       Transaction &txn) {
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(SiloMessage::SEARCH_RESPONSE));
@@ -300,7 +297,7 @@ public:
   }
 
   static void lock_request_handler(MessagePiece inputPiece,
-                                   Message &responseMessage, Table &table,
+                                   Message &responseMessage, ITable &table,
                                    Transaction &txn) {
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(SiloMessage::LOCK_REQUEST));
@@ -348,7 +345,7 @@ public:
   }
 
   static void lock_response_handler(MessagePiece inputPiece,
-                                    Message &responseMessage, Table &table,
+                                    Message &responseMessage, ITable &table,
                                     Transaction &txn) {
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(SiloMessage::LOCK_RESPONSE));
@@ -406,7 +403,7 @@ public:
 
   static void read_validation_request_handler(MessagePiece inputPiece,
                                               Message &responseMessage,
-                                              Table &table, Transaction &txn) {
+                                              ITable &table, Transaction &txn) {
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(SiloMessage::READ_VALIDATION_REQUEST));
     auto table_id = inputPiece.get_table_id();
@@ -461,7 +458,8 @@ public:
 
   static void read_validation_response_handler(MessagePiece inputPiece,
                                                Message &responseMessage,
-                                               Table &table, Transaction &txn) {
+                                               ITable &table,
+                                               Transaction &txn) {
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(SiloMessage::READ_VALIDATION_RESPONSE));
     auto table_id = inputPiece.get_table_id();
@@ -492,7 +490,7 @@ public:
   }
 
   static void abort_request_handler(MessagePiece inputPiece,
-                                    Message &responseMessage, Table &table,
+                                    Message &responseMessage, ITable &table,
                                     Transaction &txn) {
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(SiloMessage::ABORT_REQUEST));
@@ -519,7 +517,7 @@ public:
   }
 
   static void write_request_handler(MessagePiece inputPiece,
-                                    Message &responseMessage, Table &table,
+                                    Message &responseMessage, ITable &table,
                                     Transaction &txn) {
 
     DCHECK(inputPiece.get_message_type() ==
@@ -558,7 +556,7 @@ public:
   }
 
   static void write_response_handler(MessagePiece inputPiece,
-                                     Message &responseMessage, Table &table,
+                                     Message &responseMessage, ITable &table,
                                      Transaction &txn) {
 
     DCHECK(inputPiece.get_message_type() ==
@@ -578,7 +576,7 @@ public:
 
   static void replication_request_handler(MessagePiece inputPiece,
                                           Message &responseMessage,
-                                          Table &table, Transaction &txn) {
+                                          ITable &table, Transaction &txn) {
 
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(SiloMessage::REPLICATION_REQUEST));
@@ -632,7 +630,7 @@ public:
 
   static void replication_response_handler(MessagePiece inputPiece,
                                            Message &responseMessage,
-                                           Table &table, Transaction &txn) {
+                                           ITable &table, Transaction &txn) {
 
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(SiloMessage::REPLICATION_RESPONSE));
@@ -652,7 +650,7 @@ public:
 
   static void release_lock_request_handler(MessagePiece inputPiece,
                                            Message &responseMessage,
-                                           Table &table, Transaction &txn) {
+                                           ITable &table, Transaction &txn) {
 
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(SiloMessage::RELEASE_LOCK_REQUEST));
@@ -685,10 +683,10 @@ public:
   }
 
   static std::vector<
-      std::function<void(MessagePiece, Message &, Table &, Transaction &)>>
+      std::function<void(MessagePiece, Message &, ITable &, Transaction &)>>
   get_message_handlers() {
     std::vector<
-        std::function<void(MessagePiece, Message &, Table &, Transaction &)>>
+        std::function<void(MessagePiece, Message &, ITable &, Transaction &)>>
         v;
     v.resize(static_cast<int>(ControlMessage::NFIELDS));
     v.push_back(search_request_handler);

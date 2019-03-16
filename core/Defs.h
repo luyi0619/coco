@@ -13,8 +13,8 @@ enum class ExecutorStatus {
   S_PHASE,
   Analysis,
   Execute,
-  DBX_READ,
-  DBX_COMMIT,
+  Kiva_READ,
+  Kiva_COMMIT,
   STOP,
   EXIT
 };

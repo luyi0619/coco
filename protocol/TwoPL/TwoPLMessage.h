@@ -35,10 +35,8 @@ enum class TwoPLMessage {
 
 class TwoPLMessageFactory {
 
-  using Table = ITable<std::atomic<uint64_t>>;
-
 public:
-  static std::size_t new_read_lock_message(Message &message, Table &table,
+  static std::size_t new_read_lock_message(Message &message, ITable &table,
                                            const void *key,
                                            uint32_t key_offset) {
 
@@ -62,7 +60,7 @@ public:
     return message_size;
   }
 
-  static std::size_t new_write_lock_message(Message &message, Table &table,
+  static std::size_t new_write_lock_message(Message &message, ITable &table,
                                             const void *key,
                                             uint32_t key_offset) {
 
@@ -86,7 +84,7 @@ public:
     return message_size;
   }
 
-  static std::size_t new_abort_message(Message &message, Table &table,
+  static std::size_t new_abort_message(Message &message, ITable &table,
                                        const void *key, bool write_lock) {
     /*
      * The structure of an abort request: (primary key, wrtie lock)
@@ -108,7 +106,7 @@ public:
     return message_size;
   }
 
-  static std::size_t new_write_message(Message &message, Table &table,
+  static std::size_t new_write_message(Message &message, ITable &table,
                                        const void *key, const void *value) {
 
     /*
@@ -131,7 +129,7 @@ public:
     return message_size;
   }
 
-  static std::size_t new_replication_message(Message &message, Table &table,
+  static std::size_t new_replication_message(Message &message, ITable &table,
                                              const void *key, const void *value,
                                              uint64_t commit_tid) {
 
@@ -159,7 +157,7 @@ public:
   }
 
   static std::size_t new_release_read_lock_message(Message &message,
-                                                   Table &table,
+                                                   ITable &table,
                                                    const void *key) {
     /*
      * The structure of a release read lock request: (primary key)
@@ -180,7 +178,7 @@ public:
   }
 
   static std::size_t new_release_write_lock_message(Message &message,
-                                                    Table &table,
+                                                    ITable &table,
                                                     const void *key,
                                                     uint64_t commit_tid) {
 
@@ -206,12 +204,11 @@ public:
 };
 
 class TwoPLMessageHandler {
-  using Table = ITable<std::atomic<uint64_t>>;
   using Transaction = TwoPLTransaction;
 
 public:
   static void read_lock_request_handler(MessagePiece inputPiece,
-                                        Message &responseMessage, Table &table,
+                                        Message &responseMessage, ITable &table,
                                         Transaction &txn) {
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(TwoPLMessage::READ_LOCK_REQUEST));
@@ -277,8 +274,8 @@ public:
   }
 
   static void read_lock_response_handler(MessagePiece inputPiece,
-                                         Message &responseMessage, Table &table,
-                                         Transaction &txn) {
+                                         Message &responseMessage,
+                                         ITable &table, Transaction &txn) {
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(TwoPLMessage::READ_LOCK_RESPONSE));
     auto table_id = inputPiece.get_table_id();
@@ -324,8 +321,8 @@ public:
   }
 
   static void write_lock_request_handler(MessagePiece inputPiece,
-                                         Message &responseMessage, Table &table,
-                                         Transaction &txn) {
+                                         Message &responseMessage,
+                                         ITable &table, Transaction &txn) {
 
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(TwoPLMessage::WRITE_LOCK_REQUEST));
@@ -392,7 +389,7 @@ public:
 
   static void write_lock_response_handler(MessagePiece inputPiece,
                                           Message &responseMessage,
-                                          Table &table, Transaction &txn) {
+                                          ITable &table, Transaction &txn) {
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(TwoPLMessage::WRITE_LOCK_RESPONSE));
     auto table_id = inputPiece.get_table_id();
@@ -438,7 +435,7 @@ public:
   }
 
   static void abort_request_handler(MessagePiece inputPiece,
-                                    Message &responseMessage, Table &table,
+                                    Message &responseMessage, ITable &table,
                                     Transaction &txn) {
 
     DCHECK(inputPiece.get_message_type() ==
@@ -476,7 +473,7 @@ public:
   }
 
   static void write_request_handler(MessagePiece inputPiece,
-                                    Message &responseMessage, Table &table,
+                                    Message &responseMessage, ITable &table,
                                     Transaction &txn) {
 
     DCHECK(inputPiece.get_message_type() ==
@@ -515,7 +512,7 @@ public:
   }
 
   static void write_response_handler(MessagePiece inputPiece,
-                                     Message &responseMessage, Table &table,
+                                     Message &responseMessage, ITable &table,
                                      Transaction &txn) {
 
     DCHECK(inputPiece.get_message_type() ==
@@ -536,7 +533,7 @@ public:
 
   static void replication_request_handler(MessagePiece inputPiece,
                                           Message &responseMessage,
-                                          Table &table, Transaction &txn) {
+                                          ITable &table, Transaction &txn) {
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(TwoPLMessage::REPLICATION_REQUEST));
     auto table_id = inputPiece.get_table_id();
@@ -584,7 +581,7 @@ public:
 
   static void replication_response_handler(MessagePiece inputPiece,
                                            Message &responseMessage,
-                                           Table &table, Transaction &txn) {
+                                           ITable &table, Transaction &txn) {
 
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(TwoPLMessage::REPLICATION_RESPONSE));
@@ -604,7 +601,7 @@ public:
 
   static void release_read_lock_request_handler(MessagePiece inputPiece,
                                                 Message &responseMessage,
-                                                Table &table,
+                                                ITable &table,
                                                 Transaction &txn) {
 
     DCHECK(inputPiece.get_message_type() ==
@@ -645,7 +642,7 @@ public:
 
   static void release_read_lock_response_handler(MessagePiece inputPiece,
                                                  Message &responseMessage,
-                                                 Table &table,
+                                                 ITable &table,
                                                  Transaction &txn) {
 
     DCHECK(inputPiece.get_message_type() ==
@@ -666,7 +663,7 @@ public:
 
   static void release_write_lock_request_handler(MessagePiece inputPiece,
                                                  Message &responseMessage,
-                                                 Table &table,
+                                                 ITable &table,
                                                  Transaction &txn) {
 
     DCHECK(inputPiece.get_message_type() ==
@@ -709,7 +706,7 @@ public:
 
   static void release_write_lock_response_handler(MessagePiece inputPiece,
                                                   Message &responseMessage,
-                                                  Table &table,
+                                                  ITable &table,
                                                   Transaction &txn) {
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(TwoPLMessage::RELEASE_WRITE_LOCK_RESPONSE));
@@ -729,10 +726,10 @@ public:
 
 public:
   static std::vector<
-      std::function<void(MessagePiece, Message &, Table &, Transaction &)>>
+      std::function<void(MessagePiece, Message &, ITable &, Transaction &)>>
   get_message_handlers() {
     std::vector<
-        std::function<void(MessagePiece, Message &, Table &, Transaction &)>>
+        std::function<void(MessagePiece, Message &, ITable &, Transaction &)>>
         v;
     v.resize(static_cast<int>(ControlMessage::NFIELDS));
     v.push_back(read_lock_request_handler);

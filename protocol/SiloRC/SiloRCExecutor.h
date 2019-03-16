@@ -11,7 +11,9 @@ namespace scar {
 template <class Workload>
 class SiloRCExecutor
     : public group_commit::Executor<Workload,
-                                    SiloRC<typename Workload::DatabaseType>> {
+                                    SiloRC<typename Workload::DatabaseType>>
+
+{
 public:
   using base_type =
       group_commit::Executor<Workload, SiloRC<typename Workload::DatabaseType>>;
@@ -19,7 +21,6 @@ public:
   using WorkloadType = Workload;
   using ProtocolType = SiloRC<typename Workload::DatabaseType>;
   using DatabaseType = typename WorkloadType::DatabaseType;
-  using TableType = typename DatabaseType::TableType;
   using TransactionType = typename WorkloadType::TransactionType;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
@@ -37,9 +38,13 @@ public:
       : base_type(coordinator_id, id, db, context, worker_status,
                   n_complete_workers, n_started_workers) {}
 
-  ~SiloRCExecutor() = default;
+  ~
 
-  void setupHandlers(TransactionType &txn) override {
+      SiloRCExecutor() = default;
+
+  void setupHandlers(TransactionType &txn)
+
+      override {
 
     txn.readRequestHandler =
         [this, &txn](std::size_t table_id, std::size_t partition_id,
@@ -57,7 +62,7 @@ public:
       if (local_index_read || local_read) {
         return this->protocol.search(table_id, partition_id, key, value);
       } else {
-        TableType *table = this->db.find_table(table_id, partition_id);
+        ITable *table = this->db.find_table(table_id, partition_id);
         auto coordinatorID =
             this->partitioner->master_coordinator(partition_id);
         txn.network_size += MessageFactoryType::new_search_message(

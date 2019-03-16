@@ -17,16 +17,11 @@ public:
   using DatabaseType = Database;
   using MetaDataType = std::atomic<uint64_t>;
   using ContextType = typename DatabaseType::ContextType;
-  using TableType = ITable<MetaDataType>;
   using MessageType = CalvinMessage;
   using TransactionType = CalvinTransaction;
 
   using MessageFactoryType = CalvinMessageFactory;
   using MessageHandlerType = CalvinMessageHandler;
-
-  static_assert(
-      std::is_same<typename DatabaseType::TableType, TableType>::value,
-      "The database table type is different from the one in protocol.");
 
   Calvin(DatabaseType &db, CalvinPartitioner &partitioner)
       : db(db), partitioner(partitioner) {}

@@ -12,38 +12,33 @@
 #include "core/Partitioner.h"
 #include "core/Table.h"
 #include "core/Worker.h"
-#include "protocol/RStore/RStoreManager.h"
-#include "protocol/RStore/RStoreMessage.h"
 #include "protocol/Silo/SiloHelper.h"
 #include "protocol/Silo/SiloRWKey.h"
 #include "protocol/Silo/SiloTransaction.h"
+#include "protocol/Star/StarManager.h"
+#include "protocol/Star/StarMessage.h"
 #include <glog/logging.h>
 
 namespace scar {
 
-template <class Database> class RStore {
+template <class Database> class Star {
 public:
   using DatabaseType = Database;
   using MetaDataType = std::atomic<uint64_t>;
   using ContextType = typename DatabaseType::ContextType;
-  using TableType = ITable<MetaDataType>;
-  using MessageType = RStoreMessage;
+  using MessageType = StarMessage;
   using TransactionType = SiloTransaction;
 
-  using MessageFactoryType = RStoreMessageFactory;
-  using MessageHandlerType = RStoreMessageHandler;
+  using MessageFactoryType = StarMessageFactory;
+  using MessageHandlerType = StarMessageHandler;
 
-  static_assert(
-      std::is_same<typename DatabaseType::TableType, TableType>::value,
-      "The database table type is different from the one in protocol.");
-
-  RStore(DatabaseType &db, const ContextType &context, Partitioner &partitioner)
+  Star(DatabaseType &db, const ContextType &context, Partitioner &partitioner)
       : db(db), context(context), partitioner(partitioner) {}
 
   uint64_t search(std::size_t table_id, std::size_t partition_id,
                   const void *key, void *value) const {
 
-    TableType *table = db.find_table(table_id, partition_id);
+    ITable *table = db.find_table(table_id, partition_id);
     auto value_bytes = table->value_size();
     auto row = table->search(key);
     return SiloHelper::read(row, value, value_bytes);

@@ -3,7 +3,6 @@
 //
 
 #include "protocol/TwoPL/TwoPLHelper.h"
-#include <atomic>
 #include <gtest/gtest.h>
 
 TEST(TestTwoPLHelper, TestBasic) {

@@ -177,6 +177,7 @@ private:
   void clear_source_node_id() {
     get_header_ref() &= ~(SOURCE_NODE_ID_MASK << SOURCE_NODE_ID_OFFSET);
   }
+
   void clear_dest_node_id() {
     get_header_ref() &= ~(DEST_NODE_ID_MASK << DEST_NODE_ID_OFFSET);
   }

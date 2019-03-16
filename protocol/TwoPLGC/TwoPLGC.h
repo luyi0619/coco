@@ -22,16 +22,11 @@ public:
   using DatabaseType = Database;
   using MetaDataType = std::atomic<uint64_t>;
   using ContextType = typename DatabaseType::ContextType;
-  using TableType = ITable<MetaDataType>;
   using MessageType = TwoPLGCMessage;
   using TransactionType = TwoPLTransaction;
 
   using MessageFactoryType = TwoPLGCMessageFactory;
   using MessageHandlerType = TwoPLGCMessageHandler;
-
-  static_assert(
-      std::is_same<typename DatabaseType::TableType, TableType>::value,
-      "The database table type is different from the one in protocol.");
 
   TwoPLGC(DatabaseType &db, const ContextType &context,
           Partitioner &partitioner)
@@ -40,7 +35,7 @@ public:
   uint64_t search(std::size_t table_id, std::size_t partition_id,
                   const void *key, void *value) const {
 
-    TableType *table = db.find_table(table_id, partition_id);
+    ITable *table = db.find_table(table_id, partition_id);
     auto value_bytes = table->value_size();
     auto row = table->search(key);
     return TwoPLHelper::read(row, value, value_bytes);

@@ -31,10 +31,9 @@ enum class ScarMessage {
 };
 
 class ScarMessageFactory {
-  using Table = ITable<std::atomic<uint64_t>>;
 
 public:
-  static std::size_t new_search_message(Message &message, Table &table,
+  static std::size_t new_search_message(Message &message, ITable &table,
                                         const void *key, uint32_t key_offset) {
 
     /*
@@ -57,7 +56,7 @@ public:
     return message_size;
   }
 
-  static std::size_t new_lock_message(Message &message, Table &table,
+  static std::size_t new_lock_message(Message &message, ITable &table,
                                       const void *key, uint32_t key_offset) {
 
     /*
@@ -80,8 +79,8 @@ public:
     return message_size;
   }
 
-  static std::size_t new_read_validation_message(Message &message, Table &table,
-                                                 const void *key,
+  static std::size_t new_read_validation_message(Message &message,
+                                                 ITable &table, const void *key,
                                                  uint32_t key_offset,
                                                  uint64_t tid,
                                                  uint64_t commit_ts) {
@@ -107,7 +106,7 @@ public:
     return message_size;
   }
 
-  static std::size_t new_abort_message(Message &message, Table &table,
+  static std::size_t new_abort_message(Message &message, ITable &table,
                                        const void *key) {
 
     /*
@@ -128,7 +127,7 @@ public:
     return message_size;
   }
 
-  static std::size_t new_write_message(Message &message, Table &table,
+  static std::size_t new_write_message(Message &message, ITable &table,
                                        const void *key, const void *value,
                                        uint64_t commit_ts) {
 
@@ -154,7 +153,7 @@ public:
     return message_size;
   }
 
-  static std::size_t new_replication_message(Message &message, Table &table,
+  static std::size_t new_replication_message(Message &message, ITable &table,
                                              const void *key, const void *value,
                                              uint64_t commit_ts) {
 
@@ -181,8 +180,9 @@ public:
     return message_size;
   }
 
-  static std::size_t new_rts_replication_message(Message &message, Table &table,
-                                                 const void *key, uint64_t ts) {
+  static std::size_t new_rts_replication_message(Message &message,
+                                                 ITable &table, const void *key,
+                                                 uint64_t ts) {
 
     /*
      * The structure of a rts replication request: (primary key, ts)
@@ -206,12 +206,11 @@ public:
 };
 
 class ScarMessageHandler {
-  using Table = ITable<std::atomic<uint64_t>>;
   using Transaction = ScarTransaction;
 
 public:
   static void search_request_handler(MessagePiece inputPiece,
-                                     Message &responseMessage, Table &table,
+                                     Message &responseMessage, ITable &table,
                                      Transaction &txn) {
 
     DCHECK(inputPiece.get_message_type() ==
@@ -265,7 +264,7 @@ public:
   }
 
   static void search_response_handler(MessagePiece inputPiece,
-                                      Message &responseMessage, Table &table,
+                                      Message &responseMessage, ITable &table,
                                       Transaction &txn) {
 
     DCHECK(inputPiece.get_message_type() ==
@@ -302,7 +301,7 @@ public:
   }
 
   static void lock_request_handler(MessagePiece inputPiece,
-                                   Message &responseMessage, Table &table,
+                                   Message &responseMessage, ITable &table,
                                    Transaction &txn) {
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(ScarMessage::LOCK_REQUEST));
@@ -351,7 +350,7 @@ public:
   }
 
   static void lock_response_handler(MessagePiece inputPiece,
-                                    Message &responseMessage, Table &table,
+                                    Message &responseMessage, ITable &table,
                                     Transaction &txn) {
 
     DCHECK(inputPiece.get_message_type() ==
@@ -406,7 +405,7 @@ public:
 
   static void read_validation_request_handler(MessagePiece inputPiece,
                                               Message &responseMessage,
-                                              Table &table, Transaction &txn) {
+                                              ITable &table, Transaction &txn) {
 
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(ScarMessage::READ_VALIDATION_REQUEST));
@@ -459,7 +458,8 @@ public:
 
   static void read_validation_response_handler(MessagePiece inputPiece,
                                                Message &responseMessage,
-                                               Table &table, Transaction &txn) {
+                                               ITable &table,
+                                               Transaction &txn) {
 
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(ScarMessage::READ_VALIDATION_RESPONSE));
@@ -504,7 +504,7 @@ public:
   }
 
   static void abort_request_handler(MessagePiece inputPiece,
-                                    Message &responseMessage, Table &table,
+                                    Message &responseMessage, ITable &table,
                                     Transaction &txn) {
 
     DCHECK(inputPiece.get_message_type() ==
@@ -532,7 +532,7 @@ public:
   }
 
   static void write_request_handler(MessagePiece inputPiece,
-                                    Message &responseMessage, Table &table,
+                                    Message &responseMessage, ITable &table,
                                     Transaction &txn) {
 
     DCHECK(inputPiece.get_message_type() ==
@@ -574,7 +574,7 @@ public:
 
   static void replication_request_handler(MessagePiece inputPiece,
                                           Message &responseMessage,
-                                          Table &table, Transaction &txn) {
+                                          ITable &table, Transaction &txn) {
 
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(ScarMessage::REPLICATION_REQUEST));
@@ -621,7 +621,7 @@ public:
 
   static void rts_replication_request_handler(MessagePiece inputPiece,
                                               Message &responseMessage,
-                                              Table &table, Transaction &txn) {
+                                              ITable &table, Transaction &txn) {
 
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(ScarMessage::RTS_REPLICATION_REQUEST));
@@ -666,10 +666,10 @@ public:
   }
 
   static std::vector<
-      std::function<void(MessagePiece, Message &, Table &, Transaction &)>>
+      std::function<void(MessagePiece, Message &, ITable &, Transaction &)>>
   get_message_handlers() {
     std::vector<
-        std::function<void(MessagePiece, Message &, Table &, Transaction &)>>
+        std::function<void(MessagePiece, Message &, ITable &, Transaction &)>>
         v;
     v.resize(static_cast<int>(ControlMessage::NFIELDS));
     v.push_back(search_request_handler);

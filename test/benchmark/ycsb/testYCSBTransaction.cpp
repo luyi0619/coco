@@ -4,15 +4,12 @@
 
 #include "benchmark/ycsb/Database.h"
 #include "benchmark/ycsb/Transaction.h"
-#include "core/Partitioner.h"
 #include "protocol/Silo/Silo.h"
-#include "protocol/Silo/SiloTransaction.h"
 #include <gtest/gtest.h>
 
 TEST(TestYCSBTransaction, TestBasic) {
 
-  using MetaDataType = std::atomic<uint64_t>;
-  using DatabaseType = scar::ycsb::Database<MetaDataType>;
+  using DatabaseType = scar::ycsb::Database;
 
   DatabaseType db;
   scar::ycsb::Context context;

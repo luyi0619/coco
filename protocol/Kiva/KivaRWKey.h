@@ -8,7 +8,7 @@
 
 namespace scar {
 
-class DBXRWKey {
+class KivaRWKey {
 public:
   // local index read bit
 

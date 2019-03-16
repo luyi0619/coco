@@ -3,6 +3,7 @@
 //
 
 #pragma once
+
 #include <arpa/inet.h>
 #include <cstdlib>
 #include <cstring>
@@ -27,6 +28,7 @@ public:
 
   // Socket is not copyable
   Socket(const Socket &) = delete;
+
   Socket &operator=(const Socket &) = delete;
 
   // Socket is movable

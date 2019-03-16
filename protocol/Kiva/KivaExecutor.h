@@ -11,23 +11,22 @@
 #include "core/Worker.h"
 #include "glog/logging.h"
 
-#include "protocol/DBX/DBX.h"
-#include "protocol/DBX/DBXHelper.h"
-#include "protocol/DBX/DBXMessage.h"
+#include "protocol/Kiva/Kiva.h"
+#include "protocol/Kiva/KivaHelper.h"
+#include "protocol/Kiva/KivaMessage.h"
 
 #include <chrono>
 #include <thread>
 
 namespace scar {
 
-template <class Workload> class DBXExecutor : public Worker {
+template <class Workload> class KivaExecutor : public Worker {
 public:
   using WorkloadType = Workload;
   using DatabaseType = typename WorkloadType::DatabaseType;
   using StorageType = typename WorkloadType::StorageType;
 
-  using TableType = typename DatabaseType::TableType;
-  using TransactionType = DBXTransaction;
+  using TransactionType = KivaTransaction;
   static_assert(std::is_same<typename WorkloadType::TransactionType,
                              TransactionType>::value,
                 "Transaction types do not match.");
@@ -35,20 +34,20 @@ public:
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
 
-  using ProtocolType = DBX<DatabaseType>;
+  using ProtocolType = Kiva<DatabaseType>;
 
-  using MessageType = DBXMessage;
-  using MessageFactoryType = DBXMessageFactory;
-  using MessageHandlerType = DBXMessageHandler;
+  using MessageType = KivaMessage;
+  using MessageFactoryType = KivaMessageFactory;
+  using MessageHandlerType = KivaMessageHandler;
 
-  DBXExecutor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
-              const ContextType &context,
-              std::vector<std::unique_ptr<TransactionType>> &transactions,
-              std::vector<StorageType> &storages, std::atomic<uint32_t> &epoch,
-              std::atomic<uint32_t> &worker_status,
-              std::atomic<uint32_t> &total_abort,
-              std::atomic<uint32_t> &n_complete_workers,
-              std::atomic<uint32_t> &n_started_workers)
+  KivaExecutor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
+               const ContextType &context,
+               std::vector<std::unique_ptr<TransactionType>> &transactions,
+               std::vector<StorageType> &storages, std::atomic<uint32_t> &epoch,
+               std::atomic<uint32_t> &worker_status,
+               std::atomic<uint32_t> &total_abort,
+               std::atomic<uint32_t> &n_complete_workers,
+               std::atomic<uint32_t> &n_started_workers)
       : Worker(coordinator_id, id), db(db), context(context),
         transactions(transactions), storages(storages), epoch(epoch),
         worker_status(worker_status), total_abort(total_abort),
@@ -70,11 +69,11 @@ public:
     messageHandlers = MessageHandlerType::get_message_handlers();
   }
 
-  ~DBXExecutor() = default;
+  ~KivaExecutor() = default;
 
   void start() override {
 
-    LOG(INFO) << "DBXExecutor " << id << " started. ";
+    LOG(INFO) << "KivaExecutor " << id << " started. ";
 
     for (;;) {
 
@@ -86,30 +85,30 @@ public:
           LOG(INFO) << "CalvinExecutor " << id << " exits. ";
           return;
         }
-      } while (status != ExecutorStatus::DBX_READ);
+      } while (status != ExecutorStatus::Kiva_READ);
 
       n_started_workers.fetch_add(1);
       read_snapshot();
       n_complete_workers.fetch_add(1);
-      // wait to DBX_READ
+      // wait to Kiva_READ
       while (static_cast<ExecutorStatus>(worker_status.load()) ==
-             ExecutorStatus::DBX_READ) {
+             ExecutorStatus::Kiva_READ) {
         process_request();
       }
       process_request();
       n_complete_workers.fetch_add(1);
 
-      // wait till DBX_COMMIT
+      // wait till Kiva_COMMIT
       while (static_cast<ExecutorStatus>(worker_status.load()) !=
-             ExecutorStatus::DBX_COMMIT) {
+             ExecutorStatus::Kiva_COMMIT) {
         std::this_thread::yield();
       }
       n_started_workers.fetch_add(1);
       commit_transactions();
       n_complete_workers.fetch_add(1);
-      // wait to DBX_COMMIT
+      // wait to Kiva_COMMIT
       while (static_cast<ExecutorStatus>(worker_status.load()) ==
-             ExecutorStatus::DBX_COMMIT) {
+             ExecutorStatus::Kiva_COMMIT) {
         process_request();
       }
       process_request();
@@ -204,16 +203,16 @@ public:
 
   void reserve_transaction(TransactionType &txn) {
 
-    if (context.dbx_read_only_optmization && txn.is_read_only()) {
+    if (context.kiva_read_only_optmization && txn.is_read_only()) {
       return;
     }
 
-    const std::vector<DBXRWKey> &readSet = txn.readSet;
-    const std::vector<DBXRWKey> &writeSet = txn.writeSet;
+    const std::vector<KivaRWKey> &readSet = txn.readSet;
+    const std::vector<KivaRWKey> &writeSet = txn.writeSet;
 
     // reserve reads;
     for (std::size_t i = 0u; i < readSet.size(); i++) {
-      const DBXRWKey &readKey = readSet[i];
+      const KivaRWKey &readKey = readSet[i];
       if (readKey.get_local_index_read_bit()) {
         continue;
       }
@@ -223,7 +222,7 @@ public:
       auto table = db.find_table(tableId, partitionId);
       if (partitioner->has_master_partition(partitionId)) {
         std::atomic<uint64_t> &tid = table->search_metadata(readKey.get_key());
-        DBXHelper::reserve_read(tid, txn.epoch, txn.id);
+        KivaHelper::reserve_read(tid, txn.epoch, txn.id);
       } else {
         auto coordinatorID = this->partitioner->master_coordinator(partitionId);
         txn.network_size += MessageFactoryType::new_reserve_message(
@@ -234,13 +233,13 @@ public:
 
     // reserve writes
     for (std::size_t i = 0u; i < writeSet.size(); i++) {
-      const DBXRWKey &writeKey = writeSet[i];
+      const KivaRWKey &writeKey = writeSet[i];
       auto tableId = writeKey.get_table_id();
       auto partitionId = writeKey.get_partition_id();
       auto table = db.find_table(tableId, partitionId);
       if (partitioner->has_master_partition(partitionId)) {
         std::atomic<uint64_t> &tid = table->search_metadata(writeKey.get_key());
-        DBXHelper::reserve_write(tid, txn.epoch, txn.id);
+        KivaHelper::reserve_write(tid, txn.epoch, txn.id);
       } else {
         auto coordinatorID = this->partitioner->master_coordinator(partitionId);
         txn.network_size += MessageFactoryType::new_reserve_message(
@@ -252,13 +251,13 @@ public:
 
   void analyze_dependency(TransactionType &txn) {
 
-    const std::vector<DBXRWKey> &readSet = txn.readSet;
-    const std::vector<DBXRWKey> &writeSet = txn.writeSet;
+    const std::vector<KivaRWKey> &readSet = txn.readSet;
+    const std::vector<KivaRWKey> &writeSet = txn.writeSet;
 
     // analyze raw
 
     for (std::size_t i = 0u; i < readSet.size(); i++) {
-      const DBXRWKey &readKey = readSet[i];
+      const KivaRWKey &readKey = readSet[i];
       if (readKey.get_local_index_read_bit()) {
         continue;
       }
@@ -269,8 +268,8 @@ public:
 
       if (partitioner->has_master_partition(partitionId)) {
         uint64_t tid = table->search_metadata(readKey.get_key()).load();
-        uint64_t epoch = DBXHelper::get_epoch(tid);
-        uint64_t wts = DBXHelper::get_wts(tid);
+        uint64_t epoch = KivaHelper::get_epoch(tid);
+        uint64_t wts = KivaHelper::get_wts(tid);
         if (epoch == txn.epoch && wts < txn.id && wts != 0) {
           txn.raw = true;
           break;
@@ -287,7 +286,7 @@ public:
     // analyze war and waw
 
     for (std::size_t i = 0u; i < writeSet.size(); i++) {
-      const DBXRWKey &writeKey = writeSet[i];
+      const KivaRWKey &writeKey = writeSet[i];
 
       auto tableId = writeKey.get_table_id();
       auto partitionId = writeKey.get_partition_id();
@@ -295,9 +294,9 @@ public:
 
       if (partitioner->has_master_partition(partitionId)) {
         uint64_t tid = table->search_metadata(writeKey.get_key()).load();
-        uint64_t epoch = DBXHelper::get_epoch(tid);
-        uint64_t rts = DBXHelper::get_rts(tid);
-        uint64_t wts = DBXHelper::get_wts(tid);
+        uint64_t epoch = KivaHelper::get_epoch(tid);
+        uint64_t rts = KivaHelper::get_rts(tid);
+        uint64_t wts = KivaHelper::get_wts(tid);
         if (epoch == txn.epoch && rts < txn.id && rts != 0) {
           txn.war = true;
         }
@@ -349,11 +348,11 @@ public:
         continue;
       }
 
-      if (context.dbx_snapshot_isolation) {
+      if (context.kiva_snapshot_isolation) {
         protocol.commit(*transactions[i], messages);
         n_commit.fetch_add(1);
       } else {
-        if (context.dbx_reordering_optmization) {
+        if (context.kiva_reordering_optmization) {
           if (transactions[i]->war == false || transactions[i]->raw == false) {
             protocol.commit(*transactions[i], messages);
             n_commit.fetch_add(1);
@@ -391,9 +390,9 @@ public:
             local_read = true;
           }
 
-          TableType *table = db.find_table(table_id, partition_id);
+          ITable *table = db.find_table(table_id, partition_id);
           if (local_read || local_index_read) {
-            DBXHelper::read(table->search(key), value, table->value_size());
+            KivaHelper::read(table->search(key), value, table->value_size());
           } else {
             auto coordinatorID =
                 this->partitioner->master_coordinator(partition_id);
@@ -472,8 +471,8 @@ public:
         MessagePiece messagePiece = *it;
         auto type = messagePiece.get_message_type();
         DCHECK(type < messageHandlers.size());
-        TableType *table = db.find_table(messagePiece.get_table_id(),
-                                         messagePiece.get_partition_id());
+        ITable *table = db.find_table(messagePiece.get_table_id(),
+                                      messagePiece.get_partition_id());
         messageHandlers[type](messagePiece,
                               *messages[message->get_source_node_id()], *table,
                               transactions);
@@ -499,7 +498,7 @@ private:
   std::unique_ptr<Delay> delay;
   std::vector<std::unique_ptr<Message>> messages;
   std::vector<
-      std::function<void(MessagePiece, Message &, TableType &,
+      std::function<void(MessagePiece, Message &, ITable &,
                          std::vector<std::unique_ptr<TransactionType>> &)>>
       messageHandlers;
   LockfreeQueue<Message *> in_queue, out_queue;

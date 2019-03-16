@@ -3,7 +3,6 @@
 //
 
 #include "protocol/Scar/ScarHelper.h"
-#include <atomic>
 #include <gtest/gtest.h>
 
 TEST(TestTwoPLHelper, TestBasic) {

@@ -3,11 +3,8 @@
 //
 
 #include "common/Random.h"
-#include <algorithm>
 #include <gtest/gtest.h>
-#include <iostream>
 #include <unordered_map>
-#include <vector>
 
 /*
  * https://ideone.com/ZBKPrY

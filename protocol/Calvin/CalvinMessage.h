@@ -20,10 +20,9 @@ enum class CalvinMessage {
 };
 
 class CalvinMessageFactory {
-  using Table = ITable<std::atomic<uint64_t>>;
 
 public:
-  static std::size_t new_read_message(Message &message, Table &table,
+  static std::size_t new_read_message(Message &message, ITable &table,
                                       uint32_t tid, uint32_t key_offset,
                                       const void *value) {
 
@@ -50,13 +49,12 @@ public:
 };
 
 class CalvinMessageHandler {
-  using Table = ITable<std::atomic<uint64_t>>;
   using Transaction = CalvinTransaction;
 
 public:
   static void
   read_request_handler(MessagePiece inputPiece, Message &responseMessage,
-                       Table &table,
+                       ITable &table,
                        std::vector<std::unique_ptr<Transaction>> &txns) {
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(CalvinMessage::READ_REQUEST));
@@ -89,11 +87,11 @@ public:
   }
 
   static std::vector<
-      std::function<void(MessagePiece, Message &, Table &,
+      std::function<void(MessagePiece, Message &, ITable &,
                          std::vector<std::unique_ptr<Transaction>> &)>>
   get_message_handlers() {
     std::vector<
-        std::function<void(MessagePiece, Message &, Table &,
+        std::function<void(MessagePiece, Message &, ITable &,
                            std::vector<std::unique_ptr<Transaction>> &)>>
         v;
     v.resize(static_cast<int>(ControlMessage::NFIELDS));

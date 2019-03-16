@@ -31,21 +31,19 @@
 #include "protocol/TwoPLGC/TwoPLGC.h"
 #include "protocol/TwoPLGC/TwoPLGCExecutor.h"
 
-#include "protocol/RStore/RStore.h"
-#include "protocol/RStore/RStoreExecutor.h"
-#include "protocol/RStore/RStoreManager.h"
-#include "protocol/RStoreNC/RStoreNCExecutor.h"
-#include "protocol/RStoreNC/RStoreNCManager.h"
+#include "protocol/Star/Star.h"
+#include "protocol/Star/StarExecutor.h"
+#include "protocol/Star/StarManager.h"
 
 #include "protocol/Calvin/Calvin.h"
 #include "protocol/Calvin/CalvinExecutor.h"
 #include "protocol/Calvin/CalvinManager.h"
 #include "protocol/Calvin/CalvinTransaction.h"
 
-#include "protocol/DBX/DBX.h"
-#include "protocol/DBX/DBXExecutor.h"
-#include "protocol/DBX/DBXManager.h"
-#include "protocol/DBX/DBXTransaction.h"
+#include "protocol/Kiva/Kiva.h"
+#include "protocol/Kiva/KivaExecutor.h"
+#include "protocol/Kiva/KivaManager.h"
+#include "protocol/Kiva/KivaTransaction.h"
 
 #include <unordered_set>
 
@@ -86,8 +84,8 @@ public:
                  const Context &context, std::atomic<bool> &stop_flag) {
 
     std::unordered_set<std::string> protocols = {
-        "Silo",     "SiloGC", "SiloRC",  "Scar",   "ScarSI", "RStore",
-        "RStoreNC", "TwoPL",  "TwoPLGC", "Calvin", "DBX"};
+        "Silo",   "SiloGC", "SiloRC",  "Scar",   "ScarSI", "Star",
+        "StarNC", "TwoPL",  "TwoPLGC", "Calvin", "Kiva"};
     CHECK(protocols.count(context.protocol) == 1);
 
     std::vector<std::shared_ptr<Worker>> workers;
@@ -175,35 +173,17 @@ public:
 
       workers.push_back(manager);
 
-    }
-
-    else if (context.protocol == "RStore") {
+    } else if (context.protocol == "Star") {
 
       using TransactionType = scar::SiloTransaction;
       using WorkloadType =
           typename InferType<Context>::template WorkloadType<TransactionType>;
 
-      auto manager = std::make_shared<RStoreManager>(
+      auto manager = std::make_shared<StarManager>(
           coordinator_id, context.worker_num, context, stop_flag);
 
       for (auto i = 0u; i < context.worker_num; i++) {
-        workers.push_back(std::make_shared<RStoreExecutor<WorkloadType>>(
-            coordinator_id, i, db, context, manager->worker_status,
-            manager->n_completed_workers, manager->n_started_workers));
-      }
-      workers.push_back(manager);
-
-    } else if (context.protocol == "RStoreNC") {
-
-      using TransactionType = scar::SiloTransaction;
-      using WorkloadType =
-          typename InferType<Context>::template WorkloadType<TransactionType>;
-
-      auto manager = std::make_shared<RStoreNCManager>(
-          coordinator_id, context.worker_num, context, stop_flag);
-
-      for (auto i = 0u; i < context.worker_num; i++) {
-        workers.push_back(std::make_shared<RStoreNCExecutor<WorkloadType>>(
+        workers.push_back(std::make_shared<StarExecutor<WorkloadType>>(
             coordinator_id, i, db, context, manager->worker_status,
             manager->n_completed_workers, manager->n_started_workers));
       }
@@ -274,21 +254,21 @@ public:
         static_cast<CalvinExecutor<WorkloadType> *>(workers[i].get())
             ->set_all_executors(all_executors);
       }
-    } else if (context.protocol == "DBX") {
+    } else if (context.protocol == "Kiva") {
 
-      using TransactionType = scar::DBXTransaction;
+      using TransactionType = scar::KivaTransaction;
       using WorkloadType =
           typename InferType<Context>::template WorkloadType<TransactionType>;
 
       // create manager
 
-      auto manager = std::make_shared<DBXManager<WorkloadType>>(
+      auto manager = std::make_shared<KivaManager<WorkloadType>>(
           coordinator_id, context.worker_num, db, context, stop_flag);
 
       // create worker
 
       for (auto i = 0u; i < context.worker_num; i++) {
-        workers.push_back(std::make_shared<DBXExecutor<WorkloadType>>(
+        workers.push_back(std::make_shared<KivaExecutor<WorkloadType>>(
             coordinator_id, i, db, context, manager->transactions,
             manager->storages, manager->epoch, manager->worker_status,
             manager->total_abort, manager->n_completed_workers,

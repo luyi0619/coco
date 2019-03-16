@@ -8,28 +8,27 @@
 #include "core/Defs.h"
 #include "core/Partitioner.h"
 #include "core/Table.h"
-#include "protocol/DBX/DBXHelper.h"
-#include "protocol/DBX/DBXRWKey.h"
+#include "protocol/Kiva/KivaHelper.h"
+#include "protocol/Kiva/KivaRWKey.h"
 #include <chrono>
 #include <glog/logging.h>
 #include <thread>
 
 namespace scar {
 
-class DBXTransaction {
+class KivaTransaction {
 
 public:
   using MetaDataType = std::atomic<uint64_t>;
-  using TableType = ITable<MetaDataType>;
 
-  DBXTransaction(std::size_t coordinator_id, std::size_t partition_id,
-                 Partitioner &partitioner)
+  KivaTransaction(std::size_t coordinator_id, std::size_t partition_id,
+                  Partitioner &partitioner)
       : coordinator_id(coordinator_id), partition_id(partition_id),
         startTime(std::chrono::steady_clock::now()), partitioner(partitioner) {
     reset();
   }
 
-  virtual ~DBXTransaction() = default;
+  virtual ~KivaTransaction() = default;
 
   void reset() {
     abort_lock = false;
@@ -57,7 +56,7 @@ public:
       return;
     }
 
-    DBXRWKey readKey;
+    KivaRWKey readKey;
 
     readKey.set_table_id(table_id);
     readKey.set_partition_id(partition_id);
@@ -77,7 +76,7 @@ public:
     if (execution_phase) {
       return;
     }
-    DBXRWKey readKey;
+    KivaRWKey readKey;
 
     readKey.set_table_id(table_id);
     readKey.set_partition_id(partition_id);
@@ -96,7 +95,7 @@ public:
     if (execution_phase) {
       return;
     }
-    DBXRWKey readKey;
+    KivaRWKey readKey;
 
     readKey.set_table_id(table_id);
     readKey.set_partition_id(partition_id);
@@ -115,7 +114,7 @@ public:
     if (execution_phase) {
       return;
     }
-    DBXRWKey writeKey;
+    KivaRWKey writeKey;
 
     writeKey.set_table_id(table_id);
     writeKey.set_partition_id(partition_id);
@@ -127,12 +126,12 @@ public:
     add_to_write_set(writeKey);
   }
 
-  std::size_t add_to_read_set(const DBXRWKey &key) {
+  std::size_t add_to_read_set(const KivaRWKey &key) {
     readSet.push_back(key);
     return readSet.size() - 1;
   }
 
-  std::size_t add_to_write_set(const DBXRWKey &key) {
+  std::size_t add_to_write_set(const KivaRWKey &key) {
     writeSet.push_back(key);
     return writeSet.size() - 1;
   }
@@ -152,7 +151,7 @@ public:
         break;
       }
 
-      const DBXRWKey &readKey = readSet[i];
+      const KivaRWKey &readKey = readSet[i];
       readRequestHandler(readKey.get_table_id(), readKey.get_partition_id(), id,
                          i, readKey.get_key(), readKey.get_value(),
                          readKey.get_local_index_read_bit());
@@ -191,6 +190,6 @@ public:
 
   Partitioner &partitioner;
   Operation operation; // never used
-  std::vector<DBXRWKey> readSet, writeSet;
+  std::vector<KivaRWKey> readSet, writeSet;
 };
 } // namespace scar

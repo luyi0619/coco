@@ -4,15 +4,12 @@
 
 #include "benchmark/tpcc/Database.h"
 #include "benchmark/tpcc/Transaction.h"
-#include "core/Partitioner.h"
 #include "protocol/Silo/Silo.h"
-#include "protocol/Silo/SiloTransaction.h"
 #include <gtest/gtest.h>
 
 TEST(TestTPCCTransaction, TestBasic) {
 
-  using MetaDataType = std::atomic<uint64_t>;
-  using DatabaseType = scar::tpcc::Database<MetaDataType>;
+  using DatabaseType = scar::tpcc::Database;
 
   DatabaseType db;
   scar::tpcc::Context context;

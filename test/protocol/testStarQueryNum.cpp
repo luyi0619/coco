@@ -3,10 +3,10 @@
 //
 
 #include "benchmark/tpcc/Context.h"
-#include "protocol/RStore/RStoreQueryNum.h"
+#include "protocol/Star/StarQueryNum.h"
 #include <gtest/gtest.h>
 
-TEST(TestRStoreQueryNum, TestRStoreBasic) {
+TEST(TestStarQueryNum, TestStarBasic) {
 
   scar::tpcc::Context context;
   context.batch_size = 1000;
@@ -18,27 +18,27 @@ TEST(TestRStoreQueryNum, TestRStoreBasic) {
   context.paymentCrossPartitionProbability = 15;
 
   EXPECT_EQ(
-      scar::RStoreQueryNum<scar::tpcc::Context>::get_s_phase_query_num(context),
+      scar::StarQueryNum<scar::tpcc::Context>::get_s_phase_query_num(context),
       875);
   EXPECT_EQ(
-      scar::RStoreQueryNum<scar::tpcc::Context>::get_c_phase_query_num(context),
+      scar::StarQueryNum<scar::tpcc::Context>::get_c_phase_query_num(context),
       500);
 
   context.workloadType = scar::tpcc::TPCCWorkloadType::NEW_ORDER_ONLY;
 
   EXPECT_EQ(
-      scar::RStoreQueryNum<scar::tpcc::Context>::get_s_phase_query_num(context),
+      scar::StarQueryNum<scar::tpcc::Context>::get_s_phase_query_num(context),
       900);
   EXPECT_EQ(
-      scar::RStoreQueryNum<scar::tpcc::Context>::get_c_phase_query_num(context),
+      scar::StarQueryNum<scar::tpcc::Context>::get_c_phase_query_num(context),
       400);
 
   context.workloadType = scar::tpcc::TPCCWorkloadType::PAYMENT_ONLY;
 
   EXPECT_EQ(
-      scar::RStoreQueryNum<scar::tpcc::Context>::get_s_phase_query_num(context),
+      scar::StarQueryNum<scar::tpcc::Context>::get_s_phase_query_num(context),
       850);
   EXPECT_EQ(
-      scar::RStoreQueryNum<scar::tpcc::Context>::get_c_phase_query_num(context),
+      scar::StarQueryNum<scar::tpcc::Context>::get_c_phase_query_num(context),
       600);
 }

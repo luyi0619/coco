@@ -7,7 +7,6 @@
 #include "common/Operation.h"
 #include "core/Defs.h"
 #include "core/Partitioner.h"
-#include "core/Table.h"
 #include "protocol/Calvin/CalvinHelper.h"
 #include "protocol/Calvin/CalvinRWKey.h"
 #include <chrono>
@@ -19,7 +18,6 @@ class CalvinTransaction {
 
 public:
   using MetaDataType = std::atomic<uint64_t>;
-  using TableType = ITable<MetaDataType>;
 
   CalvinTransaction(std::size_t coordinator_id, std::size_t partition_id,
                     Partitioner &partitioner)

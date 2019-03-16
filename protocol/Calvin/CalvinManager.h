@@ -24,7 +24,6 @@ public:
   using DatabaseType = typename WorkloadType::DatabaseType;
   using StorageType = typename WorkloadType::StorageType;
 
-  using TableType = typename DatabaseType::TableType;
   using TransactionType = CalvinTransaction;
   static_assert(std::is_same<typename WorkloadType::TransactionType,
                              TransactionType>::value,
@@ -126,7 +125,9 @@ public:
     }
   }
 
-  void add_worker(const std::shared_ptr<CalvinExecutor<WorkloadType>> &w) {
+  void add_worker(const std::shared_ptr<CalvinExecutor<WorkloadType>>
+
+                      &w) {
     workers.push_back(w);
   }
 

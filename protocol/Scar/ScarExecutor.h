@@ -19,7 +19,6 @@ public:
   using WorkloadType = Workload;
   using ProtocolType = Scar<typename Workload::DatabaseType>;
   using DatabaseType = typename WorkloadType::DatabaseType;
-  using TableType = typename DatabaseType::TableType;
   using TransactionType = typename WorkloadType::TransactionType;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
@@ -55,7 +54,7 @@ public:
       if (local_index_read || local_read) {
         return this->protocol.search(table_id, partition_id, key, value);
       } else {
-        TableType *table = this->db.find_table(table_id, partition_id);
+        ITable *table = this->db.find_table(table_id, partition_id);
         auto coordinatorID =
             this->partitioner->master_coordinator(partition_id);
         txn.network_size += MessageFactoryType::new_search_message(

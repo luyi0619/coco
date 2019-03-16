@@ -11,12 +11,12 @@
 
 namespace scar {
 
-class RStoreManager : public scar::Manager {
+class StarManager : public scar::Manager {
 public:
   using base_type = scar::Manager;
 
-  RStoreManager(std::size_t coordinator_id, std::size_t id,
-                const Context &context, std::atomic<bool> &stopFlag)
+  StarManager(std::size_t coordinator_id, std::size_t id,
+              const Context &context, std::atomic<bool> &stopFlag)
       : base_type(coordinator_id, id, context, stopFlag) {}
 
   void coordinator_start() override {
