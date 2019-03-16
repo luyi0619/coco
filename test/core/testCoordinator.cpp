@@ -49,6 +49,7 @@ TEST(TestCoordinator, TestConnect) {
     context.worker_num = n;
     context.protocol = "Silo";
     context.partitioner = "hash";
+    context.io_thread_num = 1;
 
     DatabaseType db;
     scar::Coordinator c(id, peers, db, context);

@@ -75,6 +75,7 @@ public:
     bool ok = map_.contains(k);
     DCHECK(ok == false);
     auto &row = map_[k];
+    std::get<0>(row).store(0);
     std::get<1>(row) = v;
   }
 
@@ -82,7 +83,6 @@ public:
     const auto &k = *static_cast<const KeyType *>(key);
     const auto &v = *static_cast<const ValueType *>(value);
     auto &row = map_[k];
-    std::get<0>(row).store(0);
     std::get<1>(row) = v;
   }
 

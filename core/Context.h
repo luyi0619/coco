@@ -14,6 +14,7 @@ public:
   std::size_t partition_num = 0;
   std::size_t worker_num = 0;
   std::size_t coordinator_num = 0;
+  std::size_t io_thread_num = 1;
   std::string protocol;
   std::string replica_group;
   std::string lock_manager;

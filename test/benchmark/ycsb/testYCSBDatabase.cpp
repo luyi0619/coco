@@ -13,7 +13,8 @@ TEST(TestYCSBDatabase, TestBasic) {
   context.keysPerTransaction = 10;
   context.partition_num = 4;
   context.worker_num = 4;
-
+  context.coordinator_num = 1;
+  context.partitioner = "hash";
   scar::ycsb::Database db;
   db.initialize(context);
   EXPECT_EQ(true, true);

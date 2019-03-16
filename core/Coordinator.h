@@ -24,7 +24,7 @@ public:
   template <class Database, class Context>
   Coordinator(std::size_t id, const std::vector<std::string> &peers,
               Database &db, const Context &context)
-      : id(id), coordinator_num(peers.size()), peers(peers) {
+      : id(id), coordinator_num(peers.size()), peers(peers), context(context) {
     workerStopFlag.store(false);
     ioStopFlag.store(false);
     LOG(INFO) << "Coordinator initializes " << context.worker_num
@@ -36,16 +36,28 @@ public:
 
   void start() {
 
-    // start dispatcher threads
-    iDispatcher = std::make_unique<IncomingDispatcher>(id, inSockets, workers,
-                                                       in_queue, ioStopFlag);
-    oDispatcher = std::make_unique<OutgoingDispatcher>(id, outSockets, workers,
-                                                       out_queue, ioStopFlag);
+    // init dispatcher vector
+    iDispatchers.resize(context.io_thread_num);
+    oDispatchers.resize(context.io_thread_num);
 
-    std::thread iDispatcherThread(&IncomingDispatcher::start,
-                                  iDispatcher.get());
-    std::thread oDispatcherThread(&OutgoingDispatcher::start,
-                                  oDispatcher.get());
+    // start dispatcher threads
+
+    std::vector<std::thread> iDispatcherThreads, oDispatcherThreads;
+
+    for (auto i = 0u; i < context.io_thread_num; i++) {
+
+      iDispatchers[i] = std::make_unique<IncomingDispatcher>(
+          id, i, context.io_thread_num, inSockets[i], workers, in_queue,
+          ioStopFlag);
+      oDispatchers[i] = std::make_unique<OutgoingDispatcher>(
+          id, i, context.io_thread_num, outSockets[i], workers, out_queue,
+          ioStopFlag);
+
+      iDispatcherThreads.emplace_back(&IncomingDispatcher::start,
+                                      iDispatchers[i].get());
+      oDispatcherThreads.emplace_back(&OutgoingDispatcher::start,
+                                      oDispatchers[i].get());
+    }
 
     std::vector<std::thread> threads;
 
@@ -153,20 +165,29 @@ public:
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     ioStopFlag.store(true);
-    iDispatcherThread.join();
-    oDispatcherThread.join();
+
+    for (auto i = 0u; i < context.io_thread_num; i++) {
+      iDispatcherThreads[i].join();
+      oDispatcherThreads[i].join();
+    }
 
     LOG(INFO) << "Coordinator exits.";
   }
 
   void connectToPeers() {
 
-    inSockets = std::vector<Socket>(peers.size());
-    outSockets = std::vector<Socket>(peers.size());
-
     // single node test mode
     if (peers.size() == 1) {
       return;
+    }
+
+    // init sockets vector
+    inSockets.resize(context.io_thread_num);
+    outSockets.resize(context.io_thread_num);
+
+    for (auto i = 0u; i < context.io_thread_num; i++) {
+      inSockets[i].resize(peers.size());
+      outSockets[i].resize(peers.size());
     }
 
     auto getAddressPort = [](const std::string &addressPort) {
@@ -175,63 +196,82 @@ public:
       return result;
     };
 
-    // start a listener thread
+    // start some listener threads
 
-    std::thread listenerThread([id = this->id, peers = this->peers,
-                                &inSockets = this->inSockets, getAddressPort] {
-      auto n = peers.size();
-      std::vector<std::string> addressPort = getAddressPort(peers[id]);
+    std::vector<std::thread> listenerThreads;
 
-      Listener l(addressPort[0].c_str(), atoi(addressPort[1].c_str()), 100);
-      LOG(INFO) << "Coordinator " << id << " listening on " << peers[id];
+    for (auto i = 0u; i < context.io_thread_num; i++) {
 
-      for (std::size_t i = 0; i < n - 1; i++) {
-        Socket socket = l.accept();
-        std::size_t c_id;
-        socket.read_number(c_id);
-        inSockets[c_id] = std::move(socket);
-      }
+      listenerThreads.emplace_back(
+          [id = this->id, peers = this->peers, &inSockets = this->inSockets[i],
+           &getAddressPort](std::size_t listener_id) {
+            std::vector<std::string> addressPort = getAddressPort(peers[id]);
 
-      LOG(INFO) << "Listener on coordinator " << id << " exits.";
-    });
+            Listener l(addressPort[0].c_str(),
+                       atoi(addressPort[1].c_str()) + listener_id, 100);
+            LOG(INFO) << "Listener " << listener_id << " on coordinator " << id
+                      << " listening on " << peers[id];
+
+            auto n = peers.size();
+
+            for (std::size_t i = 0; i < n - 1; i++) {
+              Socket socket = l.accept();
+              std::size_t c_id;
+              socket.read_number(c_id);
+              inSockets[c_id] = std::move(socket);
+            }
+
+            LOG(INFO) << "Listener " << listener_id << " on coordinator " << id
+                      << " exits.";
+          },
+          i);
+    }
 
     // connect to peers
     auto n = peers.size();
     constexpr std::size_t retryLimit = 5;
 
+    // connect to multiple remote coordinators
     for (auto i = 0u; i < n; i++) {
       if (i == id)
         continue;
-
       std::vector<std::string> addressPort = getAddressPort(peers[i]);
-      for (auto k = 0u; k < retryLimit; k++) {
-        Socket socket;
+      // connnect to multiple remote listeners
+      for (auto listener_id = 0u; listener_id < context.io_thread_num;
+           listener_id++) {
+        for (auto k = 0u; k < retryLimit; k++) {
+          Socket socket;
 
-        int ret = socket.connect(addressPort[0].c_str(),
-                                 atoi(addressPort[1].c_str()));
-        if (ret == -1) {
-          socket.close();
-          if (k == retryLimit - 1) {
-            LOG(FATAL) << "failed to connect to peers, exiting ...";
-            exit(1);
+          int ret = socket.connect(addressPort[0].c_str(),
+                                   atoi(addressPort[1].c_str()) + listener_id);
+          if (ret == -1) {
+            socket.close();
+            if (k == retryLimit - 1) {
+              LOG(FATAL) << "failed to connect to peers, exiting ...";
+              exit(1);
+            }
+
+            // listener on the other side has not been set up.
+            LOG(INFO) << "Coordinator " << id << " failed to connect " << i
+                      << "(" << peers[i] << ")'s listener " << listener_id
+                      << ", retry in 5 seconds.";
+            std::this_thread::sleep_for(std::chrono::seconds(5));
+            continue;
           }
 
-          // listener on the other side has not been set up.
-          LOG(INFO) << "Coordinator " << id << " failed to connect " << i << "("
-                    << peers[i] << "), retry in 5 seconds.";
-          std::this_thread::sleep_for(std::chrono::seconds(5));
-          continue;
+          socket.disable_nagle_algorithm();
+          LOG(INFO) << "Coordinator " << id << " connected to " << i;
+          socket.write_number(id);
+          outSockets[listener_id][i] = std::move(socket);
+          break;
         }
-
-        socket.disable_nagle_algorithm();
-        LOG(INFO) << "Coordinator " << id << " connected to " << i;
-        socket.write_number(id);
-        outSockets[i] = std::move(socket);
-        break;
       }
     }
 
-    listenerThread.join();
+    for (auto i = 0u; i < listenerThreads.size(); i++) {
+      listenerThreads[i].join();
+    }
+
     LOG(INFO) << "Coordinator " << id << " connected to all peers.";
   }
 
@@ -277,13 +317,21 @@ public:
   }
 
 private:
+  /*
+   * A coordinator may have multilpe inSockets and outSockets, connected to one
+   * remote coordinator to fully utilize the network
+   *
+   * inSockets[0][i] receives w_id % io_threads from coordinator i
+   */
+
   std::size_t id, coordinator_num;
   std::vector<std::string> peers;
-  std::vector<Socket> inSockets, outSockets;
+  const Context &context;
+  std::vector<std::vector<Socket>> inSockets, outSockets;
   std::atomic<bool> workerStopFlag, ioStopFlag;
   std::vector<std::shared_ptr<Worker>> workers;
-  std::unique_ptr<IncomingDispatcher> iDispatcher;
-  std::unique_ptr<OutgoingDispatcher> oDispatcher;
+  std::vector<std::unique_ptr<IncomingDispatcher>> iDispatchers;
+  std::vector<std::unique_ptr<OutgoingDispatcher>> oDispatchers;
   LockfreeQueue<Message *> in_queue, out_queue;
 };
 } // namespace scar

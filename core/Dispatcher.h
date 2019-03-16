@@ -12,18 +12,21 @@
 #include "core/Worker.h"
 #include <atomic>
 #include <glog/logging.h>
+#include <thread>
 #include <vector>
 
 namespace scar {
 class IncomingDispatcher {
 
 public:
-  IncomingDispatcher(std::size_t id, std::vector<Socket> &sockets,
+  IncomingDispatcher(std::size_t id, std::size_t group_id,
+                     std::size_t io_thread_num, std::vector<Socket> &sockets,
                      const std::vector<std::shared_ptr<Worker>> &workers,
                      LockfreeQueue<Message *> &coordinator_queue,
                      std::atomic<bool> &stopFlag)
-      : id(id), network_size(0), workers(workers),
-        coordinator_queue(coordinator_queue), stopFlag(stopFlag) {
+      : id(id), group_id(group_id), io_thread_num(io_thread_num),
+        network_size(0), workers(workers), coordinator_queue(coordinator_queue),
+        stopFlag(stopFlag) {
 
     for (auto i = 0u; i < sockets.size(); i++) {
       buffered_readers.emplace_back(sockets[i]);
@@ -40,7 +43,8 @@ public:
     }
 
     LOG(INFO) << "Incoming Dispatcher started, numCoordinators = "
-              << numCoordinators << " numWorkers = " << numWorkers;
+              << numCoordinators << ", numWorkers = " << numWorkers
+              << ", group id = " << group_id;
 
     while (!stopFlag.load()) {
 
@@ -52,6 +56,7 @@ public:
         auto message = buffered_readers[i].next_message();
 
         if (message == nullptr) {
+          std::this_thread::yield();
           continue;
         }
 
@@ -60,10 +65,12 @@ public:
         // check coordinator message
         if (is_coordinator_message(message.get())) {
           coordinator_queue.push(message.release());
+          CHECK(group_id == 0);
           continue;
         }
 
         auto workerId = message->get_worker_id();
+        CHECK(workerId % io_thread_num == group_id);
         // release the unique ptr
         workers[workerId]->push_message(message.release());
         DCHECK(message == nullptr);
@@ -82,6 +89,8 @@ public:
 
 private:
   std::size_t id;
+  std::size_t group_id;
+  std::size_t io_thread_num;
   std::size_t network_size;
   std::vector<BufferedReader> buffered_readers;
   std::vector<std::shared_ptr<Worker>> workers;
@@ -91,11 +100,13 @@ private:
 
 class OutgoingDispatcher {
 public:
-  OutgoingDispatcher(std::size_t id, std::vector<Socket> &sockets,
+  OutgoingDispatcher(std::size_t id, std::size_t group_id,
+                     std::size_t io_thread_num, std::vector<Socket> &sockets,
                      const std::vector<std::shared_ptr<Worker>> &workers,
                      LockfreeQueue<Message *> &coordinator_queue,
                      std::atomic<bool> &stopFlag)
-      : id(id), network_size(0), sockets(sockets), workers(workers),
+      : id(id), group_id(group_id), io_thread_num(io_thread_num),
+        network_size(0), sockets(sockets), workers(workers),
         coordinator_queue(coordinator_queue), stopFlag(stopFlag) {}
 
   void start() {
@@ -108,22 +119,24 @@ public:
     }
 
     LOG(INFO) << "Outgoing Dispatcher started, numCoordinators = "
-              << numCoordinators << " numWorkers = " << numWorkers;
+              << numCoordinators << ", numWorkers = " << numWorkers
+              << ", group id = " << group_id;
 
     while (!stopFlag.load()) {
 
       // check coordinator
 
-      if (!coordinator_queue.empty()) {
+      if (group_id == 0 && !coordinator_queue.empty()) {
         std::unique_ptr<Message> message(coordinator_queue.front());
         bool ok = coordinator_queue.pop();
         CHECK(ok);
         sendMessage(message.get());
       }
 
-      for (auto i = 0u; i < numWorkers; i++) {
+      for (auto i = group_id; i < numWorkers; i += io_thread_num) {
         dispatchMessage(workers[i]);
       }
+      std::this_thread::yield();
     }
 
     LOG(INFO) << "Outgoing Dispatcher exits, network size: " << network_size;
@@ -155,6 +168,8 @@ public:
 
 private:
   std::size_t id;
+  std::size_t group_id;
+  std::size_t io_thread_num;
   std::size_t network_size;
   std::vector<Socket> &sockets;
   std::vector<std::shared_ptr<Worker>> workers;

@@ -3,6 +3,7 @@
 
 DEFINE_int32(id, 0, "coordinator id");
 DEFINE_int32(threads, 1, "the number of threads");
+DEFINE_int32(io, 1, "the number of i/o threads");
 DEFINE_int32(partition_num, 1, "the number of partitions");
 DEFINE_int32(batch_size, 100, "rstore or calvin batch size");
 DEFINE_int32(group_time, 10, "group commit frequency");
@@ -54,6 +55,7 @@ int main(int argc, char *argv[]) {
   context.sleep_time = FLAGS_sleep_time;
   context.group_time = FLAGS_group_time;
   context.worker_num = n;
+  context.io_thread_num = FLAGS_io;
   context.partition_num = FLAGS_partition_num;
   context.replica_group = FLAGS_replica_group;
   context.lock_manager = FLAGS_lock_manager;
