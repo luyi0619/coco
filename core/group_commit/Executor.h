@@ -68,6 +68,7 @@ public:
     // transaction only commit in a single group
 
     std::queue<std::unique_ptr<TransactionType>> q;
+    std::size_t count = 0;
 
     for (;;) {
 
@@ -90,7 +91,6 @@ public:
         q.pop();
       }
 
-      std::size_t count = 0;
       n_started_workers.fetch_add(1);
 
       bool retry_transaction = false;
