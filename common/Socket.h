@@ -19,12 +19,12 @@ namespace scar {
 class Socket {
 
 public:
-  Socket() {
+  Socket() : quick_ack(false) {
     fd = socket(AF_INET, SOCK_STREAM, 0);
     DCHECK(fd >= 0);
   }
 
-  Socket(int fd) : fd(fd) {}
+  Socket(int fd) : quick_ack(false), fd(fd) {}
 
   // Socket is not copyable
   Socket(const Socket &) = delete;
@@ -33,12 +33,16 @@ public:
 
   // Socket is movable
   Socket(Socket &&that) {
+    quick_ack = that.quick_ack;
+
     DCHECK(that.fd >= 0);
     fd = that.fd;
     that.fd = -1;
   }
 
   Socket &operator=(Socket &&that) {
+    quick_ack = that.quick_ack;
+
     DCHECK(that.fd >= 0);
     fd = that.fd;
     that.fd = -1;
@@ -57,6 +61,19 @@ public:
     int flag = 1;
     int res = setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(int));
     CHECK(res >= 0);
+  }
+
+  void set_quick_ack_flag(bool quick_ack) { this->quick_ack = quick_ack; }
+
+  void try_quick_ack() {
+#ifndef __APPLE__
+    if (quick_ack) {
+      DCHECK(fd >= 0);
+      int flag = 1;
+      int res = setsockopt(fd, IPPROTO_TCP, TCP_QUICKACK, &flag, sizeof(int));
+      CHECK(res >= 0);
+    }
+#endif
   }
 
   int close() {
@@ -127,7 +144,9 @@ public:
   long read(char *buf, long size) {
     DCHECK(fd >= 0);
     if (size > 0) {
-      return recv(fd, buf, size, 0);
+      long recv_size = recv(fd, buf, size, 0);
+      try_quick_ack();
+      return recv_size;
     }
     return 0;
   }
@@ -135,7 +154,9 @@ public:
   long read_async(char *buf, long size) {
     DCHECK(fd >= 0);
     if (size > 0) {
-      return recv(fd, buf, size, MSG_DONTWAIT);
+      long recv_size = recv(fd, buf, size, MSG_DONTWAIT);
+      try_quick_ack();
+      return recv_size;
     }
     return 0;
   }
@@ -159,6 +180,7 @@ public:
   }
 
 private:
+  bool quick_ack = false;
   int fd;
 };
 
@@ -188,6 +210,7 @@ private:
 
   void listen(int max_connections) { ::listen(fd, max_connections); }
 
+private:
   int fd;
 };
 } // namespace scar

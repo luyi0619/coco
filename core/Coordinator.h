@@ -171,6 +171,8 @@ public:
       oDispatcherThreads[i].join();
     }
 
+    close_sockets();
+
     LOG(INFO) << "Coordinator exits.";
   }
 
@@ -204,7 +206,8 @@ public:
 
       listenerThreads.emplace_back(
           [id = this->id, peers = this->peers, &inSockets = this->inSockets[i],
-           &getAddressPort](std::size_t listener_id) {
+           &getAddressPort,
+           tcp_quick_ack = context.tcp_quick_ack](std::size_t listener_id) {
             std::vector<std::string> addressPort = getAddressPort(peers[id]);
 
             Listener l(addressPort[0].c_str(),
@@ -218,6 +221,8 @@ public:
               Socket socket = l.accept();
               std::size_t c_id;
               socket.read_number(c_id);
+              // set quick ack flag
+              socket.set_quick_ack_flag(tcp_quick_ack);
               inSockets[c_id] = std::move(socket);
             }
 
@@ -258,8 +263,10 @@ public:
             std::this_thread::sleep_for(std::chrono::seconds(5));
             continue;
           }
+          if (context.tcp_no_delay) {
+            socket.disable_nagle_algorithm();
+          }
 
-          socket.disable_nagle_algorithm();
           LOG(INFO) << "Coordinator " << id << " connected to " << i;
           socket.write_number(id);
           outSockets[listener_id][i] = std::move(socket);
@@ -314,6 +321,20 @@ public:
       out_queue.push(message.release());
     }
     return sum;
+  }
+
+private:
+  void close_sockets() {
+    for (auto i = 0u; i < inSockets.size(); i++) {
+      for (auto j = 0u; j < inSockets[i].size(); j++) {
+        inSockets[i][j].close();
+      }
+    }
+    for (auto i = 0u; i < outSockets.size(); i++) {
+      for (auto j = 0u; j < outSockets[i].size(); j++) {
+        outSockets[i][j].close();
+      }
+    }
   }
 
 private:

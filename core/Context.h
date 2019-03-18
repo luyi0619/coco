@@ -26,6 +26,9 @@ public:
   std::size_t delay_time = 0;
   std::string cdf_path;
 
+  bool tcp_no_delay = true;
+  bool tcp_quick_ack = false;
+
   bool read_on_replica = false;
   bool local_validation = false;
   bool rts_sync = false;

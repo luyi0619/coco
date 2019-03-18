@@ -28,6 +28,8 @@ DEFINE_int32(neworder_dist, 10, "new order distributed.");
 DEFINE_int32(payment_dist, 15, "payment distributed.");
 DEFINE_int32(delay, 0, "delay time in us.");
 DEFINE_int32(n_district, 10, "no. of districts in a warehouse");
+DEFINE_bool(tcp_no_delay, true, "TCP Nagle algorithm, true: disable nagle");
+DEFINE_bool(tcp_quick_ack, false, "TCP quick ack mode, true: enable quick ack");
 
 // ./main --logtostderr=1 --id=1 --servers="127.0.0.1:10010;127.0.0.1:10011"
 // cmake -DCMAKE_BUILD_TYPE=Release
@@ -50,6 +52,9 @@ int main(int argc, char *argv[]) {
   if (context.protocol == "kiva") {
     context.batch_size = context.batch_size / context.coordinator_num;
   }
+  context.tcp_no_delay = FLAGS_tcp_no_delay;
+  context.tcp_quick_ack = FLAGS_tcp_quick_ack;
+
   context.batch_flush = FLAGS_batch_flush;
   context.sleep_time = FLAGS_sleep_time;
   context.group_time = FLAGS_group_time;
