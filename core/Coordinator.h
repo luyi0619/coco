@@ -22,9 +22,9 @@ namespace scar {
 class Coordinator {
 public:
   template <class Database, class Context>
-  Coordinator(std::size_t id, const std::vector<std::string> &peers,
-              Database &db, const Context &context)
-      : id(id), coordinator_num(peers.size()), peers(peers), context(context) {
+  Coordinator(std::size_t id, Database &db, const Context &context)
+      : id(id), coordinator_num(context.peers.size()), peers(context.peers),
+        context(context) {
     workerStopFlag.store(false);
     ioStopFlag.store(false);
     LOG(INFO) << "Coordinator initializes " << context.worker_num
@@ -346,7 +346,7 @@ private:
    */
 
   std::size_t id, coordinator_num;
-  std::vector<std::string> peers;
+  const std::vector<std::string> &peers;
   const Context &context;
   std::vector<std::vector<Socket>> inSockets, outSockets;
   std::atomic<bool> workerStopFlag, ioStopFlag;

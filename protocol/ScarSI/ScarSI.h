@@ -168,6 +168,10 @@ private:
       txn.local_validated = true;
     }
 
+    if (context.parallel_locking_and_validation) {
+      sync_messages(txn);
+    }
+
     // lock records in any order. there might be dead lock.
 
     for (auto i = 0u; i < writeSet.size(); i++) {

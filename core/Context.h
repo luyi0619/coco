@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <string>
+#include <vector>
 
 namespace scar {
 class Context {
@@ -29,13 +30,18 @@ public:
   bool tcp_no_delay = true;
   bool tcp_quick_ack = false;
 
+  bool sleep_on_retry = true;
+
   bool read_on_replica = false;
   bool local_validation = false;
   bool rts_sync = false;
-  bool sleep_on_retry = true;
+  bool parallel_locking_and_validation = true;
+
   bool kiva_read_only_optmization = true;
   bool kiva_reordering_optmization = true;
   bool kiva_snapshot_isolation = false;
   bool operation_replication = false;
+
+  std::vector<std::string> peers;
 };
 } // namespace scar

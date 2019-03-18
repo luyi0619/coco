@@ -17,6 +17,7 @@ TEST(TestCoordinator, TestTPCC) {
   int n = FLAGS_threads;
 
   scar::tpcc::Context context;
+  context.peers = {"127.0.0.1:10010"};
   context.coordinator_num = 1;
   context.partition_num = n;
   context.worker_num = n;
@@ -28,7 +29,7 @@ TEST(TestCoordinator, TestTPCC) {
   std::atomic<uint64_t> epoch;
   std::atomic<bool> stopFlag;
 
-  scar::Coordinator c(0, {"127.0.0.1:10010"}, db, context);
+  scar::Coordinator c(0, db, context);
 
   EXPECT_EQ(true, true);
 }
@@ -44,6 +45,7 @@ TEST(TestCoordinator, TestConnect) {
 
   auto startCoordinator = [n, &peers](int id) {
     scar::tpcc::Context context;
+    context.peers = peers;
     context.coordinator_num = 3;
     context.partition_num = n;
     context.worker_num = n;
@@ -52,7 +54,7 @@ TEST(TestCoordinator, TestConnect) {
     context.io_thread_num = 1;
 
     DatabaseType db;
-    scar::Coordinator c(id, peers, db, context);
+    scar::Coordinator c(id, db, context);
     c.connectToPeers();
   };
 
