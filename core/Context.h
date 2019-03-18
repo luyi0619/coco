@@ -30,6 +30,8 @@ public:
   bool tcp_no_delay = true;
   bool tcp_quick_ack = false;
 
+  bool cpu_affinity = true;
+
   bool sleep_on_retry = true;
 
   bool read_on_replica = false;

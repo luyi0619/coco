@@ -57,6 +57,10 @@ public:
                                       iDispatchers[i].get());
       oDispatcherThreads.emplace_back(&OutgoingDispatcher::start,
                                       oDispatchers[i].get());
+      if (context.cpu_affinity) {
+        pin_thread_to_core(iDispatcherThreads[i]);
+        pin_thread_to_core(oDispatcherThreads[i]);
+      }
     }
 
     std::vector<std::thread> threads;
@@ -65,6 +69,9 @@ public:
 
     for (auto i = 0u; i < workers.size(); i++) {
       threads.emplace_back(&Worker::start, workers[i].get());
+      if (context.cpu_affinity) {
+        pin_thread_to_core(threads[i]);
+      }
     }
 
     // run timeToRun seconds
@@ -335,6 +342,18 @@ private:
         outSockets[i][j].close();
       }
     }
+  }
+
+  void pin_thread_to_core(std::thread &t) {
+#ifndef __APPLE__
+    static std::size_t core_id = 0;
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(core_id++, &cpuset);
+    int rc =
+        pthread_setaffinity_np(t.native_handle(), sizeof(cpu_set_t), &cpuset);
+    CHECK(rc == 0);
+#endif
   }
 
 private:

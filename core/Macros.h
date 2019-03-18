@@ -33,6 +33,7 @@ DEFINE_int32(delay, 0, "delay time in us.");
 DEFINE_string(cdf_path, "", "path to cdf");
 DEFINE_bool(tcp_no_delay, true, "TCP Nagle algorithm, true: disable nagle");
 DEFINE_bool(tcp_quick_ack, false, "TCP quick ack mode, true: enable quick ack");
+DEFINE_bool(cpu_affinity, true, "pinning each thread to a separate core");
 
 
 #define SETUP_CONTEXT(context)  \
@@ -64,4 +65,5 @@ DEFINE_bool(tcp_quick_ack, false, "TCP quick ack mode, true: enable quick ack");
     context.delay_time = FLAGS_delay; \
     context.cdf_path = FLAGS_cdf_path; \
     context.tcp_no_delay = FLAGS_tcp_no_delay;\
-    context.tcp_quick_ack = FLAGS_tcp_quick_ack;
+    context.tcp_quick_ack = FLAGS_tcp_quick_ack; \
+    context.cpu_affinity = FLAGS_cpu_affinity;
