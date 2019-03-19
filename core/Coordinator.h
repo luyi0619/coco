@@ -346,7 +346,7 @@ private:
 
   void pin_thread_to_core(std::thread &t) {
 #ifndef __APPLE__
-    static std::size_t core_id = 0;
+    static std::size_t core_id = context.cpu_core_id;
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
     CPU_SET(core_id++, &cpuset);

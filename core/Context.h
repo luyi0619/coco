@@ -26,6 +26,7 @@ public:
   std::string partitioner;
   std::size_t delay_time = 0;
   std::string cdf_path;
+  std::size_t cpu_core_id = 0;
 
   bool tcp_no_delay = true;
   bool tcp_quick_ack = false;
