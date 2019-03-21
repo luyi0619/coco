@@ -128,7 +128,7 @@ private:
   }
 
 public:
-  static constexpr uint32_t BUFFER_SIZE = 1204 * 1024 * 4; // 4MB
+  static constexpr uint32_t BUFFER_SIZE = 1024 * 1024 * 4; // 4MB
 
 private:
   Socket *socket;

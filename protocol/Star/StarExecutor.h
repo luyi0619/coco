@@ -6,6 +6,7 @@
 
 #include "core/Partitioner.h"
 
+#include "common/BufferedFileWriter.h"
 #include "common/Percentile.h"
 #include "core/Delay.h"
 #include "core/Worker.h"
@@ -55,6 +56,12 @@ public:
     }
 
     messageHandlers = MessageHandlerType::get_message_handlers();
+
+    if (context.log_path != "") {
+      std::string filename =
+          context.log_path + "_" + std::to_string(id) + ".txt";
+      logger = std::make_unique<BufferedFileWriter>(filename.c_str());
+    }
   }
 
   void start() override {
@@ -246,6 +253,10 @@ public:
               << " us (50%) " << percentile.nth(75) << " us (75%) "
               << percentile.nth(95) << " us (95%) " << percentile.nth(99)
               << " us (99%).";
+
+    if (logger != nullptr) {
+      logger->close();
+    }
   }
 
   void push_message(Message *message) override { in_queue.push(message); }
@@ -297,6 +308,13 @@ private:
           messageHandlers[type](
               messagePiece, *messages[message->get_source_node_id()], *table);
         }
+
+        if (logger != nullptr &&
+            type ==
+                static_cast<uint32_t>(StarMessage::REPLICATION_VALUE_REQUEST)) {
+          logger->write(messagePiece.toStringPiece().data(),
+                        messagePiece.get_message_length());
+        }
       }
 
       size += message->get_message_count();
@@ -346,6 +364,7 @@ private:
   std::atomic<uint32_t> &worker_status;
   std::atomic<uint32_t> &n_complete_workers, &n_started_workers;
   std::unique_ptr<Delay> delay;
+  std::unique_ptr<BufferedFileWriter> logger;
   Percentile<int64_t> percentile;
   // transaction only commit in a single group
   std::queue<std::unique_ptr<TransactionType>> q;

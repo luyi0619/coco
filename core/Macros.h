@@ -31,41 +31,43 @@ DEFINE_bool(kiva_reordering, true, "kiva reordering optimization");
 DEFINE_bool(kiva_si, false, "kiva snapshot isolation");
 DEFINE_int32(delay, 0, "delay time in us.");
 DEFINE_string(cdf_path, "", "path to cdf");
+DEFINE_string(log_path, "", "path to disk logging.");
 DEFINE_bool(tcp_no_delay, true, "TCP Nagle algorithm, true: disable nagle");
 DEFINE_bool(tcp_quick_ack, false, "TCP quick ack mode, true: enable quick ack");
 DEFINE_bool(cpu_affinity, true, "pinning each thread to a separate core");
 DEFINE_int32(cpu_core_id, 0, "cpu core id");
 
-
-#define SETUP_CONTEXT(context)  \
-    boost::algorithm::split(context.peers, FLAGS_servers, boost::is_any_of(";")); \
-    context.coordinator_num = context.peers.size(); \
-    context.coordinator_id = FLAGS_id; \
-    context.worker_num = FLAGS_threads; \
-    context.io_thread_num = FLAGS_io; \
-    context.partition_num = FLAGS_partition_num; \
-    context.partitioner = FLAGS_partitioner; \
-    context.sleep_on_retry = FLAGS_sleep_on_retry; \
-    context.batch_size = FLAGS_batch_size; \
-    context.group_time = FLAGS_group_time; \
-    context.batch_flush = FLAGS_batch_flush; \
-    context.sleep_time = FLAGS_sleep_time; \
-    context.protocol = FLAGS_protocol; \
-    if (context.protocol == "kiva") { \
-      context.batch_size = context.batch_size / context.coordinator_num; \
-    } \
-    context.replica_group = FLAGS_replica_group; \
-    context.lock_manager = FLAGS_lock_manager; \
-    context.read_on_replica = FLAGS_read_on_replica; \
-    context.local_validation = FLAGS_local_validation; \
-    context.rts_sync = FLAGS_rts_sync; \
-    context.parallel_locking_and_validation = FLAGS_plv; \
-    context.kiva_read_only_optmization = FLAGS_kiva_read_only; \
-    context.kiva_reordering_optmization = FLAGS_kiva_reordering; \
-    context.kiva_snapshot_isolation = FLAGS_kiva_si; \
-    context.delay_time = FLAGS_delay; \
-    context.cdf_path = FLAGS_cdf_path; \
-    context.tcp_no_delay = FLAGS_tcp_no_delay;\
-    context.tcp_quick_ack = FLAGS_tcp_quick_ack; \
-    context.cpu_affinity = FLAGS_cpu_affinity; \
-    context.cpu_core_id = FLAGS_cpu_core_id;
+#define SETUP_CONTEXT(context)                                                 \
+  boost::algorithm::split(context.peers, FLAGS_servers,                        \
+                          boost::is_any_of(";"));                              \
+  context.coordinator_num = context.peers.size();                              \
+  context.coordinator_id = FLAGS_id;                                           \
+  context.worker_num = FLAGS_threads;                                          \
+  context.io_thread_num = FLAGS_io;                                            \
+  context.partition_num = FLAGS_partition_num;                                 \
+  context.partitioner = FLAGS_partitioner;                                     \
+  context.sleep_on_retry = FLAGS_sleep_on_retry;                               \
+  context.batch_size = FLAGS_batch_size;                                       \
+  context.group_time = FLAGS_group_time;                                       \
+  context.batch_flush = FLAGS_batch_flush;                                     \
+  context.sleep_time = FLAGS_sleep_time;                                       \
+  context.protocol = FLAGS_protocol;                                           \
+  if (context.protocol == "kiva") {                                            \
+    context.batch_size = context.batch_size / context.coordinator_num;         \
+  }                                                                            \
+  context.replica_group = FLAGS_replica_group;                                 \
+  context.lock_manager = FLAGS_lock_manager;                                   \
+  context.read_on_replica = FLAGS_read_on_replica;                             \
+  context.local_validation = FLAGS_local_validation;                           \
+  context.rts_sync = FLAGS_rts_sync;                                           \
+  context.parallel_locking_and_validation = FLAGS_plv;                         \
+  context.kiva_read_only_optmization = FLAGS_kiva_read_only;                   \
+  context.kiva_reordering_optmization = FLAGS_kiva_reordering;                 \
+  context.kiva_snapshot_isolation = FLAGS_kiva_si;                             \
+  context.delay_time = FLAGS_delay;                                            \
+  context.log_path = FLAGS_log_path;                                           \
+  context.cdf_path = FLAGS_cdf_path;                                           \
+  context.tcp_no_delay = FLAGS_tcp_no_delay;                                   \
+  context.tcp_quick_ack = FLAGS_tcp_quick_ack;                                 \
+  context.cpu_affinity = FLAGS_cpu_affinity;                                   \
+  context.cpu_core_id = FLAGS_cpu_core_id;
