@@ -62,6 +62,7 @@ public:
         n_workers(context.worker_num - n_lock_manager),
         lock_manager_id(CalvinHelper::worker_id_to_lock_manager_id(
             id, n_lock_manager, n_workers)),
+        init_transaction(false),
         random(id), // make sure each worker has a different seed.
         protocol(db, partitioner),
         delay(std::make_unique<SameDelay>(
@@ -94,14 +95,7 @@ public:
       } while (status != ExecutorStatus::Analysis);
 
       n_started_workers.fetch_add(1);
-      for (auto i = id; i < transactions.size(); i += context.worker_num) {
-        // generate transaction
-        auto partition_id = random.uniform_dist(0, context.partition_num - 1);
-        transactions[i] =
-            workload.next_transaction(context, partition_id, storages[i]);
-        transactions[i]->set_id(i);
-        prepare_transaction(*transactions[i]);
-      }
+      generate_transactions();
       n_complete_workers.fetch_add(1);
 
       // wait to Execute
@@ -182,6 +176,27 @@ public:
     message->set_worker_id(id);
   }
 
+  void generate_transactions() {
+    if (!context.calvin_same_batch || !init_transaction) {
+      init_transaction = true;
+      for (auto i = id; i < transactions.size(); i += context.worker_num) {
+        // generate transaction
+        auto partition_id = random.uniform_dist(0, context.partition_num - 1);
+        transactions[i] =
+            workload.next_transaction(context, partition_id, storages[i]);
+        transactions[i]->set_id(i);
+        prepare_transaction(*transactions[i]);
+      }
+    } else {
+      for (auto i = id; i < transactions.size(); i += context.worker_num) {
+        // a soft reset
+        transactions[i]->network_size.store(0);
+        transactions[i]->load_read_count();
+        transactions[i]->clear_execution_bit();
+      }
+    }
+  }
+
   void prepare_transaction(TransactionType &txn) {
 
     setup_prepare_handlers(txn);
@@ -189,6 +204,10 @@ public:
     auto result = txn.execute(id);
     if (result == TransactionResult::ABORT_NORETRY) {
       txn.abort_no_retry = true;
+    }
+
+    if (context.calvin_same_batch) {
+      txn.save_read_count();
     }
 
     analyze_active_coordinator(txn);
@@ -420,6 +439,7 @@ private:
   WorkloadType workload;
   std::size_t n_lock_manager, n_workers;
   std::size_t lock_manager_id;
+  bool init_transaction;
   RandomType random;
   ProtocolType protocol;
   std::unique_ptr<Delay> delay;

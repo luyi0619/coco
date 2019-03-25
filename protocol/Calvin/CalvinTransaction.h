@@ -33,7 +33,9 @@ public:
     abort_no_retry = false;
     abort_read_validation = false;
     local_read.store(0);
+    saved_local_read = 0;
     remote_read.store(0);
+    saved_remote_read = 0;
     execution_phase = false;
     network_size.store(0);
     active_coordinators.clear();
@@ -228,11 +230,33 @@ public:
     };
   }
 
+  void save_read_count() {
+    saved_local_read = local_read.load();
+    saved_remote_read = remote_read.load();
+  }
+
+  void load_read_count() {
+    local_read.store(saved_local_read);
+    remote_read.store(saved_remote_read);
+  }
+
+  void clear_execution_bit() {
+    for (auto i = 0u; i < readSet.size(); i++) {
+
+      if (readSet[i].get_local_index_read_bit()) {
+        continue;
+      }
+
+      readSet[i].clear_execution_processed_bit();
+    }
+  }
+
 public:
   std::size_t coordinator_id, partition_id, id;
   std::chrono::steady_clock::time_point startTime;
   std::atomic<int32_t> network_size;
   std::atomic<int32_t> local_read, remote_read;
+  int32_t saved_local_read, saved_remote_read;
 
   bool abort_lock, abort_no_retry, abort_read_validation;
   bool execution_phase;

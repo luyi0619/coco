@@ -30,6 +30,15 @@ public:
     LOG(INFO) << "Coordinator initializes " << context.worker_num
               << " workers.";
     workers = WorkerFactory::create_workers(id, db, context, workerStopFlag);
+
+    // init sockets vector
+    inSockets.resize(context.io_thread_num);
+    outSockets.resize(context.io_thread_num);
+
+    for (auto i = 0u; i < context.io_thread_num; i++) {
+      inSockets[i].resize(peers.size());
+      outSockets[i].resize(peers.size());
+    }
   }
 
   ~Coordinator() = default;
@@ -188,15 +197,6 @@ public:
     // single node test mode
     if (peers.size() == 1) {
       return;
-    }
-
-    // init sockets vector
-    inSockets.resize(context.io_thread_num);
-    outSockets.resize(context.io_thread_num);
-
-    for (auto i = 0u; i < context.io_thread_num; i++) {
-      inSockets[i].resize(peers.size());
-      outSockets[i].resize(peers.size());
     }
 
     auto getAddressPort = [](const std::string &addressPort) {

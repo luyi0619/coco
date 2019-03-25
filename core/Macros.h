@@ -26,6 +26,7 @@ DEFINE_bool(read_on_replica, false, "read from replicas");
 DEFINE_bool(local_validation, false, "local validation");
 DEFINE_bool(rts_sync, false, "rts sync");
 DEFINE_bool(plv, true, "parallel locking and validation");
+DEFINE_bool(calvin_same_batch, false, "always run the same batch of txns.");
 DEFINE_bool(kiva_read_only, true, "kiva read only optimization");
 DEFINE_bool(kiva_reordering, true, "kiva reordering optimization");
 DEFINE_bool(kiva_si, false, "kiva snapshot isolation");
@@ -58,6 +59,7 @@ DEFINE_int32(cpu_core_id, 0, "cpu core id");
   context.local_validation = FLAGS_local_validation;                           \
   context.rts_sync = FLAGS_rts_sync;                                           \
   context.parallel_locking_and_validation = FLAGS_plv;                         \
+  context.calvin_same_batch = FLAGS_calvin_same_batch;                         \
   context.kiva_read_only_optmization = FLAGS_kiva_read_only;                   \
   context.kiva_reordering_optmization = FLAGS_kiva_reordering;                 \
   context.kiva_snapshot_isolation = FLAGS_kiva_si;                             \

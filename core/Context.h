@@ -41,6 +41,8 @@ public:
   bool rts_sync = false;
   bool parallel_locking_and_validation = true;
 
+  bool calvin_same_batch = false;
+
   bool kiva_read_only_optmization = true;
   bool kiva_reordering_optmization = true;
   bool kiva_snapshot_isolation = false;
