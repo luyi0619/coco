@@ -26,7 +26,7 @@ public:
   using RandomType = typename DatabaseType::RandomType;
   using StorageType = Storage;
 
-  static constexpr std::size_t keys_num = 4;
+  static constexpr std::size_t keys_num = 10;
 
   ReadModifyWrite(std::size_t coordinator_id, std::size_t partition_id,
                   DatabaseType &db, const ContextType &context,

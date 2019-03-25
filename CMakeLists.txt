@@ -9,8 +9,8 @@ set(CMAKE_CXX_STANDARD 14)
 add_subdirectory(cmake)
 
 find_library(jemalloc_lib jemalloc) # jemalloc 5.0
-find_package(glog REQUIRED)
-find_package(gflags REQUIRED)
+#find_package(glog REQUIRED)
+#find_package(gflags REQUIRED)
 
 # additional target to perform clang-format run, requires clang-format
 
@@ -31,7 +31,7 @@ include_directories(${CMAKE_SOURCE_DIR})
 file(GLOB_RECURSE COMMON_SOURCE_FILES common/*.cpp)
 add_library(common STATIC ${COMMON_SOURCE_FILES})
 
-target_link_libraries(common ${jemalloc_lib} glog::glog gflags)
+target_link_libraries(common ${jemalloc_lib} glog gflags)
 
 include(CTest)
 
