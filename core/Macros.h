@@ -52,9 +52,6 @@ DEFINE_int32(cpu_core_id, 0, "cpu core id");
   context.batch_flush = FLAGS_batch_flush;                                     \
   context.sleep_time = FLAGS_sleep_time;                                       \
   context.protocol = FLAGS_protocol;                                           \
-  if (context.protocol == "kiva") {                                            \
-    context.batch_size = context.batch_size / context.coordinator_num;         \
-  }                                                                            \
   context.replica_group = FLAGS_replica_group;                                 \
   context.lock_manager = FLAGS_lock_manager;                                   \
   context.read_on_replica = FLAGS_read_on_replica;                             \

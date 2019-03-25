@@ -232,26 +232,26 @@ public:
                  customerNameIdxInit(context, partitionID);
                },
                partitionNum, threadsNum, partitioner.get());
-    initTables("history",
-               [&context, this](std::size_t partitionID) {
-                 historyInit(context, partitionID);
-               },
-               partitionNum, threadsNum, partitioner.get());
-    initTables("new_order",
-               [&context, this](std::size_t partitionID) {
-                 newOrderInit(context, partitionID);
-               },
-               partitionNum, threadsNum, partitioner.get());
-    initTables("order",
-               [&context, this](std::size_t partitionID) {
-                 orderInit(context, partitionID);
-               },
-               partitionNum, threadsNum, partitioner.get());
-    initTables("order_line",
-               [&context, this](std::size_t partitionID) {
-                 orderLineInit(context, partitionID);
-               },
-               partitionNum, threadsNum, partitioner.get());
+    /*    initTables("history",
+                   [&context, this](std::size_t partitionID) {
+                     historyInit(context, partitionID);
+                   },
+                   partitionNum, threadsNum, partitioner.get());
+        initTables("new_order",
+                   [&context, this](std::size_t partitionID) {
+                     newOrderInit(context, partitionID);
+                   },
+                   partitionNum, threadsNum, partitioner.get());
+        initTables("order",
+                   [&context, this](std::size_t partitionID) {
+                     orderInit(context, partitionID);
+                   },
+                   partitionNum, threadsNum, partitioner.get());
+        initTables("order_line",
+                   [&context, this](std::size_t partitionID) {
+                     orderLineInit(context, partitionID);
+                   },
+                   partitionNum, threadsNum, partitioner.get());*/
     initTables("item",
                [&context, this](std::size_t partitionID) {
                  itemInit(context, partitionID);

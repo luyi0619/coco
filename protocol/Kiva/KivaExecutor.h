@@ -82,7 +82,7 @@ public:
         status = static_cast<ExecutorStatus>(worker_status.load());
 
         if (status == ExecutorStatus::EXIT) {
-          LOG(INFO) << "CalvinExecutor " << id << " exits. ";
+          LOG(INFO) << "KivaExecutor " << id << " exits. ";
           return;
         }
       } while (status != ExecutorStatus::Kiva_READ);
