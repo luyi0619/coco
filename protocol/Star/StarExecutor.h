@@ -51,8 +51,11 @@ public:
             coordinator_id, context.coordinator_num, context.delay_time)) {
 
     for (auto i = 0u; i < context.coordinator_num; i++) {
-      messages.emplace_back(std::make_unique<Message>());
-      init_message(messages[i].get(), i);
+      sync_messages.emplace_back(std::make_unique<Message>());
+      init_message(sync_messages[i].get(), i);
+
+      async_messages.emplace_back(std::make_unique<Message>());
+      init_message(async_messages[i].get(), i);
     }
 
     messageHandlers = MessageHandlerType::get_message_handlers();
@@ -218,7 +221,8 @@ public:
 
         auto result = transaction->execute(id);
         if (result == TransactionResult::READY_TO_COMMIT) {
-          bool commit = protocol.commit(*transaction, messages);
+          bool commit =
+              protocol.commit(*transaction, sync_messages, async_messages);
           n_network_size.fetch_add(transaction->network_size);
           if (commit) {
             n_commit.fetch_add(1);
@@ -240,10 +244,10 @@ public:
       } while (retry_transaction);
 
       if (i % phase_context.batch_flush == 0) {
-        flush_messages();
+        flush_async_messages();
       }
     }
-    flush_messages();
+    flush_async_messages();
   }
 
   void onExit() override {
@@ -297,7 +301,7 @@ private:
         DCHECK(type < messageHandlers.size());
 
         messageHandlers[type](messagePiece,
-                              *messages[message->get_source_node_id()], db,
+                              *sync_messages[message->get_source_node_id()], db,
                               transaction.get());
         if (logger) {
           logger->write(messagePiece.toStringPiece().data(),
@@ -306,6 +310,7 @@ private:
       }
 
       size += message->get_message_count();
+      flush_sync_messages();
     }
     return size;
   }
@@ -317,10 +322,12 @@ private:
                     bool local_index_read) -> uint64_t {
       return protocol.search(table_id, partition_id, key, value);
     };
+
+    txn.remote_request_handler = [this]() { return this->process_request(); };
+    txn.message_flusher = [this]() { this->flush_sync_messages(); };
   }
 
-  void flush_messages() {
-
+  void flush_messages(std::vector<std::unique_ptr<Message>> &messages) {
     for (auto i = 0u; i < messages.size(); i++) {
       if (i == coordinator_id) {
         continue;
@@ -337,6 +344,10 @@ private:
       init_message(messages[i].get(), i);
     }
   }
+
+  void flush_sync_messages() { flush_messages(sync_messages); }
+
+  void flush_async_messages() { flush_messages(async_messages); }
 
   void init_message(Message *message, std::size_t dest_node_id) {
     message->set_source_node_id(coordinator_id);
@@ -357,7 +368,7 @@ private:
   std::unique_ptr<TransactionType> transaction;
   // transaction only commit in a single group
   std::queue<std::unique_ptr<TransactionType>> q;
-  std::vector<std::unique_ptr<Message>> messages;
+  std::vector<std::unique_ptr<Message>> sync_messages, async_messages;
   std::vector<std::function<void(MessagePiece, Message &, DatabaseType &,
                                  TransactionType *)>>
       messageHandlers;

@@ -60,7 +60,8 @@ public:
   }
 
   bool commit(TransactionType &txn,
-              std::vector<std::unique_ptr<Message>> &messages) {
+              std::vector<std::unique_ptr<Message>> &syncMessages,
+              std::vector<std::unique_ptr<Message>> &asyncMessages) {
     // lock write set
     if (lock_write_set(txn)) {
       abort(txn);
@@ -76,7 +77,7 @@ public:
     uint64_t commit_tid = generateTid(txn);
 
     // write and replicate
-    write_and_replicate(txn, commit_tid, messages);
+    write_and_replicate(txn, commit_tid, syncMessages, asyncMessages);
 
     return true;
   }
@@ -198,11 +199,17 @@ private:
     return next_tid;
   }
 
-  void write_and_replicate(TransactionType &txn, uint64_t commit_tid,
-                           std::vector<std::unique_ptr<Message>> &messages) {
+  void
+  write_and_replicate(TransactionType &txn, uint64_t commit_tid,
+                      std::vector<std::unique_ptr<Message>> &syncMessages,
+                      std::vector<std::unique_ptr<Message>> &asyncMessages) {
 
     auto &readSet = txn.readSet;
     auto &writeSet = txn.writeSet;
+
+    std::vector<std::atomic<uint64_t> *> tids;
+
+    // write to local db
 
     for (auto i = 0u; i < writeSet.size(); i++) {
       auto &writeKey = writeSet[i];
@@ -214,36 +221,14 @@ private:
       auto value = writeKey.get_value();
 
       std::atomic<uint64_t> &tid = table->search_metadata(key);
+      tids.push_back(&tid);
       table->update(key, value);
-      SiloHelper::unlock(tid, commit_tid);
-
-      // value replicate
-      for (auto k = 0u; k < partitioner.total_coordinators(); k++) {
-
-        // k does not have this partition
-        if (!partitioner.is_partition_replicated_on(partitionId, k)) {
-          continue;
-        }
-
-        // already write
-        if (k == txn.coordinator_id) {
-          continue;
-        }
-
-        if (!context.operation_replication) {
-
-          txn.network_size +=
-              MessageFactoryType::new_async_value_replication_message(
-                  *messages[k], *table, writeKey.get_key(),
-                  writeKey.get_value(), commit_tid);
-        }
-      }
     }
 
-    // operation replicate
+    // replicate to remote db
 
+    // operation replication optimization in the partitioned phase
     if (context.operation_replication) {
-
       txn.operation.set_tid(commit_tid);
       auto partition_id = txn.operation.partition_id;
 
@@ -259,7 +244,59 @@ private:
 
         txn.network_size +=
             MessageFactoryType::new_operation_replication_message(
-                *messages[k], txn.operation);
+                *asyncMessages[k], txn.operation);
+      }
+    } else {
+      // value replication
+      for (auto i = 0u; i < writeSet.size(); i++) {
+        auto &writeKey = writeSet[i];
+        auto tableId = writeKey.get_table_id();
+        auto partitionId = writeKey.get_partition_id();
+        auto table = db.find_table(tableId, partitionId);
+
+        auto key = writeKey.get_key();
+        auto value = writeKey.get_value();
+
+        // value replicate
+        for (auto k = 0u; k < partitioner.total_coordinators(); k++) {
+
+          // k does not have this partition
+          if (!partitioner.is_partition_replicated_on(partitionId, k)) {
+            continue;
+          }
+
+          // already write
+          if (k == txn.coordinator_id) {
+            continue;
+          }
+          if (context.star_sync_in_single_master_phase) {
+            txn.pendingResponses++;
+            txn.network_size +=
+                MessageFactoryType::new_sync_value_replication_message(
+                    *syncMessages[k], *table, key, value, commit_tid);
+          } else {
+            txn.network_size +=
+                MessageFactoryType::new_async_value_replication_message(
+                    *asyncMessages[k], *table, key, value, commit_tid);
+          }
+        }
+      }
+    }
+
+    if (context.star_sync_in_single_master_phase) {
+      sync_messages(txn);
+    }
+
+    for (auto i = 0u; i < tids.size(); i++) {
+      SiloHelper::unlock(*tids[i], commit_tid);
+    }
+  }
+
+  void sync_messages(TransactionType &txn, bool wait_response = true) {
+    txn.message_flusher();
+    if (wait_response) {
+      while (txn.pendingResponses > 0) {
+        txn.remote_request_handler();
       }
     }
   }

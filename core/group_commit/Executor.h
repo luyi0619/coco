@@ -272,43 +272,27 @@ public:
   virtual void setupHandlers(TransactionType &txn) = 0;
 
 protected:
-  void flush_sync_messages() {
-
-    for (auto i = 0u; i < sync_messages.size(); i++) {
+  void flush_messages(std::vector<std::unique_ptr<Message>> &messages) {
+    for (auto i = 0u; i < messages.size(); i++) {
       if (i == coordinator_id) {
         continue;
       }
 
-      if (sync_messages[i]->get_message_count() == 0) {
+      if (messages[i]->get_message_count() == 0) {
         continue;
       }
 
-      auto message = sync_messages[i].release();
+      auto message = messages[i].release();
 
       out_queue.push(message);
-      sync_messages[i] = std::make_unique<Message>();
-      init_message(sync_messages[i].get(), i);
+      messages[i] = std::make_unique<Message>();
+      init_message(messages[i].get(), i);
     }
   }
 
-  void flush_async_messages() {
+  void flush_sync_messages() { flush_messages(sync_messages); }
 
-    for (auto i = 0u; i < async_messages.size(); i++) {
-      if (i == coordinator_id) {
-        continue;
-      }
-
-      if (async_messages[i]->get_message_count() == 0) {
-        continue;
-      }
-
-      auto message = async_messages[i].release();
-
-      out_queue.push(message);
-      async_messages[i] = std::make_unique<Message>();
-      init_message(async_messages[i].get(), i);
-    }
-  }
+  void flush_async_messages() { flush_messages(async_messages); }
 
   void init_message(Message *message, std::size_t dest_node_id) {
     message->set_source_node_id(coordinator_id);
