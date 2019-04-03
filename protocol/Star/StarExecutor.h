@@ -33,7 +33,7 @@ public:
 
   using MessageType = StarMessage;
   using MessageFactoryType = StarMessageFactory;
-  using MessageHandlerType = StarMessageHandler;
+  using MessageHandlerType = StarMessageHandler<DatabaseType>;
 
   StarExecutor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
                const ContextType &context, std::atomic<uint32_t> &worker_status,
@@ -297,18 +297,9 @@ private:
         MessagePiece messagePiece = *it;
         auto type = messagePiece.get_message_type();
         DCHECK(type < messageHandlers.size());
-        ITable *table = db.find_table(messagePiece.get_table_id(),
-                                      messagePiece.get_partition_id());
 
-        if (type == static_cast<uint32_t>(
-                        ControlMessage::OPERATION_REPLICATION_REQUEST)) {
-          ControlMessageHandler::operation_replication_request_handler(
-              messagePiece, *messages[message->get_source_node_id()], db);
-        } else {
-          messageHandlers[type](
-              messagePiece, *messages[message->get_source_node_id()], *table);
-        }
-
+        messageHandlers[type](messagePiece,
+                              *messages[message->get_source_node_id()], db);
         if (logger != nullptr &&
             type ==
                 static_cast<uint32_t>(StarMessage::REPLICATION_VALUE_REQUEST)) {
@@ -369,7 +360,7 @@ private:
   // transaction only commit in a single group
   std::queue<std::unique_ptr<TransactionType>> q;
   std::vector<std::unique_ptr<Message>> messages;
-  std::vector<std::function<void(MessagePiece, Message &, ITable &)>>
+  std::vector<std::function<void(MessagePiece, Message &, DatabaseType &)>>
       messageHandlers;
   LockfreeQueue<Message *> in_queue, out_queue;
 };

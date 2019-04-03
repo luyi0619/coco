@@ -30,7 +30,7 @@ public:
   using TransactionType = SiloTransaction;
 
   using MessageFactoryType = StarMessageFactory;
-  using MessageHandlerType = StarMessageHandler;
+  using MessageHandlerType = StarMessageHandler<DatabaseType>;
 
   Star(DatabaseType &db, const ContextType &context, Partitioner &partitioner)
       : db(db), context(context), partitioner(partitioner) {}
@@ -257,7 +257,7 @@ private:
         }
 
         txn.network_size +=
-            ControlMessageFactory::new_operation_replication_message(
+            MessageFactoryType::new_operation_replication_message(
                 *messages[k], txn.operation);
       }
     }
