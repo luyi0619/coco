@@ -19,7 +19,7 @@ public:
   std::string protocol;
   std::string replica_group;
   std::string lock_manager;
-  std::size_t batch_size = 240; // rstore, calvin, dbx batch size
+  std::size_t batch_size = 240; // star, calvin, dbx batch size
   std::size_t batch_flush = 10;
   std::size_t group_time = 40; // ms
   std::size_t sleep_time = 50; // us

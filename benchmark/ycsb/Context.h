@@ -40,6 +40,7 @@ public:
     Context c = *this;
     c.crossPartitionProbability = 0;
     c.operation_replication = this->operation_replication;
+    c.star_sync_in_single_master_phase = false;
     return c;
   }
 
@@ -47,6 +48,7 @@ public:
     Context c = *this;
     c.crossPartitionProbability = 100;
     c.operation_replication = false;
+    c.star_sync_in_single_master_phase = this->star_sync_in_single_master_phase;
     return c;
   }
 
