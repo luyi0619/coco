@@ -24,13 +24,6 @@ public:
     YCSBQuery<N> query;
     int readOnly = random.uniform_dist(1, 100);
     int crossPartition = random.uniform_dist(1, 100);
-    auto newPartitionID = partitionID;
-    if (crossPartition <= context.crossPartitionProbability &&
-        context.partition_num > 1) {
-      while (newPartitionID == partitionID) {
-        newPartitionID = random.uniform_dist(0, context.partition_num - 1);
-      }
-    }
 
     for (auto i = 0u; i < N; i++) {
       // read or write
@@ -60,7 +53,12 @@ public:
           key = Zipf::globalZipf().value(random.next_double());
         }
 
-        if (2 * i >= N) {
+        if (crossPartition <= context.crossPartitionProbability &&
+            context.partition_num > 1) {
+          auto newPartitionID = partitionID;
+          while (newPartitionID == partitionID) {
+            newPartitionID = random.uniform_dist(0, context.partition_num - 1);
+          }
           query.Y_KEY[i] = context.getGlobalKeyID(key, newPartitionID);
         } else {
           query.Y_KEY[i] = context.getGlobalKeyID(key, partitionID);
