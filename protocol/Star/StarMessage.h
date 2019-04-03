@@ -15,7 +15,7 @@
 namespace scar {
 
 enum class StarMessage {
-  REPLICATION_VALUE_REQUEST = static_cast<int>(ControlMessage::NFIELDS),
+  ASYNC_REPLICATION_VALUE_REQUEST = static_cast<int>(ControlMessage::NFIELDS),
   OPERATION_REPLICATION_REQUEST,
   NFIELDS
 };
@@ -40,7 +40,7 @@ public:
     auto message_size = MessagePiece::get_header_size() + key_size +
                         field_size + sizeof(commit_tid);
     auto message_piece_header = MessagePiece::construct_message_piece_header(
-        static_cast<uint32_t>(StarMessage::REPLICATION_VALUE_REQUEST),
+        static_cast<uint32_t>(StarMessage::ASYNC_REPLICATION_VALUE_REQUEST),
         message_size, table.tableID(), table.partitionID());
 
     Encoder encoder(message.data);
@@ -83,7 +83,7 @@ public:
                                                 Database &db) {
 
     DCHECK(inputPiece.get_message_type() ==
-           static_cast<uint32_t>(StarMessage::REPLICATION_VALUE_REQUEST));
+           static_cast<uint32_t>(StarMessage::ASYNC_REPLICATION_VALUE_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     ITable &table = *db.find_table(table_id, partition_id);

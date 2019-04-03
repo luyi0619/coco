@@ -300,9 +300,7 @@ private:
 
         messageHandlers[type](messagePiece,
                               *messages[message->get_source_node_id()], db);
-        if (logger != nullptr &&
-            type ==
-                static_cast<uint32_t>(StarMessage::REPLICATION_VALUE_REQUEST)) {
+        if (logger) {
           logger->write(messagePiece.toStringPiece().data(),
                         messagePiece.get_message_length());
         }

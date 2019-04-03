@@ -175,6 +175,11 @@ public:
 
     } else if (context.protocol == "Star") {
 
+      CHECK(context.partition_num %
+                (context.worker_num * context.coordinator_num) ==
+            0)
+          << "In Star, each partition is managed by only one thread.";
+
       using TransactionType = scar::SiloTransaction;
       using WorkloadType =
           typename InferType<Context>::template WorkloadType<TransactionType>;
