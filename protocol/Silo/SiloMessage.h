@@ -208,7 +208,7 @@ class SiloMessageHandler {
 public:
   static void search_request_handler(MessagePiece inputPiece,
                                      Message &responseMessage, ITable &table,
-                                     Transaction &txn) {
+                                     Transaction *txn) {
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(SiloMessage::SEARCH_REQUEST));
     auto table_id = inputPiece.get_table_id();
@@ -262,7 +262,7 @@ public:
 
   static void search_response_handler(MessagePiece inputPiece,
                                       Message &responseMessage, ITable &table,
-                                      Transaction &txn) {
+                                      Transaction *txn) {
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(SiloMessage::SEARCH_RESPONSE));
     auto table_id = inputPiece.get_table_id();
@@ -288,17 +288,17 @@ public:
     Decoder dec(stringPiece);
     dec >> tid >> key_offset;
 
-    SiloRWKey &readKey = txn.readSet[key_offset];
+    SiloRWKey &readKey = txn->readSet[key_offset];
     dec = Decoder(inputPiece.toStringPiece());
     dec.read_n_bytes(readKey.get_value(), value_size);
     readKey.set_tid(tid);
-    txn.pendingResponses--;
-    txn.network_size += inputPiece.get_message_length();
+    txn->pendingResponses--;
+    txn->network_size += inputPiece.get_message_length();
   }
 
   static void lock_request_handler(MessagePiece inputPiece,
                                    Message &responseMessage, ITable &table,
-                                   Transaction &txn) {
+                                   Transaction *txn) {
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(SiloMessage::LOCK_REQUEST));
     auto table_id = inputPiece.get_table_id();
@@ -346,7 +346,7 @@ public:
 
   static void lock_response_handler(MessagePiece inputPiece,
                                     Message &responseMessage, ITable &table,
-                                    Transaction &txn) {
+                                    Transaction *txn) {
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(SiloMessage::LOCK_RESPONSE));
     auto table_id = inputPiece.get_table_id();
@@ -373,13 +373,13 @@ public:
 
     DCHECK(dec.size() == 0);
 
-    SiloRWKey &writeKey = txn.writeSet[key_offset];
+    SiloRWKey &writeKey = txn->writeSet[key_offset];
 
     bool tid_changed = false;
 
     if (success) {
 
-      SiloRWKey *readKey = txn.get_read_key(writeKey.get_key());
+      SiloRWKey *readKey = txn->get_read_key(writeKey.get_key());
 
       DCHECK(readKey != nullptr);
 
@@ -393,17 +393,17 @@ public:
       writeKey.set_write_lock_bit();
     }
 
-    txn.pendingResponses--;
-    txn.network_size += inputPiece.get_message_length();
+    txn->pendingResponses--;
+    txn->network_size += inputPiece.get_message_length();
 
     if (!success || tid_changed) {
-      txn.abort_lock = true;
+      txn->abort_lock = true;
     }
   }
 
   static void read_validation_request_handler(MessagePiece inputPiece,
                                               Message &responseMessage,
-                                              ITable &table, Transaction &txn) {
+                                              ITable &table, Transaction *txn) {
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(SiloMessage::READ_VALIDATION_REQUEST));
     auto table_id = inputPiece.get_table_id();
@@ -459,7 +459,7 @@ public:
   static void read_validation_response_handler(MessagePiece inputPiece,
                                                Message &responseMessage,
                                                ITable &table,
-                                               Transaction &txn) {
+                                               Transaction *txn) {
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(SiloMessage::READ_VALIDATION_RESPONSE));
     auto table_id = inputPiece.get_table_id();
@@ -479,19 +479,19 @@ public:
 
     dec >> success >> key_offset;
 
-    SiloRWKey &readKey = txn.readSet[key_offset];
+    SiloRWKey &readKey = txn->readSet[key_offset];
 
-    txn.pendingResponses--;
-    txn.network_size += inputPiece.get_message_length();
+    txn->pendingResponses--;
+    txn->network_size += inputPiece.get_message_length();
 
     if (!success) {
-      txn.abort_read_validation = true;
+      txn->abort_read_validation = true;
     }
   }
 
   static void abort_request_handler(MessagePiece inputPiece,
                                     Message &responseMessage, ITable &table,
-                                    Transaction &txn) {
+                                    Transaction *txn) {
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(SiloMessage::ABORT_REQUEST));
     auto table_id = inputPiece.get_table_id();
@@ -518,7 +518,7 @@ public:
 
   static void write_request_handler(MessagePiece inputPiece,
                                     Message &responseMessage, ITable &table,
-                                    Transaction &txn) {
+                                    Transaction *txn) {
 
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(SiloMessage::WRITE_REQUEST));
@@ -557,7 +557,7 @@ public:
 
   static void write_response_handler(MessagePiece inputPiece,
                                      Message &responseMessage, ITable &table,
-                                     Transaction &txn) {
+                                     Transaction *txn) {
 
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(SiloMessage::WRITE_RESPONSE));
@@ -570,13 +570,13 @@ public:
      * The structure of a write response: ()
      */
 
-    txn.pendingResponses--;
-    txn.network_size += inputPiece.get_message_length();
+    txn->pendingResponses--;
+    txn->network_size += inputPiece.get_message_length();
   }
 
   static void replication_request_handler(MessagePiece inputPiece,
                                           Message &responseMessage,
-                                          ITable &table, Transaction &txn) {
+                                          ITable &table, Transaction *txn) {
 
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(SiloMessage::REPLICATION_REQUEST));
@@ -630,7 +630,7 @@ public:
 
   static void replication_response_handler(MessagePiece inputPiece,
                                            Message &responseMessage,
-                                           ITable &table, Transaction &txn) {
+                                           ITable &table, Transaction *txn) {
 
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(SiloMessage::REPLICATION_RESPONSE));
@@ -644,13 +644,13 @@ public:
      * The structure of a replication response: ()
      */
 
-    txn.pendingResponses--;
-    txn.network_size += inputPiece.get_message_length();
+    txn->pendingResponses--;
+    txn->network_size += inputPiece.get_message_length();
   }
 
   static void release_lock_request_handler(MessagePiece inputPiece,
                                            Message &responseMessage,
-                                           ITable &table, Transaction &txn) {
+                                           ITable &table, Transaction *txn) {
 
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(SiloMessage::RELEASE_LOCK_REQUEST));
@@ -683,10 +683,10 @@ public:
   }
 
   static std::vector<
-      std::function<void(MessagePiece, Message &, ITable &, Transaction &)>>
+      std::function<void(MessagePiece, Message &, ITable &, Transaction *)>>
   get_message_handlers() {
     std::vector<
-        std::function<void(MessagePiece, Message &, ITable &, Transaction &)>>
+        std::function<void(MessagePiece, Message &, ITable &, Transaction *)>>
         v;
     v.resize(static_cast<int>(ControlMessage::NFIELDS));
     v.push_back(search_request_handler);

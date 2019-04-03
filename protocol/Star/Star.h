@@ -75,7 +75,7 @@ public:
     // generate tid
     uint64_t commit_tid = generateTid(txn);
 
-    // write and replicate, use value replication for now
+    // write and replicate
     write_and_replicate(txn, commit_tid, messages);
 
     return true;
@@ -232,9 +232,10 @@ private:
 
         if (!context.operation_replication) {
 
-          txn.network_size += MessageFactoryType::new_replication_value_message(
-              *messages[k], *table, writeKey.get_key(), writeKey.get_value(),
-              commit_tid);
+          txn.network_size +=
+              MessageFactoryType::new_async_value_replication_message(
+                  *messages[k], *table, writeKey.get_key(),
+                  writeKey.get_value(), commit_tid);
         }
       }
     }

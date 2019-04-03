@@ -211,7 +211,7 @@ class ScarMessageHandler {
 public:
   static void search_request_handler(MessagePiece inputPiece,
                                      Message &responseMessage, ITable &table,
-                                     Transaction &txn) {
+                                     Transaction *txn) {
 
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(ScarMessage::SEARCH_REQUEST));
@@ -265,7 +265,7 @@ public:
 
   static void search_response_handler(MessagePiece inputPiece,
                                       Message &responseMessage, ITable &table,
-                                      Transaction &txn) {
+                                      Transaction *txn) {
 
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(ScarMessage::SEARCH_RESPONSE));
@@ -292,17 +292,17 @@ public:
     Decoder dec(stringPiece);
     dec >> tid >> key_offset;
 
-    ScarRWKey &readKey = txn.readSet[key_offset];
+    ScarRWKey &readKey = txn->readSet[key_offset];
     dec = Decoder(inputPiece.toStringPiece());
     dec.read_n_bytes(readKey.get_value(), value_size);
     readKey.set_tid(tid);
-    txn.pendingResponses--;
-    txn.network_size += inputPiece.get_message_length();
+    txn->pendingResponses--;
+    txn->network_size += inputPiece.get_message_length();
   }
 
   static void lock_request_handler(MessagePiece inputPiece,
                                    Message &responseMessage, ITable &table,
-                                   Transaction &txn) {
+                                   Transaction *txn) {
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(ScarMessage::LOCK_REQUEST));
 
@@ -351,7 +351,7 @@ public:
 
   static void lock_response_handler(MessagePiece inputPiece,
                                     Message &responseMessage, ITable &table,
-                                    Transaction &txn) {
+                                    Transaction *txn) {
 
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(ScarMessage::LOCK_RESPONSE));
@@ -379,33 +379,33 @@ public:
 
     DCHECK(dec.size() == 0);
 
-    ScarRWKey &writeKey = txn.writeSet[key_offset];
+    ScarRWKey &writeKey = txn->writeSet[key_offset];
 
     if (success) {
 
-      ScarRWKey *readKey = txn.get_read_key(writeKey.get_key());
+      ScarRWKey *readKey = txn->get_read_key(writeKey.get_key());
 
       DCHECK(readKey != nullptr);
 
       uint64_t tid_on_read = readKey->get_tid();
 
       if (ScarHelper::get_wts(latest_tid) != ScarHelper::get_wts(tid_on_read)) {
-        txn.abort_lock = true;
+        txn->abort_lock = true;
       }
 
       writeKey.set_tid(latest_tid);
       writeKey.set_write_lock_bit();
     } else {
-      txn.abort_lock = true;
+      txn->abort_lock = true;
     }
 
-    txn.pendingResponses--;
-    txn.network_size += inputPiece.get_message_length();
+    txn->pendingResponses--;
+    txn->network_size += inputPiece.get_message_length();
   }
 
   static void read_validation_request_handler(MessagePiece inputPiece,
                                               Message &responseMessage,
-                                              ITable &table, Transaction &txn) {
+                                              ITable &table, Transaction *txn) {
 
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(ScarMessage::READ_VALIDATION_REQUEST));
@@ -459,7 +459,7 @@ public:
   static void read_validation_response_handler(MessagePiece inputPiece,
                                                Message &responseMessage,
                                                ITable &table,
-                                               Transaction &txn) {
+                                               Transaction *txn) {
 
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(ScarMessage::READ_VALIDATION_RESPONSE));
@@ -482,7 +482,7 @@ public:
 
     dec >> success >> written_ts >> key_offset;
 
-    ScarRWKey &readKey = txn.readSet[key_offset];
+    ScarRWKey &readKey = txn->readSet[key_offset];
 
     if (success) {
       readKey.set_read_validation_success_bit();
@@ -495,17 +495,17 @@ public:
       }
     }
 
-    txn.pendingResponses--;
-    txn.network_size += inputPiece.get_message_length();
+    txn->pendingResponses--;
+    txn->network_size += inputPiece.get_message_length();
 
     if (!success) {
-      txn.abort_read_validation = true;
+      txn->abort_read_validation = true;
     }
   }
 
   static void abort_request_handler(MessagePiece inputPiece,
                                     Message &responseMessage, ITable &table,
-                                    Transaction &txn) {
+                                    Transaction *txn) {
 
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(ScarMessage::ABORT_REQUEST));
@@ -533,7 +533,7 @@ public:
 
   static void write_request_handler(MessagePiece inputPiece,
                                     Message &responseMessage, ITable &table,
-                                    Transaction &txn) {
+                                    Transaction *txn) {
 
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(ScarMessage::WRITE_REQUEST));
@@ -574,7 +574,7 @@ public:
 
   static void replication_request_handler(MessagePiece inputPiece,
                                           Message &responseMessage,
-                                          ITable &table, Transaction &txn) {
+                                          ITable &table, Transaction *txn) {
 
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(ScarMessage::REPLICATION_REQUEST));
@@ -621,7 +621,7 @@ public:
 
   static void rts_replication_request_handler(MessagePiece inputPiece,
                                               Message &responseMessage,
-                                              ITable &table, Transaction &txn) {
+                                              ITable &table, Transaction *txn) {
 
     DCHECK(inputPiece.get_message_type() ==
            static_cast<uint32_t>(ScarMessage::RTS_REPLICATION_REQUEST));
@@ -666,10 +666,10 @@ public:
   }
 
   static std::vector<
-      std::function<void(MessagePiece, Message &, ITable &, Transaction &)>>
+      std::function<void(MessagePiece, Message &, ITable &, Transaction *)>>
   get_message_handlers() {
     std::vector<
-        std::function<void(MessagePiece, Message &, ITable &, Transaction &)>>
+        std::function<void(MessagePiece, Message &, ITable &, Transaction *)>>
         v;
     v.resize(static_cast<int>(ControlMessage::NFIELDS));
     v.push_back(search_request_handler);

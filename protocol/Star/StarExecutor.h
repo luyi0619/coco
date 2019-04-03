@@ -199,8 +199,6 @@ public:
 
     uint64_t last_seed = 0;
 
-    std::unique_ptr<TransactionType> transaction;
-
     for (auto i = 0u; i < query_num; i++) {
 
       bool retry_transaction = false;
@@ -299,7 +297,8 @@ private:
         DCHECK(type < messageHandlers.size());
 
         messageHandlers[type](messagePiece,
-                              *messages[message->get_source_node_id()], db);
+                              *messages[message->get_source_node_id()], db,
+                              transaction.get());
         if (logger) {
           logger->write(messagePiece.toStringPiece().data(),
                         messagePiece.get_message_length());
@@ -355,10 +354,12 @@ private:
   std::unique_ptr<Delay> delay;
   std::unique_ptr<BufferedFileWriter> logger;
   Percentile<int64_t> percentile;
+  std::unique_ptr<TransactionType> transaction;
   // transaction only commit in a single group
   std::queue<std::unique_ptr<TransactionType>> q;
   std::vector<std::unique_ptr<Message>> messages;
-  std::vector<std::function<void(MessagePiece, Message &, DatabaseType &)>>
+  std::vector<std::function<void(MessagePiece, Message &, DatabaseType &,
+                                 TransactionType *)>>
       messageHandlers;
   LockfreeQueue<Message *> in_queue, out_queue;
 };

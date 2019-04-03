@@ -225,7 +225,7 @@ public:
 
         messageHandlers[type](messagePiece,
                               *messages[message->get_source_node_id()], *table,
-                              *transaction);
+                              transaction.get());
 
         message_stats[type]++;
       }
@@ -278,7 +278,7 @@ protected:
   std::unique_ptr<TransactionType> transaction;
   std::vector<std::unique_ptr<Message>> messages;
   std::vector<
-      std::function<void(MessagePiece, Message &, ITable &, TransactionType &)>>
+      std::function<void(MessagePiece, Message &, ITable &, TransactionType *)>>
       messageHandlers;
   std::vector<std::size_t> message_stats;
   LockfreeQueue<Message *> in_queue, out_queue;
