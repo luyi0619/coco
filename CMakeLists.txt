@@ -28,6 +28,7 @@ include_directories(${CMAKE_SOURCE_DIR})
 
 file(GLOB_RECURSE COMMON_SOURCE_FILES common/*.cpp)
 add_library(common STATIC ${COMMON_SOURCE_FILES})
+
 if(APPLE)
     find_package(glog REQUIRED)
     find_package(gflags REQUIRED)
