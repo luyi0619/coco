@@ -207,12 +207,12 @@ public:
       return;
     }
 
-    const std::vector<KivaRWKey> &readSet = txn.readSet;
-    const std::vector<KivaRWKey> &writeSet = txn.writeSet;
+    std::vector<KivaRWKey> &readSet = txn.readSet;
+    std::vector<KivaRWKey> &writeSet = txn.writeSet;
 
     // reserve reads;
     for (std::size_t i = 0u; i < readSet.size(); i++) {
-      const KivaRWKey &readKey = readSet[i];
+      KivaRWKey &readKey = readSet[i];
       if (readKey.get_local_index_read_bit()) {
         continue;
       }
@@ -221,7 +221,8 @@ public:
       auto partitionId = readKey.get_partition_id();
       auto table = db.find_table(tableId, partitionId);
       if (partitioner->has_master_partition(partitionId)) {
-        std::atomic<uint64_t> &tid = table->search_metadata(readKey.get_key());
+        std::atomic<uint64_t> &tid = KivaHelper::get_metadata(table, readKey);
+        readKey.set_tid(&tid);
         KivaHelper::reserve_read(tid, txn.epoch, txn.id);
       } else {
         auto coordinatorID = this->partitioner->master_coordinator(partitionId);
@@ -233,12 +234,13 @@ public:
 
     // reserve writes
     for (std::size_t i = 0u; i < writeSet.size(); i++) {
-      const KivaRWKey &writeKey = writeSet[i];
+      KivaRWKey &writeKey = writeSet[i];
       auto tableId = writeKey.get_table_id();
       auto partitionId = writeKey.get_partition_id();
       auto table = db.find_table(tableId, partitionId);
       if (partitioner->has_master_partition(partitionId)) {
-        std::atomic<uint64_t> &tid = table->search_metadata(writeKey.get_key());
+        std::atomic<uint64_t> &tid = KivaHelper::get_metadata(table, writeKey);
+        writeKey.set_tid(&tid);
         KivaHelper::reserve_write(tid, txn.epoch, txn.id);
       } else {
         auto coordinatorID = this->partitioner->master_coordinator(partitionId);
@@ -267,7 +269,7 @@ public:
       auto table = db.find_table(tableId, partitionId);
 
       if (partitioner->has_master_partition(partitionId)) {
-        uint64_t tid = table->search_metadata(readKey.get_key()).load();
+        uint64_t tid = KivaHelper::get_metadata(table, readKey).load();
         uint64_t epoch = KivaHelper::get_epoch(tid);
         uint64_t wts = KivaHelper::get_wts(tid);
         if (epoch == txn.epoch && wts < txn.id && wts != 0) {
@@ -293,7 +295,7 @@ public:
       auto table = db.find_table(tableId, partitionId);
 
       if (partitioner->has_master_partition(partitionId)) {
-        uint64_t tid = table->search_metadata(writeKey.get_key()).load();
+        uint64_t tid = KivaHelper::get_metadata(table, writeKey).load();
         uint64_t epoch = KivaHelper::get_epoch(tid);
         uint64_t rts = KivaHelper::get_rts(tid);
         uint64_t wts = KivaHelper::get_wts(tid);
@@ -380,28 +382,35 @@ public:
 
   void setupHandlers(TransactionType &txn) {
 
-    txn.readRequestHandler =
-        [this, &txn](std::size_t table_id, std::size_t partition_id,
-                     std::size_t tid, uint32_t key_offset, const void *key,
-                     void *value, bool local_index_read) {
-          bool local_read = false;
+    txn.readRequestHandler = [this, &txn](KivaRWKey &readKey, std::size_t tid,
+                                          uint32_t key_offset) {
+      auto table_id = readKey.get_table_id();
+      auto partition_id = readKey.get_partition_id();
+      const void *key = readKey.get_key();
+      void *value = readKey.get_value();
+      bool local_index_read = readKey.get_local_index_read_bit();
 
-          if (this->partitioner->has_master_partition(partition_id)) {
-            local_read = true;
-          }
+      bool local_read = false;
 
-          ITable *table = db.find_table(table_id, partition_id);
-          if (local_read || local_index_read) {
-            KivaHelper::read(table->search(key), value, table->value_size());
-          } else {
-            auto coordinatorID =
-                this->partitioner->master_coordinator(partition_id);
-            txn.network_size += MessageFactoryType::new_search_message(
-                *(this->messages[coordinatorID]), *table, tid, txn.tid_offset,
-                key, key_offset);
-            txn.pendingResponses++;
-          }
-        };
+      if (this->partitioner->has_master_partition(partition_id)) {
+        local_read = true;
+      }
+
+      ITable *table = db.find_table(table_id, partition_id);
+      if (local_read || local_index_read) {
+        // set tid meta_data
+        auto row = table->search(key);
+        KivaHelper::set_key_tid(readKey, row);
+        KivaHelper::read(row, value, table->value_size());
+      } else {
+        auto coordinatorID =
+            this->partitioner->master_coordinator(partition_id);
+        txn.network_size += MessageFactoryType::new_search_message(
+            *(this->messages[coordinatorID]), *table, tid, txn.tid_offset, key,
+            key_offset);
+        txn.pendingResponses++;
+      }
+    };
 
     txn.remote_request_handler = [this]() { return this->process_request(); };
     txn.message_flusher = [this]() { this->flush_messages(); };

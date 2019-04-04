@@ -79,6 +79,10 @@ public:
 
   void *get_value() const { return value; }
 
+  void set_tid(std::atomic<uint64_t> *tid) { this->tid = tid; };
+
+  std::atomic<uint64_t> *get_tid() const { return tid; };
+
 private:
   /*
    * A bitvec is a 32-bit word.
@@ -92,6 +96,7 @@ private:
   uint32_t bitvec = 0;
   const void *key = nullptr;
   void *value = nullptr;
+  std::atomic<uint64_t> *tid = nullptr;
 
 public:
   static constexpr uint32_t TABLE_ID_MASK = 0x1f;

@@ -151,10 +151,8 @@ public:
         break;
       }
 
-      const KivaRWKey &readKey = readSet[i];
-      readRequestHandler(readKey.get_table_id(), readKey.get_partition_id(), id,
-                         i, readKey.get_key(), readKey.get_value(),
-                         readKey.get_local_index_read_bit());
+      KivaRWKey &readKey = readSet[i];
+      readRequestHandler(readKey, id, i);
       readSet[i].clear_read_request_bit();
     }
 
@@ -178,10 +176,8 @@ public:
   std::function<void(std::size_t, std::size_t, const void *, void *)>
       local_index_read_handler;
 
-  // table id, partition id, id, key_offset, key, value
-  std::function<void(std::size_t, std::size_t, std::size_t, std::size_t,
-                     const void *, void *, bool)>
-      readRequestHandler;
+  // read_key, id, key_offset
+  std::function<void(KivaRWKey &, std::size_t, std::size_t)> readRequestHandler;
 
   // processed a request?
   std::function<std::size_t(void)> remote_request_handler;

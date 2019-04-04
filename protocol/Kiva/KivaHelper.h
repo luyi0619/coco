@@ -8,7 +8,10 @@
 #include <cstring>
 #include <tuple>
 
+#include "core/Table.h"
+
 #include "glog/logging.h"
+#include "protocol/Kiva/KivaRWKey.h"
 
 namespace scar {
 
@@ -23,6 +26,21 @@ public:
     void *src = std::get<1>(row);
     std::memcpy(dest, src, size);
     return tid.load();
+  }
+
+  static void
+  set_key_tid(KivaRWKey &key,
+              const std::tuple<std::atomic<uint64_t> *, void *> &row) {
+    key.set_tid(std::get<0>(row));
+  }
+
+  static std::atomic<uint64_t> &get_metadata(ITable *table,
+                                             const KivaRWKey &key) {
+    auto tid = key.get_tid();
+    if (!tid) {
+      tid = &table->search_metadata(key.get_key());
+    }
+    return *tid;
   }
 
   static bool reserve_read(std::atomic<uint64_t> &a, uint64_t epoch,
