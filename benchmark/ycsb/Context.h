@@ -60,6 +60,9 @@ public:
   std::size_t keysPerTransaction = 10;
   std::size_t keysPerPartition = 200000;
 
+  std::size_t nop_prob = 0; // out of 10000
+  std::size_t n_nop = 0;
+
   bool isUniform = true;
 
   PartitionStrategy strategy = PartitionStrategy::ROUND_ROBIN;
