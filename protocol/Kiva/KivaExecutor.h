@@ -253,6 +253,10 @@ public:
 
   void analyze_dependency(TransactionType &txn) {
 
+    if (context.kiva_read_only_optmization && txn.is_read_only()) {
+      return;
+    }
+
     const std::vector<KivaRWKey> &readSet = txn.readSet;
     const std::vector<KivaRWKey> &writeSet = txn.writeSet;
 
@@ -272,6 +276,7 @@ public:
         uint64_t tid = KivaHelper::get_metadata(table, readKey).load();
         uint64_t epoch = KivaHelper::get_epoch(tid);
         uint64_t wts = KivaHelper::get_wts(tid);
+        DCHECK(epoch == txn.epoch);
         if (epoch == txn.epoch && wts < txn.id && wts != 0) {
           txn.raw = true;
           break;
@@ -299,6 +304,7 @@ public:
         uint64_t epoch = KivaHelper::get_epoch(tid);
         uint64_t rts = KivaHelper::get_rts(tid);
         uint64_t wts = KivaHelper::get_wts(tid);
+        DCHECK(epoch == txn.epoch);
         if (epoch == txn.epoch && rts < txn.id && rts != 0) {
           txn.war = true;
         }
@@ -342,6 +348,12 @@ public:
       // wait till all checks are processed
       while (transactions[i]->pendingResponses > 0) {
         process_request();
+      }
+
+      if (context.kiva_read_only_optmization &&
+          transactions[i]->is_read_only()) {
+        n_commit.fetch_add(1);
+        continue;
       }
 
       if (transactions[i]->waw) {
