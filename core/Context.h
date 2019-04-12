@@ -40,6 +40,7 @@ public:
   bool local_validation = false;
   bool rts_sync = false;
   bool star_sync_in_single_master_phase = false;
+  bool star_dynamic_batch_size = true;
   bool parallel_locking_and_validation = true;
 
   bool calvin_same_batch = false;

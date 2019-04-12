@@ -36,10 +36,12 @@ public:
   using MessageHandlerType = StarMessageHandler<DatabaseType>;
 
   StarExecutor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
-               const ContextType &context, std::atomic<uint32_t> &worker_status,
+               const ContextType &context, uint32_t &batch_size,
+               std::atomic<uint32_t> &worker_status,
                std::atomic<uint32_t> &n_complete_workers,
                std::atomic<uint32_t> &n_started_workers)
       : Worker(coordinator_id, id), db(db), context(context),
+        batch_size(batch_size),
         s_partitioner(std::make_unique<StarSPartitioner>(
             coordinator_id, context.coordinator_num)),
         c_partitioner(std::make_unique<StarCPartitioner>(
@@ -185,11 +187,13 @@ public:
 
     if (status == ExecutorStatus::C_PHASE) {
       partitioner = c_partitioner.get();
-      query_num = StarQueryNum<ContextType>::get_c_phase_query_num(context);
+      query_num =
+          StarQueryNum<ContextType>::get_c_phase_query_num(context, batch_size);
       phase_context = context.get_cross_partition_context();
     } else if (status == ExecutorStatus::S_PHASE) {
       partitioner = s_partitioner.get();
-      query_num = StarQueryNum<ContextType>::get_s_phase_query_num(context);
+      query_num =
+          StarQueryNum<ContextType>::get_s_phase_query_num(context, batch_size);
       phase_context = context.get_single_partition_context();
     } else {
       CHECK(false);
@@ -358,6 +362,7 @@ private:
 private:
   DatabaseType &db;
   const ContextType &context;
+  uint32_t &batch_size;
   std::unique_ptr<Partitioner> s_partitioner, c_partitioner;
   RandomType random;
   std::atomic<uint32_t> &worker_status;

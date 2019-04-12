@@ -24,7 +24,7 @@ TEST(TestStar, TestStarSwitcher) {
   std::atomic<bool> stopFlag;
 
   scar::StarManager manager(0, 0, context, stopFlag);
-  scar::StarExecutor<WorkloadType> e(0, 0, db, context, manager.worker_status,
-                                     manager.n_completed_workers,
-                                     manager.n_started_workers);
+  scar::StarExecutor<WorkloadType> e(
+      0, 0, db, context, manager.batch_size, manager.worker_status,
+      manager.n_completed_workers, manager.n_started_workers);
 }

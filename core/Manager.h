@@ -283,7 +283,7 @@ public:
     return message;
   }
 
-private:
+protected:
   void flush_messages() {
 
     for (auto i = 0u; i < messages.size(); i++) {

@@ -17,28 +17,28 @@ TEST(TestStarQueryNum, TestStarBasic) {
   context.newOrderCrossPartitionProbability = 10;
   context.paymentCrossPartitionProbability = 15;
 
-  EXPECT_EQ(
-      scar::StarQueryNum<scar::tpcc::Context>::get_s_phase_query_num(context),
-      875);
-  EXPECT_EQ(
-      scar::StarQueryNum<scar::tpcc::Context>::get_c_phase_query_num(context),
-      500);
+  EXPECT_EQ(scar::StarQueryNum<scar::tpcc::Context>::get_s_phase_query_num(
+                context, context.batch_size),
+            875);
+  EXPECT_EQ(scar::StarQueryNum<scar::tpcc::Context>::get_c_phase_query_num(
+                context, context.batch_size),
+            500);
 
   context.workloadType = scar::tpcc::TPCCWorkloadType::NEW_ORDER_ONLY;
 
-  EXPECT_EQ(
-      scar::StarQueryNum<scar::tpcc::Context>::get_s_phase_query_num(context),
-      900);
-  EXPECT_EQ(
-      scar::StarQueryNum<scar::tpcc::Context>::get_c_phase_query_num(context),
-      400);
+  EXPECT_EQ(scar::StarQueryNum<scar::tpcc::Context>::get_s_phase_query_num(
+                context, context.batch_size),
+            900);
+  EXPECT_EQ(scar::StarQueryNum<scar::tpcc::Context>::get_c_phase_query_num(
+                context, context.batch_size),
+            400);
 
   context.workloadType = scar::tpcc::TPCCWorkloadType::PAYMENT_ONLY;
 
-  EXPECT_EQ(
-      scar::StarQueryNum<scar::tpcc::Context>::get_s_phase_query_num(context),
-      850);
-  EXPECT_EQ(
-      scar::StarQueryNum<scar::tpcc::Context>::get_c_phase_query_num(context),
-      600);
+  EXPECT_EQ(scar::StarQueryNum<scar::tpcc::Context>::get_s_phase_query_num(
+                context, context.batch_size),
+            850);
+  EXPECT_EQ(scar::StarQueryNum<scar::tpcc::Context>::get_c_phase_query_num(
+                context, context.batch_size),
+            600);
 }
