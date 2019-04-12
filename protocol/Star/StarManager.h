@@ -25,7 +25,6 @@ public:
     std::size_t n_coordinators = context.coordinator_num;
 
     Percentile<int64_t> all_percentile, c_percentile, s_percentile;
-    Percentile<double> overhead_percentile;
 
     while (!stopFlag.load()) {
 
@@ -41,13 +40,10 @@ public:
       wait_all_workers_finish();
       set_worker_status(ExecutorStatus::STOP);
       broadcast_stop();
-      wait4_ack(true);
+      wait4_ack();
 
       {
         auto now = std::chrono::steady_clock::now();
-        ack_wait_time_c = std::chrono::duration_cast<std::chrono::microseconds>(
-                              now - time_point)
-                              .count();
         c_percentile.add(
             std::chrono::duration_cast<std::chrono::microseconds>(now - c_start)
                 .count());
@@ -67,24 +63,16 @@ public:
       wait4_stop(n_coordinators - 1);
       n_completed_workers.store(0);
       set_worker_status(ExecutorStatus::STOP);
-      wait_all_workers_finish(true);
+      wait_all_workers_finish();
       wait4_ack();
       {
         auto now = std::chrono::steady_clock::now();
-        ack_wait_time_s = std::chrono::duration_cast<std::chrono::microseconds>(
-                              now - time_point)
-                              .count();
 
         s_percentile.add(
             std::chrono::duration_cast<std::chrono::microseconds>(now - s_start)
                 .count());
 
         all_percentile.add(
-            std::chrono::duration_cast<std::chrono::microseconds>(now - c_start)
-                .count());
-
-        overhead_percentile.add(
-            100.0 * (ack_wait_time_c + ack_wait_time_s) /
             std::chrono::duration_cast<std::chrono::microseconds>(now - c_start)
                 .count());
       }
@@ -95,8 +83,7 @@ public:
     LOG(INFO) << "Average phase switch length " << all_percentile.nth(50)
               << " us, average c phase length " << c_percentile.nth(50)
               << " us, average s phase length " << s_percentile.nth(50)
-              << " us, average overhead: " << overhead_percentile.nth(50)
-              << " %.";
+              << " us.";
   }
 
   void non_coordinator_start() override {
@@ -144,53 +131,5 @@ public:
       send_ack();
     }
   }
-
-  void wait_all_workers_finish(bool reset = false) {
-    std::size_t n_workers = context.worker_num;
-    // wait for all workers to finish
-    std::size_t value = 0;
-    while ((value = n_completed_workers.load()) < n_workers) {
-      if (reset && value > 0) {
-        reset_time_point();
-        reset = false;
-      }
-      // change to nop_pause()?
-      std::this_thread::yield();
-    }
-  }
-
-  void wait4_ack(bool reset = false) {
-
-    std::chrono::steady_clock::time_point start;
-
-    // only coordinator waits for ack
-    DCHECK(coordinator_id == 0);
-
-    std::size_t n_coordinators = context.coordinator_num;
-
-    for (auto i = 0u; i < n_coordinators - 1; i++) {
-
-      ack_in_queue.wait_till_non_empty();
-
-      if (reset) {
-        reset_time_point();
-        reset = false;
-      }
-
-      std::unique_ptr<Message> message(ack_in_queue.front());
-      bool ok = ack_in_queue.pop();
-      CHECK(ok);
-
-      CHECK(message->get_message_count() == 1);
-
-      MessagePiece messagePiece = *(message->begin());
-      auto type = static_cast<ControlMessage>(messagePiece.get_message_type());
-    }
-  }
-
-  void reset_time_point() { time_point = std::chrono::steady_clock::now(); }
-
-public:
-  std::chrono::steady_clock::time_point time_point;
 };
 } // namespace scar
