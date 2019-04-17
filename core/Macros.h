@@ -17,7 +17,7 @@ DEFINE_string(partitioner, "hash", "database partitioner (hash, hash2, pb)");
 DEFINE_bool(sleep_on_retry, true, "sleep when retry aborted transactions");
 DEFINE_int32(batch_size, 100, "star or calvin batch size");
 DEFINE_int32(group_time, 10, "group commit frequency");
-DEFINE_int32(batch_flush, 20, "batch flush");
+DEFINE_int32(batch_flush, 50, "batch flush");
 DEFINE_int32(sleep_time, 1000, "retry sleep time");
 DEFINE_string(protocol, "Scar", "transaction protocol");
 DEFINE_string(replica_group, "1,3", "calvin replica group");

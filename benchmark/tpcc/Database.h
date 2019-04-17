@@ -226,6 +226,7 @@ public:
         "customer_name_idx",
         [this](std::size_t partitionID) { customerNameIdxInit(partitionID); },
         partitionNum, threadsNum, partitioner.get());
+    /*
     initTables("history",
                [this](std::size_t partitionID) { historyInit(partitionID); },
                partitionNum, threadsNum, partitioner.get());
@@ -238,6 +239,7 @@ public:
     initTables("order_line",
                [this](std::size_t partitionID) { orderLineInit(partitionID); },
                partitionNum, threadsNum, partitioner.get());
+    */
     initTables("item",
                [this](std::size_t partitionID) { itemInit(partitionID); }, 1, 1,
                nullptr);
