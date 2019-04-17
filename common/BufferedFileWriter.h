@@ -39,7 +39,7 @@ public:
 
     if (size >= BUFFER_SIZE) {
       int err = ::write(fd, str, size);
-      CHECK(err == 0);
+      CHECK(err >= 0);
       bytes_total = 0;
     } else {
       memcpy(buffer, str, size);
@@ -51,7 +51,7 @@ public:
     DCHECK(fd >= 0);
     if (bytes_total > 0) {
       int err = ::write(fd, buffer, bytes_total);
-      CHECK(err == 0);
+      CHECK(err >= 0);
     }
     bytes_total = 0;
   }

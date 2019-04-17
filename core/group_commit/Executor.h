@@ -56,6 +56,7 @@ public:
 
     messageHandlers = MessageHandlerType::get_message_handlers();
     message_stats.resize(messageHandlers.size(), 0);
+    message_sizes.resize(messageHandlers.size(), 0);
   }
 
   void start() override {
@@ -194,7 +195,8 @@ public:
     if (id == 0) {
       for (auto i = 0u; i < message_stats.size(); i++) {
         LOG(INFO) << "message stats, type: " << i
-                  << " count: " << message_stats[i];
+                  << " count: " << message_stats[i]
+                  << " total size: " << message_sizes[i];
       }
       write_latency.save_cdf(context.cdf_path);
     }
@@ -261,6 +263,7 @@ public:
                               *sync_messages[message->get_source_node_id()],
                               *table, transaction.get());
         message_stats[type]++;
+        message_sizes[type] += messagePiece.get_message_length();
       }
 
       size += message->get_message_count();
@@ -316,7 +319,7 @@ protected:
   std::vector<
       std::function<void(MessagePiece, Message &, ITable &, TransactionType *)>>
       messageHandlers;
-  std::vector<std::size_t> message_stats;
+  std::vector<std::size_t> message_stats, message_sizes;
   LockfreeQueue<Message *> in_queue, out_queue;
 };
 } // namespace group_commit
