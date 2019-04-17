@@ -241,7 +241,7 @@ public:
 
     // connect to peers
     auto n = peers.size();
-    constexpr std::size_t retryLimit = 5;
+    constexpr std::size_t retryLimit = 50;
 
     // connect to multiple remote coordinators
     for (auto i = 0u; i < n; i++) {

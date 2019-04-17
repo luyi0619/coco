@@ -10,6 +10,19 @@
 
 namespace scar {
 class Context {
+
+public:
+  void set_star_partitioner() {
+    if (protocol != "Star") {
+      return;
+    }
+    if (coordinator_id == 0) {
+      partitioner = "StarS";
+    } else {
+      partitioner = "StarC";
+    }
+  }
+
 public:
   std::size_t coordinator_id = 0;
   std::size_t partition_num = 0;

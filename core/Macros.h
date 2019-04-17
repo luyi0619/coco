@@ -73,4 +73,5 @@ DEFINE_int32(cpu_core_id, 0, "cpu core id");
   context.tcp_no_delay = FLAGS_tcp_no_delay;                                   \
   context.tcp_quick_ack = FLAGS_tcp_quick_ack;                                 \
   context.cpu_affinity = FLAGS_cpu_affinity;                                   \
-  context.cpu_core_id = FLAGS_cpu_core_id;
+  context.cpu_core_id = FLAGS_cpu_core_id;                                     \
+  context.set_star_partitioner();
