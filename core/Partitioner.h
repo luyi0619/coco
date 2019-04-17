@@ -300,10 +300,10 @@ public:
     } else if (part == "pb") {
       return std::make_unique<PrimaryBackupPartitioner>(coordinator_id,
                                                         coordinator_num);
-    } else if (part == "starS") {
+    } else if (part == "StarS") {
       return std::make_unique<StarSPartitioner>(coordinator_id,
                                                 coordinator_num);
-    } else if (part == "starC") {
+    } else if (part == "StarC") {
       return std::make_unique<StarCPartitioner>(coordinator_id,
                                                 coordinator_num);
     } else {
