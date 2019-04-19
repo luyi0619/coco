@@ -111,6 +111,11 @@ public:
                     std::chrono::steady_clock::now() - transaction->startTime)
                     .count();
             percentile.add(latency);
+            if (transaction->distributed_transaction) {
+              dist_latency.add(latency);
+            } else {
+              local_latency.add(latency);
+            }
           } else {
             if (transaction->abort_lock) {
               n_abort_lock.fetch_add(1);
@@ -155,8 +160,13 @@ public:
     LOG(INFO) << "Worker " << id << " latency: " << percentile.nth(50)
               << " us (50%) " << percentile.nth(75) << " us (75%) "
               << percentile.nth(95) << " us (95%) " << percentile.nth(99)
-              << " us (99%), size: " << percentile.size() * sizeof(int64_t)
-              << " bytes.";
+              << " us (99%). dist txn latency: " << dist_latency.nth(50)
+              << " us (50%) " << dist_latency.nth(75) << " us (75%) "
+              << dist_latency.nth(95) << " us (95%) " << dist_latency.nth(99)
+              << " us (99%). local txn latency: " << local_latency.nth(50)
+              << " us (50%) " << local_latency.nth(75) << " us (75%) "
+              << local_latency.nth(95) << " us (95%) " << local_latency.nth(99)
+              << " us (99%).";
 
     if (id == 0) {
       for (auto i = 0u; i < message_stats.size(); i++) {
@@ -277,7 +287,7 @@ protected:
   ProtocolType protocol;
   WorkloadType workload;
   std::unique_ptr<Delay> delay;
-  Percentile<int64_t> percentile;
+  Percentile<int64_t> percentile, dist_latency, local_latency;
   std::unique_ptr<TransactionType> transaction;
   std::vector<std::unique_ptr<Message>> messages;
   std::vector<

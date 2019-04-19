@@ -420,6 +420,7 @@ public:
         txn.network_size += MessageFactoryType::new_search_message(
             *(this->messages[coordinatorID]), *table, tid, txn.tid_offset, key,
             key_offset);
+        txn.distributed_transaction = true;
         txn.pendingResponses++;
       }
     };

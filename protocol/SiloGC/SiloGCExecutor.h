@@ -67,6 +67,7 @@ public:
             this->partitioner->master_coordinator(partition_id);
         txn.network_size += MessageFactoryType::new_search_message(
             *(this->sync_messages[coordinatorID]), *table, key, key_offset);
+        txn.distributed_transaction = true;
         txn.pendingResponses++;
         return 0;
       }

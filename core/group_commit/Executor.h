@@ -130,11 +130,17 @@ public:
               if (transaction->local_validated) {
                 n_local.fetch_add(1);
               }
+
               auto latency =
                   std::chrono::duration_cast<std::chrono::microseconds>(
                       std::chrono::steady_clock::now() - transaction->startTime)
                       .count();
               write_latency.add(latency);
+              if (transaction->distributed_transaction) {
+                dist_latency.add(latency);
+              } else {
+                local_latency.add(latency);
+              }
               retry_transaction = false;
               q.push(std::move(transaction));
             } else {
@@ -190,6 +196,12 @@ public:
               << " us (99%). write latency: " << write_latency.nth(50)
               << " us (50%) " << write_latency.nth(75) << " us (75%) "
               << write_latency.nth(95) << " us (95%) " << write_latency.nth(99)
+              << " us (99%). dist txn latency: " << dist_latency.nth(50)
+              << " us (50%) " << dist_latency.nth(75) << " us (75%) "
+              << dist_latency.nth(95) << " us (95%) " << dist_latency.nth(99)
+              << " us (99%). local txn latency: " << local_latency.nth(50)
+              << " us (50%) " << local_latency.nth(75) << " us (75%) "
+              << local_latency.nth(95) << " us (95%) " << local_latency.nth(99)
               << " us (99%).";
 
     if (id == 0) {
@@ -314,6 +326,7 @@ protected:
   WorkloadType workload;
   std::unique_ptr<Delay> delay;
   Percentile<int64_t> commit_latency, write_latency;
+  Percentile<int64_t> dist_latency, local_latency;
   std::unique_ptr<TransactionType> transaction;
   std::vector<std::unique_ptr<Message>> sync_messages, async_messages;
   std::vector<

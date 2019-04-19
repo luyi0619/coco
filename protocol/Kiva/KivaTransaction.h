@@ -34,6 +34,7 @@ public:
     abort_lock = false;
     abort_no_retry = false;
     abort_read_validation = false;
+    distributed_transaction = false;
     execution_phase = false;
     waw = false;
     war = false;
@@ -169,6 +170,7 @@ public:
   std::size_t network_size;
 
   bool abort_lock, abort_no_retry, abort_read_validation;
+  bool distributed_transaction;
   bool execution_phase;
   bool waw, war, raw;
 

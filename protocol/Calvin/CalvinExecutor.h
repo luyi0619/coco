@@ -345,6 +345,7 @@ public:
           auto sz = MessageFactoryType::new_read_message(
               *worker->messages[i], *table, id, key_offset, value);
           txn.network_size.fetch_add(sz);
+          txn.distributed_transaction = true;
         }
         txn.local_read.fetch_add(-1);
       }

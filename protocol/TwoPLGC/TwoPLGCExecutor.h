@@ -91,6 +91,7 @@ public:
           txn.network_size += MessageFactoryType::new_read_lock_message(
               *(this->sync_messages[coordinatorID]), *table, key, key_offset);
         }
+        txn.distributed_transaction = true;
         return 0;
       }
     };

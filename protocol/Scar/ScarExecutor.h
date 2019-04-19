@@ -60,6 +60,7 @@ public:
         txn.network_size += MessageFactoryType::new_search_message(
             *(this->sync_messages[coordinatorID]), *table, key, key_offset);
         txn.pendingResponses++;
+        txn.distributed_transaction = true;
         return 0;
       }
     };

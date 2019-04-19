@@ -36,6 +36,7 @@ public:
     saved_local_read = 0;
     remote_read.store(0);
     saved_remote_read = 0;
+    distributed_transaction = false;
     execution_phase = false;
     network_size.store(0);
     active_coordinators.clear();
@@ -259,6 +260,7 @@ public:
   int32_t saved_local_read, saved_remote_read;
 
   bool abort_lock, abort_no_retry, abort_read_validation;
+  bool distributed_transaction;
   bool execution_phase;
 
   std::function<bool(std::size_t)> process_requests;
