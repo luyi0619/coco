@@ -5,19 +5,19 @@
 #pragma once
 
 #include "core/group_commit/Executor.h"
-#include "protocol/Scar/Scar.h"
+#include "protocol/ScarGC/ScarGC.h"
 
 namespace scar {
 template <class Workload>
-class ScarExecutor
+class ScarGCExecutor
     : public group_commit::Executor<Workload,
-                                    Scar<typename Workload::DatabaseType>> {
+        ScarGC<typename Workload::DatabaseType>> {
 public:
   using base_type =
-      group_commit::Executor<Workload, Scar<typename Workload::DatabaseType>>;
+      group_commit::Executor<Workload, ScarGC<typename Workload::DatabaseType>>;
 
   using WorkloadType = Workload;
-  using ProtocolType = Scar<typename Workload::DatabaseType>;
+  using ProtocolType = ScarGC<typename Workload::DatabaseType>;
   using DatabaseType = typename WorkloadType::DatabaseType;
   using TransactionType = typename WorkloadType::TransactionType;
   using ContextType = typename DatabaseType::ContextType;
@@ -28,14 +28,14 @@ public:
 
   using StorageType = typename WorkloadType::StorageType;
 
-  ScarExecutor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
+  ScarGCExecutor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
                const ContextType &context, std::atomic<uint32_t> &worker_status,
                std::atomic<uint32_t> &n_complete_workers,
                std::atomic<uint32_t> &n_started_workers)
       : base_type(coordinator_id, id, db, context, worker_status,
                   n_complete_workers, n_started_workers) {}
 
-  ~ScarExecutor() = default;
+  ~ScarGCExecutor() = default;
 
   void setupHandlers(TransactionType &txn) override {
     txn.readRequestHandler =

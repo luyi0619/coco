@@ -11,24 +11,25 @@
 #include "core/Partitioner.h"
 #include "core/Table.h"
 #include "protocol/Scar/ScarHelper.h"
-#include "protocol/Scar/ScarMessage.h"
 #include "protocol/Scar/ScarTransaction.h"
+#include "protocol/ScarGC/ScarGCMessage.h"
+
 #include <glog/logging.h>
 
 namespace scar {
 
-template <class Database> class Scar {
+template <class Database> class ScarGC {
 public:
   using DatabaseType = Database;
   using MetaDataType = std::atomic<uint64_t>;
   using ContextType = typename DatabaseType::ContextType;
-  using MessageType = ScarMessage;
+  using MessageType = ScarGCMessage;
   using TransactionType = ScarTransaction;
 
-  using MessageFactoryType = ScarMessageFactory;
-  using MessageHandlerType = ScarMessageHandler;
+  using MessageFactoryType = ScarGCMessageFactory;
+  using MessageHandlerType = ScarGCMessageHandler;
 
-  Scar(DatabaseType &db, const ContextType &context, Partitioner &partitioner)
+  ScarGC(DatabaseType &db, const ContextType &context, Partitioner &partitioner)
       : db(db), context(context), partitioner(partitioner) {}
 
   uint64_t search(std::size_t table_id, std::size_t partition_id,
@@ -182,7 +183,6 @@ private:
 
     bool use_local_validation = context.local_validation;
 
-    // TODO: change to commit_rts if the transaction validates in SI
     uint64_t commit_ts = txn.commit_wts;
 
     auto isKeyInWriteSet = [&writeSet](const void *key) {
@@ -253,8 +253,6 @@ private:
   write_and_replicate(TransactionType &txn,
                       std::vector<std::unique_ptr<Message>> &syncMessages,
                       std::vector<std::unique_ptr<Message>> &asyncMessage) {
-
-    // no operation replication in Scar
 
     auto &readSet = txn.readSet;
     auto &writeSet = txn.writeSet;

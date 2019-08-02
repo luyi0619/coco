@@ -11,8 +11,8 @@
 #include "core/Partitioner.h"
 #include "core/Table.h"
 #include "protocol/Scar/ScarHelper.h"
-#include "protocol/Scar/ScarMessage.h"
 #include "protocol/Scar/ScarTransaction.h"
+#include "protocol/ScarGC/ScarGCMessage.h"
 #include <glog/logging.h>
 
 namespace scar {
@@ -22,11 +22,11 @@ public:
   using DatabaseType = Database;
   using MetaDataType = std::atomic<uint64_t>;
   using ContextType = typename DatabaseType::ContextType;
-  using MessageType = ScarMessage;
+  using MessageType = ScarGCMessage;
   using TransactionType = ScarTransaction;
 
-  using MessageFactoryType = ScarMessageFactory;
-  using MessageHandlerType = ScarMessageHandler;
+  using MessageFactoryType = ScarGCMessageFactory;
+  using MessageHandlerType = ScarGCMessageHandler;
 
   ScarSI(DatabaseType &db, const ContextType &context, Partitioner &partitioner)
       : db(db), context(context), partitioner(partitioner) {}

@@ -13,8 +13,8 @@
 #include "benchmark/tpcc/Workload.h"
 #include "benchmark/ycsb/Workload.h"
 
-#include "protocol/Scar/Scar.h"
-#include "protocol/Scar/ScarExecutor.h"
+#include "protocol/ScarGC/ScarGC.h"
+#include "protocol/ScarGC/ScarGCExecutor.h"
 #include "protocol/ScarSI/ScarSI.h"
 #include "protocol/ScarSI/ScarSIExecutor.h"
 #include "protocol/Silo/Silo.h"
@@ -84,7 +84,7 @@ public:
                  const Context &context, std::atomic<bool> &stop_flag) {
 
     std::unordered_set<std::string> protocols = {
-        "Silo",   "SiloGC", "SiloRC",  "Scar",   "ScarSI", "Star",
+        "Silo",   "SiloGC", "SiloRC",  "ScarGC", "ScarSI", "Star",
         "StarNC", "TwoPL",  "TwoPLGC", "Calvin", "Kiva"};
     CHECK(protocols.count(context.protocol) == 1);
 
@@ -139,7 +139,7 @@ public:
       }
       workers.push_back(manager);
 
-    } else if (context.protocol == "Scar") {
+    } else if (context.protocol == "ScarGC") {
 
       using TransactionType = scar::ScarTransaction;
       using WorkloadType =
@@ -149,7 +149,7 @@ public:
           coordinator_id, context.worker_num, context, stop_flag);
 
       for (auto i = 0u; i < context.worker_num; i++) {
-        workers.push_back(std::make_shared<ScarExecutor<WorkloadType>>(
+        workers.push_back(std::make_shared<ScarGCExecutor<WorkloadType>>(
             coordinator_id, i, db, context, manager->worker_status,
             manager->n_completed_workers, manager->n_started_workers));
       }

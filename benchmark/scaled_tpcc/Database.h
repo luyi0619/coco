@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <random>
 #include <thread>
 #include <unordered_map>
 #include <vector>
@@ -591,7 +592,7 @@ private:
 
     for (int i = 1; i <= context.n_district; i++) {
 
-      std::random_shuffle(perm.begin(), perm.end());
+      std::shuffle(perm.begin(), perm.end(), std::default_random_engine());
 
       for (int j = 1; j <= 3000; j++) {
 

@@ -16,7 +16,7 @@
 
 namespace scar {
 
-enum class ScarMessage {
+enum class ScarGCMessage {
   SEARCH_REQUEST = static_cast<int>(ControlMessage::NFIELDS),
   SEARCH_RESPONSE,
   LOCK_REQUEST,
@@ -30,7 +30,7 @@ enum class ScarMessage {
   NFIELDS
 };
 
-class ScarMessageFactory {
+class ScarGCMessageFactory {
 
 public:
   static std::size_t new_search_message(Message &message, ITable &table,
@@ -45,7 +45,7 @@ public:
     auto message_size =
         MessagePiece::get_header_size() + key_size + sizeof(key_offset);
     auto message_piece_header = MessagePiece::construct_message_piece_header(
-        static_cast<uint32_t>(ScarMessage::SEARCH_REQUEST), message_size,
+        static_cast<uint32_t>(ScarGCMessage::SEARCH_REQUEST), message_size,
         table.tableID(), table.partitionID());
 
     Encoder encoder(message.data);
@@ -68,7 +68,7 @@ public:
     auto message_size =
         MessagePiece::get_header_size() + key_size + sizeof(key_offset);
     auto message_piece_header = MessagePiece::construct_message_piece_header(
-        static_cast<uint32_t>(ScarMessage::LOCK_REQUEST), message_size,
+        static_cast<uint32_t>(ScarGCMessage::LOCK_REQUEST), message_size,
         table.tableID(), table.partitionID());
 
     Encoder encoder(message.data);
@@ -95,7 +95,7 @@ public:
     auto message_size = MessagePiece::get_header_size() + key_size +
                         sizeof(key_offset) + sizeof(tid) + sizeof(commit_ts);
     auto message_piece_header = MessagePiece::construct_message_piece_header(
-        static_cast<uint32_t>(ScarMessage::READ_VALIDATION_REQUEST),
+        static_cast<uint32_t>(ScarGCMessage::READ_VALIDATION_REQUEST),
         message_size, table.tableID(), table.partitionID());
 
     Encoder encoder(message.data);
@@ -117,7 +117,7 @@ public:
 
     auto message_size = MessagePiece::get_header_size() + key_size;
     auto message_piece_header = MessagePiece::construct_message_piece_header(
-        static_cast<uint32_t>(ScarMessage::ABORT_REQUEST), message_size,
+        static_cast<uint32_t>(ScarGCMessage::ABORT_REQUEST), message_size,
         table.tableID(), table.partitionID());
 
     Encoder encoder(message.data);
@@ -141,7 +141,7 @@ public:
     auto message_size = MessagePiece::get_header_size() + key_size +
                         field_size + sizeof(commit_ts);
     auto message_piece_header = MessagePiece::construct_message_piece_header(
-        static_cast<uint32_t>(ScarMessage::WRITE_REQUEST), message_size,
+        static_cast<uint32_t>(ScarGCMessage::WRITE_REQUEST), message_size,
         table.tableID(), table.partitionID());
 
     Encoder encoder(message.data);
@@ -168,7 +168,7 @@ public:
     auto message_size = MessagePiece::get_header_size() + key_size +
                         field_size + sizeof(commit_ts);
     auto message_piece_header = MessagePiece::construct_message_piece_header(
-        static_cast<uint32_t>(ScarMessage::REPLICATION_REQUEST), message_size,
+        static_cast<uint32_t>(ScarGCMessage::REPLICATION_REQUEST), message_size,
         table.tableID(), table.partitionID());
 
     Encoder encoder(message.data);
@@ -193,7 +193,7 @@ public:
 
     auto message_size = MessagePiece::get_header_size() + key_size + sizeof(ts);
     auto message_piece_header = MessagePiece::construct_message_piece_header(
-        static_cast<uint32_t>(ScarMessage::RTS_REPLICATION_REQUEST),
+        static_cast<uint32_t>(ScarGCMessage::RTS_REPLICATION_REQUEST),
         message_size, table.tableID(), table.partitionID());
 
     Encoder encoder(message.data);
@@ -205,7 +205,7 @@ public:
   }
 };
 
-class ScarMessageHandler {
+class ScarGCMessageHandler {
   using Transaction = ScarTransaction;
 
 public:
@@ -214,7 +214,7 @@ public:
                                      Transaction *txn) {
 
     DCHECK(inputPiece.get_message_type() ==
-           static_cast<uint32_t>(ScarMessage::SEARCH_REQUEST));
+           static_cast<uint32_t>(ScarGCMessage::SEARCH_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     DCHECK(table_id == table.tableID());
@@ -238,7 +238,7 @@ public:
     auto row = table.search(key);
 
     stringPiece.remove_prefix(key_size);
-    scar::Decoder dec(stringPiece);
+    Decoder dec(stringPiece);
     dec >> key_offset;
 
     DCHECK(dec.size() == 0);
@@ -247,10 +247,10 @@ public:
     auto message_size = MessagePiece::get_header_size() + value_size +
                         sizeof(uint64_t) + sizeof(key_offset);
     auto message_piece_header = MessagePiece::construct_message_piece_header(
-        static_cast<uint32_t>(ScarMessage::SEARCH_RESPONSE), message_size,
+        static_cast<uint32_t>(ScarGCMessage::SEARCH_RESPONSE), message_size,
         table_id, partition_id);
 
-    scar::Encoder encoder(responseMessage.data);
+    Encoder encoder(responseMessage.data);
     encoder << message_piece_header;
 
     // reserve size for read
@@ -268,7 +268,7 @@ public:
                                       Transaction *txn) {
 
     DCHECK(inputPiece.get_message_type() ==
-           static_cast<uint32_t>(ScarMessage::SEARCH_RESPONSE));
+           static_cast<uint32_t>(ScarGCMessage::SEARCH_RESPONSE));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     DCHECK(table_id == table.tableID());
@@ -304,7 +304,7 @@ public:
                                    Message &responseMessage, ITable &table,
                                    Transaction *txn) {
     DCHECK(inputPiece.get_message_type() ==
-           static_cast<uint32_t>(ScarMessage::LOCK_REQUEST));
+           static_cast<uint32_t>(ScarGCMessage::LOCK_REQUEST));
 
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
@@ -331,7 +331,7 @@ public:
     uint64_t latest_tid = ScarHelper::lock(tid, success);
 
     stringPiece.remove_prefix(key_size);
-    scar::Decoder dec(stringPiece);
+    Decoder dec(stringPiece);
     dec >> key_offset;
 
     DCHECK(dec.size() == 0);
@@ -340,10 +340,10 @@ public:
     auto message_size = MessagePiece::get_header_size() + sizeof(bool) +
                         sizeof(uint64_t) + sizeof(uint32_t);
     auto message_piece_header = MessagePiece::construct_message_piece_header(
-        static_cast<uint32_t>(ScarMessage::LOCK_RESPONSE), message_size,
+        static_cast<uint32_t>(ScarGCMessage::LOCK_RESPONSE), message_size,
         table_id, partition_id);
 
-    scar::Encoder encoder(responseMessage.data);
+    Encoder encoder(responseMessage.data);
     encoder << message_piece_header;
     encoder << success << latest_tid << key_offset;
     responseMessage.flush();
@@ -354,7 +354,7 @@ public:
                                     Transaction *txn) {
 
     DCHECK(inputPiece.get_message_type() ==
-           static_cast<uint32_t>(ScarMessage::LOCK_RESPONSE));
+           static_cast<uint32_t>(ScarGCMessage::LOCK_RESPONSE));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     DCHECK(table_id == table.tableID());
@@ -408,7 +408,7 @@ public:
                                               ITable &table, Transaction *txn) {
 
     DCHECK(inputPiece.get_message_type() ==
-           static_cast<uint32_t>(ScarMessage::READ_VALIDATION_REQUEST));
+           static_cast<uint32_t>(ScarGCMessage::READ_VALIDATION_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     DCHECK(table_id == table.tableID());
@@ -446,10 +446,10 @@ public:
     auto message_size = MessagePiece::get_header_size() + sizeof(bool) +
                         sizeof(uint64_t) + sizeof(uint32_t);
     auto message_piece_header = MessagePiece::construct_message_piece_header(
-        static_cast<uint32_t>(ScarMessage::READ_VALIDATION_RESPONSE),
+        static_cast<uint32_t>(ScarGCMessage::READ_VALIDATION_RESPONSE),
         message_size, table_id, partition_id);
 
-    scar::Encoder encoder(responseMessage.data);
+    Encoder encoder(responseMessage.data);
     encoder << message_piece_header;
     encoder << success << written_ts << key_offset;
 
@@ -462,7 +462,7 @@ public:
                                                Transaction *txn) {
 
     DCHECK(inputPiece.get_message_type() ==
-           static_cast<uint32_t>(ScarMessage::READ_VALIDATION_RESPONSE));
+           static_cast<uint32_t>(ScarGCMessage::READ_VALIDATION_RESPONSE));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     DCHECK(table_id == table.tableID());
@@ -508,7 +508,7 @@ public:
                                     Transaction *txn) {
 
     DCHECK(inputPiece.get_message_type() ==
-           static_cast<uint32_t>(ScarMessage::ABORT_REQUEST));
+           static_cast<uint32_t>(ScarGCMessage::ABORT_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     DCHECK(table_id == table.tableID());
@@ -536,7 +536,7 @@ public:
                                     Transaction *txn) {
 
     DCHECK(inputPiece.get_message_type() ==
-           static_cast<uint32_t>(ScarMessage::WRITE_REQUEST));
+           static_cast<uint32_t>(ScarGCMessage::WRITE_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     DCHECK(table_id == table.tableID());
@@ -577,7 +577,7 @@ public:
                                           ITable &table, Transaction *txn) {
 
     DCHECK(inputPiece.get_message_type() ==
-           static_cast<uint32_t>(ScarMessage::REPLICATION_REQUEST));
+           static_cast<uint32_t>(ScarGCMessage::REPLICATION_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     DCHECK(table_id == table.tableID());
@@ -624,7 +624,7 @@ public:
                                               ITable &table, Transaction *txn) {
 
     DCHECK(inputPiece.get_message_type() ==
-           static_cast<uint32_t>(ScarMessage::RTS_REPLICATION_REQUEST));
+           static_cast<uint32_t>(ScarGCMessage::RTS_REPLICATION_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     DCHECK(table_id == table.tableID());

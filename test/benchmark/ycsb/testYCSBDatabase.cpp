@@ -17,5 +17,11 @@ TEST(TestYCSBDatabase, TestBasic) {
   context.partitioner = "hash";
   scar::ycsb::Database db;
   db.initialize(context);
+
+  auto ycsb = sizeof(scar::ycsb::ycsb::key) + sizeof(scar::ycsb::ycsb::value);
+  auto total_size = 200000 * ycsb;
+
+  LOG(INFO) << "YCSB total size: " << total_size << " bytes.";
+
   EXPECT_EQ(true, true);
 }
