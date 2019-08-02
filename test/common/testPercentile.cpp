@@ -4,13 +4,14 @@
 
 #include "common/Percentile.h"
 #include <gtest/gtest.h>
+#include <random>
 
 TEST(TestPercentile, TestBasic) {
 
   scar::Percentile<int> p;
   std::vector<int> data = {15, 20, 35, 40, 50};
 
-  std::random_shuffle(data.begin(), data.end());
+  std::shuffle(data.begin(), data.end(), std::default_random_engine());
 
   p.add(data);
 
@@ -21,7 +22,7 @@ TEST(TestPercentile, TestBasic) {
   EXPECT_EQ(p.nth(100), 50);
 
   data = {3, 6, 7, 8, 8, 10, 13, 15, 16, 20};
-  std::random_shuffle(data.begin(), data.end());
+  std::shuffle(data.begin(), data.end(), std::default_random_engine());
   p.clear();
   p.add(data);
 
@@ -31,7 +32,7 @@ TEST(TestPercentile, TestBasic) {
   EXPECT_EQ(p.nth(100), 20);
 
   data = {3, 6, 7, 8, 8, 9, 10, 13, 15, 16, 20};
-  std::random_shuffle(data.begin(), data.end());
+  std::shuffle(data.begin(), data.end(), std::default_random_engine());
   p.clear();
   p.add(data);
 
@@ -46,7 +47,7 @@ TEST(TestPercentile, TestString) {
   scar::Percentile<std::string> p;
   std::vector<std::string> data = {"15", "20", "35", "40", "50"};
 
-  std::random_shuffle(data.begin(), data.end());
+  std::shuffle(data.begin(), data.end(), std::default_random_engine());
 
   p.add(data);
 
@@ -57,7 +58,7 @@ TEST(TestPercentile, TestString) {
   EXPECT_EQ(p.nth(100), "50");
 
   data = {"03", "06", "07", "08", "08", "10", "13", "15", "16", "20"};
-  std::random_shuffle(data.begin(), data.end());
+  std::shuffle(data.begin(), data.end(), std::default_random_engine());
   p.clear();
   p.add(data);
 
@@ -67,7 +68,7 @@ TEST(TestPercentile, TestString) {
   EXPECT_EQ(p.nth(100), "20");
 
   data = {"03", "06", "07", "08", "08", "09", "10", "13", "15", "16", "20"};
-  std::random_shuffle(data.begin(), data.end());
+  std::shuffle(data.begin(), data.end(), std::default_random_engine());
   p.clear();
   p.add(data);
 

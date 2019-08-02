@@ -4,6 +4,7 @@
 
 #include "common/Random.h"
 #include <gtest/gtest.h>
+#include <random>
 #include <unordered_map>
 
 /*
@@ -44,7 +45,8 @@ struct Transaction {
       records.push_back(record);
       is_write.push_back(i < writes);
     }
-    std::random_shuffle(is_write.begin(), is_write.end());
+    std::shuffle(is_write.begin(), is_write.end(),
+                 std::default_random_engine());
   }
 
   int ts;
