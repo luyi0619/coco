@@ -94,15 +94,6 @@ public:
       }
     }
 
-    if (this->execution_phase && context.nop_prob > 0) {
-      auto x = random.uniform_dist(1, 10000);
-      if (x <= context.nop_prob) {
-        for (auto i = 0u; i < context.n_nop; i++) {
-          asm("nop");
-        }
-      }
-    }
-
     return TransactionResult::READY_TO_COMMIT;
   }
 
