@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "common/FastSleep.h"
 #include "common/Percentile.h"
 #include "core/ControlMessage.h"
 #include "core/Defs.h"
@@ -96,6 +97,9 @@ public:
         auto result = transaction->execute(id);
         if (result == TransactionResult::READY_TO_COMMIT) {
           bool commit = protocol.commit(*transaction, messages);
+          if (transaction->distributed_transaction) {
+            simulate_2pc_durable_cost();
+          }
           n_network_size.fetch_add(transaction->network_size);
           if (commit) {
             n_commit.fetch_add(1);
@@ -252,6 +256,12 @@ public:
   virtual void setupHandlers(TransactionType &txn) = 0;
 
 protected:
+  void simulate_2pc_durable_cost() {
+    if (context.durable_write_cost > 0) {
+      FastSleep::sleep_for(context.durable_write_cost * 2);
+    }
+  }
+
   void flush_messages() {
 
     for (auto i = 0u; i < messages.size(); i++) {

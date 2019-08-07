@@ -42,6 +42,8 @@ public:
   std::string cdf_path;
   std::size_t cpu_core_id = 0;
 
+  std::size_t durable_write_cost = 0;
+
   bool tcp_no_delay = true;
   bool tcp_quick_ack = false;
 

@@ -12,7 +12,7 @@ class FastSleep {
 public:
 
   // in microseconds
-  int64_t sleep_for(int64_t length) {
+  static int64_t sleep_for(int64_t length) {
 
     std::chrono::steady_clock::time_point start, end;
     start = std::chrono::steady_clock::now();
@@ -32,7 +32,7 @@ public:
   }
 
 private:
-  void nop() {
+  static void nop() {
     asm("nop");
   }
 };

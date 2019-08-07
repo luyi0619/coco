@@ -39,6 +39,8 @@ DEFINE_bool(tcp_no_delay, true, "TCP Nagle algorithm, true: disable nagle");
 DEFINE_bool(tcp_quick_ack, false, "TCP quick ack mode, true: enable quick ack");
 DEFINE_bool(cpu_affinity, true, "pinning each thread to a separate core");
 DEFINE_int32(cpu_core_id, 0, "cpu core id");
+DEFINE_int32(durable_write_cost, 0,
+             "the cost of durable write in microseconds");
 
 #define SETUP_CONTEXT(context)                                                 \
   boost::algorithm::split(context.peers, FLAGS_servers,                        \
@@ -74,4 +76,5 @@ DEFINE_int32(cpu_core_id, 0, "cpu core id");
   context.tcp_quick_ack = FLAGS_tcp_quick_ack;                                 \
   context.cpu_affinity = FLAGS_cpu_affinity;                                   \
   context.cpu_core_id = FLAGS_cpu_core_id;                                     \
+  context.durable_write_cost = FLAGS_durable_write_cost;                       \
   context.set_star_partitioner();

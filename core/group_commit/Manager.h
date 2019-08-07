@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "common/FastSleep.h"
 #include "core/Manager.h"
 
 namespace scar {
@@ -34,6 +35,7 @@ public:
       wait_all_workers_finish();
       broadcast_stop();
       wait4_stop(n_coordinators - 1);
+      simulate_durable_write();
       // process replication
       n_completed_workers.store(0);
       set_worker_status(ExecutorStatus::CLEANUP);
@@ -63,6 +65,7 @@ public:
       set_worker_status(ExecutorStatus::START);
       wait_all_workers_start();
       wait4_stop(1);
+      simulate_durable_write();
       set_worker_status(ExecutorStatus::STOP);
       wait_all_workers_finish();
       broadcast_stop();
@@ -72,6 +75,13 @@ public:
       set_worker_status(ExecutorStatus::CLEANUP);
       wait_all_workers_finish();
       send_ack();
+    }
+  }
+
+protected:
+  void simulate_durable_write() {
+    if (context.durable_write_cost > 0) {
+      FastSleep::sleep_for(context.durable_write_cost);
     }
   }
 };
