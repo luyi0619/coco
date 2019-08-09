@@ -213,30 +213,26 @@ public:
                << " milliseconds.";
 
     using std::placeholders::_1;
-    initTables(
-        "warehouse",
-        [&context, this](std::size_t partitionID) {
-          warehouseInit(context, partitionID);
-        },
-        partitionNum, threadsNum, partitioner.get());
-    initTables(
-        "district",
-        [&context, this](std::size_t partitionID) {
-          districtInit(context, partitionID);
-        },
-        partitionNum, threadsNum, partitioner.get());
-    initTables(
-        "customer",
-        [&context, this](std::size_t partitionID) {
-          customerInit(context, partitionID);
-        },
-        partitionNum, threadsNum, partitioner.get());
-    initTables(
-        "customer_name_idx",
-        [&context, this](std::size_t partitionID) {
-          customerNameIdxInit(context, partitionID);
-        },
-        partitionNum, threadsNum, partitioner.get());
+    initTables("warehouse",
+               [&context, this](std::size_t partitionID) {
+                 warehouseInit(context, partitionID);
+               },
+               partitionNum, threadsNum, partitioner.get());
+    initTables("district",
+               [&context, this](std::size_t partitionID) {
+                 districtInit(context, partitionID);
+               },
+               partitionNum, threadsNum, partitioner.get());
+    initTables("customer",
+               [&context, this](std::size_t partitionID) {
+                 customerInit(context, partitionID);
+               },
+               partitionNum, threadsNum, partitioner.get());
+    initTables("customer_name_idx",
+               [&context, this](std::size_t partitionID) {
+                 customerNameIdxInit(context, partitionID);
+               },
+               partitionNum, threadsNum, partitioner.get());
     /*    initTables("history",
                    [&context, this](std::size_t partitionID) {
                      historyInit(context, partitionID);
@@ -257,18 +253,16 @@ public:
                      orderLineInit(context, partitionID);
                    },
                    partitionNum, threadsNum, partitioner.get());*/
-    initTables(
-        "item",
-        [&context, this](std::size_t partitionID) {
-          itemInit(context, partitionID);
-        },
-        1, 1, nullptr);
-    initTables(
-        "stock",
-        [&context, this](std::size_t partitionID) {
-          stockInit(context, partitionID);
-        },
-        partitionNum, threadsNum, partitioner.get());
+    initTables("item",
+               [&context, this](std::size_t partitionID) {
+                 itemInit(context, partitionID);
+               },
+               1, 1, nullptr);
+    initTables("stock",
+               [&context, this](std::size_t partitionID) {
+                 stockInit(context, partitionID);
+               },
+               partitionNum, threadsNum, partitioner.get());
   }
 
   void apply_operation(const Operation &operation) {

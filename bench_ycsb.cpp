@@ -8,6 +8,8 @@ DEFINE_int32(cross_ratio, 0, "cross partition transaction ratio");
 DEFINE_int32(keys, 200000, "keys in a partition.");
 DEFINE_double(zipf, 0, "skew factor");
 
+DEFINE_string(skew_pattern, "both", "skew pattern: both, read, write");
+
 // ./main --logtostderr=1 --id=1 --servers="127.0.0.1:10010;127.0.0.1:10011"
 // cmake -DCMAKE_BUILD_TYPE=Release
 
@@ -19,6 +21,16 @@ int main(int argc, char *argv[]) {
 
   scar::ycsb::Context context;
   SETUP_CONTEXT(context);
+
+  if (FLAGS_skew_pattern == "both") {
+    context.skewPattern = scar::ycsb::YCSBSkewPattern::BOTH;
+  } else if (FLAGS_skew_pattern == "read") {
+    context.skewPattern = scar::ycsb::YCSBSkewPattern::READ;
+  } else if (FLAGS_skew_pattern == "write") {
+    context.skewPattern = scar::ycsb::YCSBSkewPattern::WRITE;
+  } else {
+    CHECK(false);
+  }
 
   context.readWriteRatio = FLAGS_read_write_ratio;
   context.readOnlyTransaction = FLAGS_read_only_ratio;

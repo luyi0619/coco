@@ -214,18 +214,15 @@ public:
                << " milliseconds.";
 
     using std::placeholders::_1;
-    initTables(
-        "warehouse",
-        [this](std::size_t partitionID) { warehouseInit(partitionID); },
-        partitionNum, threadsNum, partitioner.get());
-    initTables(
-        "district",
-        [this](std::size_t partitionID) { districtInit(partitionID); },
-        partitionNum, threadsNum, partitioner.get());
-    initTables(
-        "customer",
-        [this](std::size_t partitionID) { customerInit(partitionID); },
-        partitionNum, threadsNum, partitioner.get());
+    initTables("warehouse",
+               [this](std::size_t partitionID) { warehouseInit(partitionID); },
+               partitionNum, threadsNum, partitioner.get());
+    initTables("district",
+               [this](std::size_t partitionID) { districtInit(partitionID); },
+               partitionNum, threadsNum, partitioner.get());
+    initTables("customer",
+               [this](std::size_t partitionID) { customerInit(partitionID); },
+               partitionNum, threadsNum, partitioner.get());
     initTables(
         "customer_name_idx",
         [this](std::size_t partitionID) { customerNameIdxInit(partitionID); },
@@ -244,12 +241,12 @@ public:
                [this](std::size_t partitionID) { orderLineInit(partitionID); },
                partitionNum, threadsNum, partitioner.get());
     */
-    initTables(
-        "item", [this](std::size_t partitionID) { itemInit(partitionID); }, 1,
-        1, nullptr);
-    initTables(
-        "stock", [this](std::size_t partitionID) { stockInit(partitionID); },
-        partitionNum, threadsNum, partitioner.get());
+    initTables("item",
+               [this](std::size_t partitionID) { itemInit(partitionID); }, 1, 1,
+               nullptr);
+    initTables("stock",
+               [this](std::size_t partitionID) { stockInit(partitionID); },
+               partitionNum, threadsNum, partitioner.get());
   }
 
   void apply_operation(const Operation &operation) {

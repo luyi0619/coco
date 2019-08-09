@@ -46,7 +46,15 @@ public:
       do {
         retry = false;
 
-        if (context.isUniform) {
+        // a uniform key is generated in three cases
+        // case 1: it is a uniform distribution
+        // case 2: the skew pattern is read, but this is a key for update
+        // case 3: the skew pattern is write, but this is a kew for read
+
+        if (context.isUniform ||
+            (context.skewPattern == YCSBSkewPattern::READ && query.UPDATE[i]) ||
+            (context.skewPattern == YCSBSkewPattern::WRITE &&
+             query.UPDATE[i] == false)) {
           key = random.uniform_dist(
               0, static_cast<int>(context.keysPerPartition) - 1);
         } else {

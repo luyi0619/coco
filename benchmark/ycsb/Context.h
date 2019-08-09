@@ -13,6 +13,8 @@ namespace ycsb {
 
 enum class PartitionStrategy { RANGE, ROUND_ROBIN };
 
+enum class YCSBSkewPattern { BOTH, READ, WRITE };
+
 class Context : public scar::Context {
 public:
   std::size_t getPartitionID(std::size_t key) const {
@@ -53,6 +55,8 @@ public:
   }
 
 public:
+  YCSBSkewPattern skewPattern = YCSBSkewPattern::BOTH;
+
   int readWriteRatio = 0;            // out of 100
   int readOnlyTransaction = 0;       //  out of 100
   int crossPartitionProbability = 0; // out of 100
