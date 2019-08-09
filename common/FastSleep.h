@@ -4,13 +4,12 @@
 
 #pragma once
 
-#include <iostream>
 #include <chrono>
+#include <iostream>
 
 class FastSleep {
 
 public:
-
   // in microseconds
   static int64_t sleep_for(int64_t length) {
 
@@ -24,15 +23,12 @@ public:
     do {
       nop();
       end = std::chrono::steady_clock::now();
-      d = std::chrono::duration_cast<std::chrono::nanoseconds>(
-              end - start);
+      d = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
     } while (d.count() < nano_length);
 
     return d.count() / 1000;
   }
 
 private:
-  static void nop() {
-    asm("nop");
-  }
+  static void nop() { asm("nop"); }
 };

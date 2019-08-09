@@ -1,25 +1,25 @@
 //
-// Created by Yi Lu on 9/11/18.
+// Created by Yi Lu on 8/9/19.
 //
 
 #pragma once
 
 #include "core/group_commit/Executor.h"
-#include "protocol/SiloGC/SiloGC.h"
+#include "protocol/SiloSI/SiloSI.h"
 
 namespace scar {
 template <class Workload>
-class SiloGCExecutor
+class SiloSIExecutor
     : public group_commit::Executor<Workload,
-                                    SiloGC<typename Workload::DatabaseType>>
+                                    SiloSI<typename Workload::DatabaseType>>
 
 {
 public:
   using base_type =
-      group_commit::Executor<Workload, SiloGC<typename Workload::DatabaseType>>;
+      group_commit::Executor<Workload, SiloSI<typename Workload::DatabaseType>>;
 
   using WorkloadType = Workload;
-  using ProtocolType = SiloGC<typename Workload::DatabaseType>;
+  using ProtocolType = SiloSI<typename Workload::DatabaseType>;
   using DatabaseType = typename WorkloadType::DatabaseType;
   using TransactionType = typename WorkloadType::TransactionType;
   using ContextType = typename DatabaseType::ContextType;
@@ -30,7 +30,7 @@ public:
 
   using StorageType = typename WorkloadType::StorageType;
 
-  SiloGCExecutor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
+  SiloSIExecutor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
                  const ContextType &context,
                  std::atomic<uint32_t> &worker_status,
                  std::atomic<uint32_t> &n_complete_workers,
@@ -38,11 +38,9 @@ public:
       : base_type(coordinator_id, id, db, context, worker_status,
                   n_complete_workers, n_started_workers) {}
 
-  ~SiloGCExecutor() = default;
+  ~SiloSIExecutor() = default;
 
-  void setupHandlers(TransactionType &txn)
-
-      override {
+  void setupHandlers(TransactionType &txn) override {
 
     txn.readRequestHandler =
         [this, &txn](std::size_t table_id, std::size_t partition_id,

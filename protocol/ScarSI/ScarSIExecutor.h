@@ -40,9 +40,7 @@ public:
 
   ~ScarSIExecutor() = default;
 
-  void setupHandlers(TransactionType &txn)
-
-      override {
+  void setupHandlers(TransactionType &txn) override {
     txn.readRequestHandler =
         [this, &txn](std::size_t table_id, std::size_t partition_id,
                      uint32_t key_offset, const void *key, void *value,
@@ -65,6 +63,7 @@ public:
         txn.network_size += MessageFactoryType::new_search_message(
             *(this->sync_messages[coordinatorID]), *table, key, key_offset);
         txn.pendingResponses++;
+        txn.distributed_transaction = true;
         return 0;
       }
     };

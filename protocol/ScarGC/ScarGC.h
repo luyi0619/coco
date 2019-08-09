@@ -43,7 +43,7 @@ public:
 
   void abort(TransactionType &txn,
              std::vector<std::unique_ptr<Message>> &syncMessages,
-             std::vector<std::unique_ptr<Message>> &asyncMessage) {
+             std::vector<std::unique_ptr<Message>> &asyncMessages) {
 
     auto &writeSet = txn.writeSet;
 
@@ -68,10 +68,10 @@ public:
       }
     }
 
-    replicate_read_set(txn, asyncMessage, false);
+    replicate_read_set(txn, asyncMessages, false);
 
     if (context.rts_sync) {
-      replicate_rts(txn, asyncMessage);
+      replicate_rts(txn, asyncMessages);
     }
 
     sync_messages(txn, false);
@@ -79,11 +79,11 @@ public:
 
   bool commit(TransactionType &txn,
               std::vector<std::unique_ptr<Message>> &syncMessages,
-              std::vector<std::unique_ptr<Message>> &asyncMessage) {
+              std::vector<std::unique_ptr<Message>> &asyncMessages) {
 
     // lock write set
     if (lock_write_set(txn, syncMessages)) {
-      abort(txn, syncMessages, asyncMessage);
+      abort(txn, syncMessages, asyncMessages);
       return false;
     }
 
@@ -91,12 +91,12 @@ public:
 
     // commit phase 2, read validation
     if (!validate_read_set(txn, syncMessages)) {
-      abort(txn, syncMessages, asyncMessage);
+      abort(txn, syncMessages, asyncMessages);
       return false;
     }
 
     // write and replicate
-    write_and_replicate(txn, syncMessages, asyncMessage);
+    write_and_replicate(txn, syncMessages, asyncMessages);
 
     return true;
   }
@@ -252,7 +252,7 @@ private:
   void
   write_and_replicate(TransactionType &txn,
                       std::vector<std::unique_ptr<Message>> &syncMessages,
-                      std::vector<std::unique_ptr<Message>> &asyncMessage) {
+                      std::vector<std::unique_ptr<Message>> &asyncMessages) {
 
     auto &readSet = txn.readSet;
     auto &writeSet = txn.writeSet;
@@ -282,14 +282,14 @@ private:
 
       // value replicate
 
-      replicate_record(txn, asyncMessage, tableId, partitionId,
+      replicate_record(txn, asyncMessages, tableId, partitionId,
                        writeKey.get_key(), writeKey.get_value(), commit_wts);
     }
 
-    replicate_read_set(txn, asyncMessage, true);
+    replicate_read_set(txn, asyncMessages, true);
 
     if (context.rts_sync) {
-      replicate_rts(txn, asyncMessage);
+      replicate_rts(txn, asyncMessages);
     }
 
     sync_messages(txn, false);
