@@ -23,14 +23,19 @@ public:
     std::size_t n_workers = context.worker_num;
     std::size_t n_coordinators = context.coordinator_num;
 
+    std::chrono::steady_clock::time_point start, end;
+    std::size_t group_time = 1000 * context.group_time,
+                total_time = 1000 * context.group_time;
+
     while (!stopFlag.load()) {
+      start = std::chrono::steady_clock::now();
 
       n_started_workers.store(0);
       n_completed_workers.store(0);
       signal_worker(ExecutorStatus::START);
       wait_all_workers_start();
-      std::this_thread::sleep_for(
-          std::chrono::milliseconds(context.group_time));
+      group_time = get_group_time(group_time, total_time);
+      std::this_thread::sleep_for(std::chrono::microseconds(group_time));
       set_worker_status(ExecutorStatus::STOP);
       wait_all_workers_finish();
       broadcast_stop();
@@ -41,6 +46,11 @@ public:
       set_worker_status(ExecutorStatus::CLEANUP);
       wait_all_workers_finish();
       wait4_ack();
+
+      end = std::chrono::steady_clock::now();
+      total_time =
+          std::chrono::duration_cast<std::chrono::microseconds>(end - start)
+              .count();
     }
 
     signal_worker(ExecutorStatus::EXIT);
@@ -75,6 +85,24 @@ public:
       set_worker_status(ExecutorStatus::CLEANUP);
       wait_all_workers_finish();
       send_ack();
+    }
+  }
+
+  // in microseconds.
+  std::size_t get_group_time(std::size_t group_time, std::size_t total_time) {
+    if (total_time < group_time) {
+      total_time = group_time;
+    }
+
+    if (context.exact_group_commit) {
+      int adjusted_group_time =
+          1000 * context.group_time * group_time / total_time;
+      if (adjusted_group_time < 1000) {
+        adjusted_group_time = 1000;
+      }
+      return adjusted_group_time;
+    } else {
+      return group_time;
     }
   }
 
