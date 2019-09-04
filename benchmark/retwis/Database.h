@@ -79,8 +79,8 @@ public:
     for (auto partitionID = 0u; partitionID < partitionNum; partitionID++) {
       auto retwisTableID = retwis::tableID;
       tbl_retwis_vec.push_back(
-          std::make_unique<Table<9973, retwis::key, retwis::value>>(
-              retwisTableID, partitionID));
+          TableFactory::create_table<9973, retwis::key, retwis::value>(
+              context, retwisTableID, partitionID));
     }
 
     // there is 1 table in retwis

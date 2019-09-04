@@ -137,43 +137,49 @@ public:
     for (auto partitionID = 0u; partitionID < partitionNum; partitionID++) {
       auto warehouseTableID = warehouse::tableID;
       tbl_warehouse_vec.push_back(
-          std::make_unique<Table<997, warehouse::key, warehouse::value>>(
-              warehouseTableID, partitionID));
+          TableFactory::create_table<997, warehouse::key, warehouse::value>(
+              context, warehouseTableID, partitionID));
+
       auto districtTableID = district::tableID;
       tbl_district_vec.push_back(
-          std::make_unique<Table<997, district::key, district::value>>(
-              districtTableID, partitionID));
+          TableFactory::create_table<997, district::key, district::value>(
+              context, districtTableID, partitionID));
+
       auto customerTableID = customer::tableID;
       tbl_customer_vec.push_back(
-          std::make_unique<Table<997, customer::key, customer::value>>(
-              customerTableID, partitionID));
+          TableFactory::create_table<997, customer::key, customer::value>(
+              context, customerTableID, partitionID));
+
       auto customerNameIdxTableID = customer_name_idx::tableID;
       tbl_customer_name_idx_vec.push_back(
-          std::make_unique<
-              Table<997, customer_name_idx::key, customer_name_idx::value>>(
-              customerNameIdxTableID, partitionID));
+          TableFactory::create_table<997, customer_name_idx::key,
+                                     customer_name_idx::value>(
+              context, customerNameIdxTableID, partitionID));
+
       auto historyTableID = history::tableID;
       tbl_history_vec.push_back(
-          std::make_unique<Table<997, history::key, history::value>>(
-              historyTableID, partitionID));
+          TableFactory::create_table<997, history::key, history::value>(
+              context, historyTableID, partitionID));
+
       auto newOrderTableID = new_order::tableID;
       tbl_new_order_vec.push_back(
-          std::make_unique<Table<997, new_order::key, new_order::value>>(
-              newOrderTableID, partitionID));
+          TableFactory::create_table<997, new_order::key, new_order::value>(
+              context, newOrderTableID, partitionID));
+
       auto orderTableID = order::tableID;
       tbl_order_vec.push_back(
-          std::make_unique<Table<997, order::key, order::value>>(
+          TableFactory::create_table<997, order::key, order::value>(
+              context, orderTableID, partitionID));
 
-              orderTableID, partitionID));
       auto orderLineTableID = order_line::tableID;
       tbl_order_line_vec.push_back(
-          std::make_unique<Table<997, order_line::key, order_line::value>>(
-              orderLineTableID, partitionID));
+          TableFactory::create_table<997, order_line::key, order_line::value>(
+              context, orderLineTableID, partitionID));
+
       auto stockTableID = stock::tableID;
       tbl_stock_vec.push_back(
-
-          std::make_unique<Table<997, stock::key, stock::value>>(stockTableID,
-                                                                 partitionID));
+          TableFactory::create_table<997, stock::key, stock::value>(
+              context, stockTableID, partitionID));
     }
     auto itemTableID = item::tableID;
     tbl_item_vec.push_back(

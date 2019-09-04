@@ -53,6 +53,8 @@ public:
 
   bool exact_group_commit = false;
 
+  bool mvcc = false;
+
   bool read_on_replica = false;
   bool local_validation = false;
   bool rts_sync = false;

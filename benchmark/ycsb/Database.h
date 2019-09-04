@@ -79,8 +79,8 @@ public:
     for (auto partitionID = 0u; partitionID < partitionNum; partitionID++) {
       auto ycsbTableID = ycsb::tableID;
       tbl_ycsb_vec.push_back(
-          std::make_unique<Table<9973, ycsb::key, ycsb::value>>(ycsbTableID,
-                                                                partitionID));
+          TableFactory::create_table<9973, ycsb::key, ycsb::value>(
+              context, ycsbTableID, partitionID));
     }
 
     // there is 1 table in ycsb

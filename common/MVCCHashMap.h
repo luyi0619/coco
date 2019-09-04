@@ -105,23 +105,27 @@ public:
         bucket_number(key));
   }
 
-  // insert a key-value pair with a specific version, always return true
-  bool insert_key_version(const KeyType &key, const ValueType &value,
-                          uint64_t version) {
-    return apply(
-        [&key, &value, version](HashMapType &map) {
+  // insert a key with a specific version placeholder and return the reference
+  ValueType &insert_key_version_holder(const KeyType &key, uint64_t version) {
+    return apply_ref(
+        [&key, version](HashMapType &map) -> ValueType & {
           auto &l = map[key];
           // always insert to the front if the list is empty
           if (l.empty()) {
-            l.emplace_front(version, value);
+            l.emplace_front(version);
           } else {
             // make sure the version is larger than the head, making sure the
             // versions are always monotonically decreasing
             auto &head = l.front();
-            CHECK(version > get_version(head));
-            l.emplace_front(version, value);
+            auto head_version = get_version(head);
+            CHECK(version > head_version)
+                << "the new version: " << version
+                << " is not larger than the current latest version: "
+                << head_version;
+            l.emplace_front(version);
           }
-          return true;
+          // std::get<0> returns the version
+          return std::get<1>(l.front());
         },
         bucket_number(key));
   }
