@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "benchmark/tpcc/Schema.h"
 #include "common/ClassOf.h"
 #include "common/Encoder.h"
 #include "common/HashMap.h"

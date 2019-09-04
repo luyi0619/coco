@@ -53,9 +53,6 @@ endforeach()
 add_executable(bench_tpcc bench_tpcc.cpp)
 target_link_libraries(bench_tpcc common)
 
-add_executable(bench_scaled_tpcc bench_scaled_tpcc.cpp)
-target_link_libraries(bench_scaled_tpcc common)
-
 add_executable(bench_ycsb bench_ycsb.cpp)
 target_link_libraries(bench_ycsb common)
 

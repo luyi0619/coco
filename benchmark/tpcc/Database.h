@@ -19,6 +19,7 @@
 #include "common/Time.h"
 #include "core/Partitioner.h"
 #include "core/Table.h"
+
 #include <glog/logging.h>
 
 namespace scar {
@@ -102,7 +103,6 @@ public:
 
     std::vector<std::thread> v;
     auto now = std::chrono::steady_clock::now();
-
     for (auto threadID = 0u; threadID < threadsNum; threadID++) {
       v.emplace_back([=]() {
         for (auto i = threadID; i < all_parts.size(); i += threadsNum) {
@@ -111,7 +111,6 @@ public:
         }
       });
     }
-
     for (auto &t : v) {
       t.join();
     }
@@ -215,37 +214,54 @@ public:
 
     using std::placeholders::_1;
     initTables("warehouse",
-               [this](std::size_t partitionID) { warehouseInit(partitionID); },
+               [&context, this](std::size_t partitionID) {
+                 warehouseInit(context, partitionID);
+               },
                partitionNum, threadsNum, partitioner.get());
     initTables("district",
-               [this](std::size_t partitionID) { districtInit(partitionID); },
+               [&context, this](std::size_t partitionID) {
+                 districtInit(context, partitionID);
+               },
                partitionNum, threadsNum, partitioner.get());
     initTables("customer",
-               [this](std::size_t partitionID) { customerInit(partitionID); },
+               [&context, this](std::size_t partitionID) {
+                 customerInit(context, partitionID);
+               },
                partitionNum, threadsNum, partitioner.get());
-    initTables(
-        "customer_name_idx",
-        [this](std::size_t partitionID) { customerNameIdxInit(partitionID); },
-        partitionNum, threadsNum, partitioner.get());
-    /*
-    initTables("history",
-               [this](std::size_t partitionID) { historyInit(partitionID); },
+    initTables("customer_name_idx",
+               [&context, this](std::size_t partitionID) {
+                 customerNameIdxInit(context, partitionID);
+               },
                partitionNum, threadsNum, partitioner.get());
-    initTables("new_order",
-               [this](std::size_t partitionID) { newOrderInit(partitionID); },
-               partitionNum, threadsNum, partitioner.get());
-    initTables("order",
-               [this](std::size_t partitionID) { orderInit(partitionID); },
-               partitionNum, threadsNum, partitioner.get());
-    initTables("order_line",
-               [this](std::size_t partitionID) { orderLineInit(partitionID); },
-               partitionNum, threadsNum, partitioner.get());
-    */
+    /*    initTables("history",
+                   [&context, this](std::size_t partitionID) {
+                     historyInit(context, partitionID);
+                   },
+                   partitionNum, threadsNum, partitioner.get());
+        initTables("new_order",
+                   [&context, this](std::size_t partitionID) {
+                     newOrderInit(context, partitionID);
+                   },
+                   partitionNum, threadsNum, partitioner.get());
+        initTables("order",
+                   [&context, this](std::size_t partitionID) {
+                     orderInit(context, partitionID);
+                   },
+                   partitionNum, threadsNum, partitioner.get());
+        initTables("order_line",
+                   [&context, this](std::size_t partitionID) {
+                     orderLineInit(context, partitionID);
+                   },
+                   partitionNum, threadsNum, partitioner.get());*/
     initTables("item",
-               [this](std::size_t partitionID) { itemInit(partitionID); }, 1, 1,
-               nullptr);
+               [&context, this](std::size_t partitionID) {
+                 itemInit(context, partitionID);
+               },
+               1, 1, nullptr);
     initTables("stock",
-               [this](std::size_t partitionID) { stockInit(partitionID); },
+               [&context, this](std::size_t partitionID) {
+                 stockInit(context, partitionID);
+               },
                partitionNum, threadsNum, partitioner.get());
   }
 
@@ -349,7 +365,7 @@ public:
   }
 
 private:
-  void warehouseInit(std::size_t partitionID) {
+  void warehouseInit(const Context &context, std::size_t partitionID) {
 
     Random random;
     ITable *table = tbl_warehouse_vec[partitionID].get();
@@ -370,14 +386,15 @@ private:
     table->insert(&key, &value);
   }
 
-  void districtInit(std::size_t partitionID) {
+  void districtInit(const Context &context, std::size_t partitionID) {
 
     Random random;
     ITable *table = tbl_district_vec[partitionID].get();
 
-    // For each row in the WAREHOUSE table, 10 rows in the DISTRICT table
+    // For each row in the WAREHOUSE table, context.n_district rows in the
+    // DISTRICT table
 
-    for (int i = 1; i <= 10; i++) {
+    for (int i = 1; i <= context.n_district; i++) {
 
       district::key key;
       key.D_W_ID = partitionID + 1;
@@ -398,15 +415,16 @@ private:
     }
   }
 
-  void customerInit(std::size_t partitionID) {
+  void customerInit(const Context &context, std::size_t partitionID) {
 
     Random random;
     ITable *table = tbl_customer_vec[partitionID].get();
 
-    // For each row in the WAREHOUSE table, 10 rows in the DISTRICT table
-    // For each row in the DISTRICT table, 3,000 rows in the CUSTOMER table
+    // For each row in the WAREHOUSE table, context.n_district rows in the
+    // DISTRICT table For each row in the DISTRICT table, 3,000 rows in the
+    // CUSTOMER table
 
-    for (int i = 1; i <= 10; i++) {
+    for (int i = 1; i <= context.n_district; i++) {
       for (int j = 1; j <= 3000; j++) {
 
         customer::key key;
@@ -458,13 +476,14 @@ private:
     }
   }
 
-  void customerNameIdxInit(std::size_t partitionID) {
+  void customerNameIdxInit(const Context &context, std::size_t partitionID) {
 
     Random random;
     ITable *table = tbl_customer_name_idx_vec[partitionID].get();
 
-    // For each row in the WAREHOUSE table, 10 rows in the DISTRICT table
-    // For each row in the DISTRICT table, 3,000 rows in the CUSTOMER table
+    // For each row in the WAREHOUSE table, context.n_district rows in the
+    // DISTRICT table For each row in the DISTRICT table, 3,000 rows in the
+    // CUSTOMER table
 
     ITable *customer_table = find_table(customer::tableID, partitionID);
 
@@ -472,7 +491,7 @@ private:
                        std::vector<std::pair<FixedString<16>, int32_t>>>
         last_name_to_first_names_and_c_ids;
 
-    for (int i = 1; i <= 10; i++) {
+    for (int i = 1; i <= context.n_district; i++) {
       for (int j = 1; j <= 3000; j++) {
         customer::key customer_key;
         customer_key.C_W_ID = partitionID + 1;
@@ -500,16 +519,17 @@ private:
     }
   }
 
-  void historyInit(std::size_t partitionID) {
+  void historyInit(const Context &context, std::size_t partitionID) {
 
     Random random;
     ITable *table = tbl_history_vec[partitionID].get();
 
-    // For each row in the WAREHOUSE table, 10 rows in the DISTRICT table
-    // For each row in the DISTRICT table, 3,000 rows in the CUSTOMER table
-    // For each row in the CUSTOMER table, 1 row in the HISTORY table
+    // For each row in the WAREHOUSE table, context.n_district rows in the
+    // DISTRICT table For each row in the DISTRICT table, 3,000 rows in the
+    // CUSTOMER table For each row in the CUSTOMER table, 1 row in the HISTORY
+    // table
 
-    for (int i = 1; i <= 10; i++) {
+    for (int i = 1; i <= context.n_district; i++) {
       for (int j = 1; j <= 3000; j++) {
 
         history::key key;
@@ -530,17 +550,17 @@ private:
     }
   }
 
-  void newOrderInit(std::size_t partitionID) {
+  void newOrderInit(const Context &context, std::size_t partitionID) {
 
     Random random;
     ITable *table = tbl_new_order_vec[partitionID].get();
 
-    // For each row in the WAREHOUSE table, 10 rows in the DISTRICT table
-    // For each row in the DISTRICT table, 3,000 rows in the ORDER table
-    // For each row in the ORDER table from 2101 to 3000, 1 row in the NEW_ORDER
-    // table
+    // For each row in the WAREHOUSE table, context.n_district rows in the
+    // DISTRICT table For each row in the DISTRICT table, 3,000 rows in the
+    // ORDER table For each row in the ORDER table from 2101 to 3000, 1 row in
+    // the NEW_ORDER table
 
-    for (int i = 1; i <= 10; i++) {
+    for (int i = 1; i <= context.n_district; i++) {
       for (int j = 2101; j <= 3000; j++) {
 
         new_order::key key;
@@ -555,13 +575,14 @@ private:
     }
   }
 
-  void orderInit(std::size_t partitionID) {
+  void orderInit(const Context &context, std::size_t partitionID) {
 
     Random random;
     ITable *table = tbl_order_vec[partitionID].get();
 
-    // For each row in the WAREHOUSE table, 10 rows in the DISTRICT table
-    // For each row in the DISTRICT table, 3,000 rows in the ORDER table
+    // For each row in the WAREHOUSE table, context.n_district rows in the
+    // DISTRICT table For each row in the DISTRICT table, 3,000 rows in the
+    // ORDER table
 
     std::vector<int> perm;
 
@@ -569,7 +590,7 @@ private:
       perm.push_back(i);
     }
 
-    for (int i = 1; i <= 10; i++) {
+    for (int i = 1; i <= context.n_district; i++) {
 
       std::shuffle(perm.begin(), perm.end(), std::default_random_engine());
 
@@ -597,18 +618,19 @@ private:
     }
   }
 
-  void orderLineInit(std::size_t partitionID) {
+  void orderLineInit(const Context &context, std::size_t partitionID) {
 
     Random random;
     ITable *table = tbl_order_line_vec[partitionID].get();
 
-    // For each row in the WAREHOUSE table, 10 rows in the DISTRICT table
-    // For each row in the DISTRICT table, 3,000 rows in the ORDER table
-    // For each row in the ORDER table, O_OL_CNT rows in the ORDER_LINE table
+    // For each row in the WAREHOUSE table, context.n_district rows in the
+    // DISTRICT table For each row in the DISTRICT table, 3,000 rows in the
+    // ORDER table For each row in the ORDER table, O_OL_CNT rows in the
+    // ORDER_LINE table
 
     ITable *order_table = find_table(order::tableID, partitionID);
 
-    for (int i = 1; i <= 10; i++) {
+    for (int i = 1; i <= context.n_district; i++) {
 
       order::key order_key;
       order_key.O_W_ID = partitionID + 1;
@@ -649,7 +671,7 @@ private:
     }
   }
 
-  void itemInit(std::size_t partitionID) {
+  void itemInit(const Context &context, std::size_t partitionID) {
 
     Random random;
     ITable *table = tbl_item_vec[partitionID].get();
@@ -689,7 +711,7 @@ private:
     }
   }
 
-  void stockInit(std::size_t partitionID) {
+  void stockInit(const Context &context, std::size_t partitionID) {
 
     Random random;
     ITable *table = tbl_stock_vec[partitionID].get();

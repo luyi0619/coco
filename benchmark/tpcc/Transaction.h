@@ -194,7 +194,6 @@ public:
                 << storage.stock_values[i].S_ORDER_CNT
                 << storage.stock_values[i].S_REMOTE_CNT;
       }
-
       if (this->execution_phase) {
         float OL_AMOUNT = I_PRICE * OL_QUANTITY;
         storage.order_line_keys[i] =
@@ -300,14 +299,15 @@ public:
     int32_t C_W_ID = query.C_W_ID;
     float H_AMOUNT = query.H_AMOUNT;
 
-    // The row in the WAREHOUSE table with matching W_ID is selected.
-    // W_NAME, W_STREET_1, W_STREET_2, W_CITY, W_STATE, and W_ZIP are retrieved
-    // and W_YTD,
-
     auto warehouseTableID = warehouse::tableID;
-    storage.warehouse_key = warehouse::key(W_ID);
-    this->search_for_update(warehouseTableID, W_ID - 1, storage.warehouse_key,
-                            storage.warehouse_value);
+    if (context.write_to_w_ytd) {
+      // The row in the WAREHOUSE table with matching W_ID is selected.
+      // W_NAME, W_STREET_1, W_STREET_2, W_CITY, W_STATE, and W_ZIP are
+      // retrieved and W_YTD,
+      storage.warehouse_key = warehouse::key(W_ID);
+      this->search_for_update(warehouseTableID, W_ID - 1, storage.warehouse_key,
+                              storage.warehouse_value);
+    }
 
     // The row in the DISTRICT table with matching D_W_ID and D_ID is selected.
     // D_NAME, D_STREET_1, D_STREET_2, D_CITY, D_STATE, and D_ZIP are retrieved
@@ -345,16 +345,18 @@ public:
       return TransactionResult::ABORT;
     }
 
-    // the warehouse's year-to-date balance, is increased by H_ AMOUNT.
-    storage.warehouse_value.W_YTD += H_AMOUNT;
-    this->update(warehouseTableID, W_ID - 1, storage.warehouse_key,
-                 storage.warehouse_value);
+    if (context.write_to_w_ytd) {
+      // the warehouse's year-to-date balance, is increased by H_ AMOUNT.
+      storage.warehouse_value.W_YTD += H_AMOUNT;
+      this->update(warehouseTableID, W_ID - 1, storage.warehouse_key,
+                   storage.warehouse_value);
 
-    if (context.operation_replication) {
-      this->operation.partition_id = this->partition_id;
-      Encoder encoder(this->operation.data);
-      encoder << false << storage.warehouse_key.W_ID
-              << storage.warehouse_value.W_YTD;
+      if (context.operation_replication) {
+        this->operation.partition_id = this->partition_id;
+        Encoder encoder(this->operation.data);
+        encoder << false << storage.warehouse_key.W_ID
+                << storage.warehouse_value.W_YTD;
+      }
     }
 
     // the district's year-to-date balance, is increased by H_AMOUNT.
@@ -404,7 +406,6 @@ public:
       storage.customer_value.C_YTD_PAYMENT += H_AMOUNT;
       storage.customer_value.C_PAYMENT_CNT += 1;
     }
-
     this->update(customerTableID, C_W_ID - 1, storage.customer_key,
                  storage.customer_value);
 

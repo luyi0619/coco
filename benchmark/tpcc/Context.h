@@ -13,6 +13,8 @@ enum class TPCCWorkloadType { NEW_ORDER_ONLY, PAYMENT_ONLY, MIXED };
 
 class Context : public scar::Context {
 public:
+  TPCCWorkloadType workloadType = TPCCWorkloadType::NEW_ORDER_ONLY;
+
   Context get_single_partition_context() const {
     Context c = *this;
     c.newOrderCrossPartitionProbability = 0;
@@ -31,8 +33,8 @@ public:
     return c;
   }
 
-  TPCCWorkloadType workloadType = TPCCWorkloadType::NEW_ORDER_ONLY;
-
+  bool write_to_w_ytd = true;
+  int n_district = 10;
   int newOrderCrossPartitionProbability = 10; // out of 100
   int paymentCrossPartitionProbability = 15;  // out of 100
 };

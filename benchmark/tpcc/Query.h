@@ -43,9 +43,9 @@ public:
     NewOrderQuery query;
     // W_ID is constant over the whole measurement interval
     query.W_ID = W_ID;
-    // The district number (D_ID) is randomly selected within [1 .. 10] from the
-    // home warehouse (D_W_ID = W_ID).
-    query.D_ID = random.uniform_dist(1, 10);
+    // The district number (D_ID) is randomly selected within [1 ..
+    // context.n_district] from the home warehouse (D_W_ID = W_ID).
+    query.D_ID = random.uniform_dist(1, context.n_district);
 
     // The non-uniform random customer number (C_ID) is selected using the
     // NURand(1023,1,3000) function from the selected district number (C_D_ID =
@@ -130,10 +130,10 @@ public:
 
     query.W_ID = W_ID;
 
-    // The district number (D_ID) is randomly selected within [1 ..10] from the
-    // home warehouse (D_W_ID) = W_ID).
+    // The district number (D_ID) is randomly selected within [1
+    // ..context.n_district] from the home warehouse (D_W_ID) = W_ID).
 
-    query.D_ID = random.uniform_dist(1, 10);
+    query.D_ID = random.uniform_dist(1, context.n_district);
 
     // the customer resident warehouse is the home warehouse 85% of the time
     // and is a randomly selected remote warehouse 15% of the time.
@@ -146,9 +146,9 @@ public:
     if (x <= context.paymentCrossPartitionProbability &&
         context.partition_num > 1) {
       // If x <= 15 a customer is selected from a random district number (C_D_ID
-      // is randomly selected within [1 .. 10]), and a random remote warehouse
-      // number (C_W_ID is randomly selected within the range of active
-      // warehouses (see Clause 4.2.2), and C_W_ID ≠ W_ID).
+      // is randomly selected within [1 .. context.n_district]), and a random
+      // remote warehouse number (C_W_ID is randomly selected within the range
+      // of active warehouses (see Clause 4.2.2), and C_W_ID ≠ W_ID).
 
       int32_t C_W_ID = W_ID;
 
@@ -157,7 +157,7 @@ public:
       }
 
       query.C_W_ID = C_W_ID;
-      query.C_D_ID = random.uniform_dist(1, 10);
+      query.C_D_ID = random.uniform_dist(1, context.n_district);
     } else {
       // If x > 15 a customer is selected from the selected district number
       // (C_D_ID = D_ID) and the home warehouse number (C_W_ID = W_ID).

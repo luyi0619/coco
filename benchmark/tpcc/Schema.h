@@ -10,7 +10,7 @@
 #include "common/Serialization.h"
 #include "core/SchemaDef.h"
 
-// table definition for ycsb
+// table definition for tpcc
 namespace scar {
 namespace tpcc {
 static constexpr std::size_t __BASE_COUNTER__ = __COUNTER__ + 1;

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "benchmark/tpcc/Context.h"
+#include "benchmark/ycsb/Context.h"
 #include "benchmark/ycsb/Database.h"
 #include "benchmark/ycsb/Random.h"
 #include "benchmark/ycsb/Storage.h"
