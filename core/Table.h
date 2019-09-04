@@ -9,6 +9,7 @@
 #include "common/HashMap.h"
 #include "common/MVCCHashMap.h"
 #include "common/StringPiece.h"
+#include <memory>
 
 #include "core/Context.h"
 

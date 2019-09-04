@@ -112,7 +112,7 @@ public:
           auto &l = map[key];
           // always insert to the front if the list is empty
           if (l.empty()) {
-            l.emplace_front(version);
+            l.emplace_front();
           } else {
             // make sure the version is larger than the head, making sure the
             // versions are always monotonically decreasing
@@ -122,8 +122,10 @@ public:
                 << "the new version: " << version
                 << " is not larger than the current latest version: "
                 << head_version;
-            l.emplace_front(version);
+            l.emplace_front();
           }
+          // set the version
+          std::get<0>(l.front()) = version;
           // std::get<0> returns the version
           return std::get<1>(l.front());
         },
