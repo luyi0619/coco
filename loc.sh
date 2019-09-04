@@ -1,3 +1,3 @@
 #!/bin/bash
 
-cloc benchmark common core protocol
+cloc benchmark common core protocol *.cpp
