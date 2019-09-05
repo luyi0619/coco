@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "core/Partitioner.h"
 #include "core/Table.h"
 #include "protocol/Calvin/CalvinHelper.h"
 #include "protocol/Calvin/CalvinMessage.h"
+#include "protocol/Calvin/CalvinPartitioner.h"
 #include "protocol/Calvin/CalvinTransaction.h"
 
 namespace scar {

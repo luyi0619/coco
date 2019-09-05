@@ -6,8 +6,8 @@
 
 #include "common/Operation.h"
 #include "core/Defs.h"
-#include "core/Partitioner.h"
 #include "protocol/Calvin/CalvinHelper.h"
+#include "protocol/Calvin/CalvinPartitioner.h"
 #include "protocol/Calvin/CalvinRWKey.h"
 #include <chrono>
 #include <glog/logging.h>

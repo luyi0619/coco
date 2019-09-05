@@ -2,7 +2,7 @@
 // Created by Yi Lu on 9/13/18.
 //
 
-#include "core/Partitioner.h"
+#include "protocol/Calvin/CalvinPartitioner.h"
 #include <gtest/gtest.h>
 
 TEST(TestCalvinPartitioner, TestBasic) {

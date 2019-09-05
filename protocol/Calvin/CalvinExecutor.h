@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include "core/Partitioner.h"
-
 #include "common/Percentile.h"
 #include "core/Delay.h"
 #include "core/Worker.h"
@@ -14,6 +12,7 @@
 #include "protocol/Calvin/Calvin.h"
 #include "protocol/Calvin/CalvinHelper.h"
 #include "protocol/Calvin/CalvinMessage.h"
+#include "protocol/Calvin/CalvinPartitioner.h"
 
 #include <chrono>
 #include <thread>
@@ -25,17 +24,10 @@ public:
   using WorkloadType = Workload;
   using DatabaseType = typename WorkloadType::DatabaseType;
   using StorageType = typename WorkloadType::StorageType;
-
   using TransactionType = CalvinTransaction;
-  static_assert(std::is_same<typename WorkloadType::TransactionType,
-                             TransactionType>::value,
-                "Transaction types do not match.");
-
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
-
   using ProtocolType = Calvin<DatabaseType>;
-
   using MessageType = CalvinMessage;
   using MessageFactoryType = CalvinMessageFactory;
   using MessageHandlerType = CalvinMessageHandler;
