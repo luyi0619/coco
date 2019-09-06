@@ -328,19 +328,19 @@ public:
     if (C_ID == 0) {
       storage.customer_name_idx_key =
           customer_name_idx::key(C_W_ID, C_D_ID, query.C_LAST);
-      this->search_local_index(customerNameIdxTableID, C_W_ID - 1,
-                               storage.customer_name_idx_key,
-                               storage.customer_name_idx_value);
+      this->search_for_read(customerNameIdxTableID, C_W_ID - 1,
+                            storage.customer_name_idx_key,
+                            storage.customer_name_idx_value);
 
       this->process_requests(worker_id);
       C_ID = storage.customer_name_idx_value.C_ID;
+      CHECK(C_ID > 0) << "Invalid C_ID read from index";
     }
 
     auto customerTableID = customer::tableID;
     storage.customer_key = customer::key(C_W_ID, C_D_ID, C_ID);
     this->search_for_update(customerTableID, C_W_ID - 1, storage.customer_key,
                             storage.customer_value);
-
     if (this->process_requests(worker_id)) {
       return TransactionResult::ABORT;
     }

@@ -166,12 +166,12 @@ public:
       query.C_W_ID = W_ID;
     }
 
+    // a CID is always used.
     int y = random.uniform_dist(1, 100);
-
     // The customer is randomly selected 60% of the time by last name (C_W_ID ,
     // C_D_ID, C_LAST) and 40% of the time by number (C_W_ID , C_D_ID , C_ID).
 
-    if (y <= 60) {
+    if (y <= 60 && context.payment_look_up) {
       // If y <= 60 a customer last name (C_LAST) is generated according to
       // Clause 4.3.2.3 from a non-uniform random value using the
       // NURand(255,0,999) function.

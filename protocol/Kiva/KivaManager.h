@@ -34,7 +34,7 @@ public:
 
   KivaManager(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
               const ContextType &context, std::atomic<bool> &stopFlag)
-      : base_type(coordinator_id, id, context, stopFlag), db(db) {
+      : base_type(coordinator_id, id, context, stopFlag), db(db), epoch(0) {
 
     storages.resize(context.batch_size);
     transactions.resize(context.batch_size);

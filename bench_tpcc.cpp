@@ -8,9 +8,7 @@ DEFINE_int32(neworder_dist, 10, "new order distributed.");
 DEFINE_int32(payment_dist, 15, "payment distributed.");
 DEFINE_int32(n_district, 10, "no. of districts in a warehouse");
 DEFINE_bool(write_to_w_ytd, true, "by default, we run standard tpc-c.");
-
-// ./main --logtostderr=1 --id=1 --servers="127.0.0.1:10010;127.0.0.1:10011"
-// cmake -DCMAKE_BUILD_TYPE=Release
+DEFINE_bool(payment_look_up, false, "look up C_ID on secondary index.");
 
 int main(int argc, char *argv[]) {
 
@@ -37,6 +35,7 @@ int main(int argc, char *argv[]) {
   context.paymentCrossPartitionProbability = FLAGS_payment_dist;
   context.n_district = FLAGS_n_district;
   context.write_to_w_ytd = FLAGS_write_to_w_ytd;
+  context.payment_look_up = FLAGS_payment_look_up;
 
   scar::tpcc::Database db;
   db.initialize(context);

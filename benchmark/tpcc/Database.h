@@ -494,7 +494,7 @@ private:
     ITable *customer_table = find_table(customer::tableID, partitionID);
 
     std::unordered_map<FixedString<16>,
-                       std::vector<std::pair<FixedString<16>, int32_t>>>
+                       std::vector<std::tuple<FixedString<16>, int32_t>>>
         last_name_to_first_names_and_c_ids;
 
     for (int i = 1; i <= context.n_district; i++) {
@@ -509,17 +509,18 @@ private:
         const customer::value &customer_value = *static_cast<customer::value *>(
             customer_table->search_value(&customer_key));
         last_name_to_first_names_and_c_ids[customer_value.C_LAST].push_back(
-            std::make_pair(customer_value.C_FIRST, customer_key.C_ID));
+            std::make_tuple(customer_value.C_FIRST, customer_key.C_ID));
       }
 
       for (auto it = last_name_to_first_names_and_c_ids.begin();
            it != last_name_to_first_names_and_c_ids.end(); it++) {
-        auto &v = it->second;
+        auto &v = std::get<1>(*it);
         std::sort(v.begin(), v.end());
 
         // insert ceiling(n/2) to customer_last_name_idx, n starts from 1
-        customer_name_idx::key cni_key(partitionID + 1, i, it->first);
-        customer_name_idx::value cni_value(v[(v.size() - 1) / 2].second);
+        customer_name_idx::key cni_key(partitionID + 1, i, std::get<0>(*it));
+        customer_name_idx::value cni_value(std::get<1>(v[(v.size() - 1) / 2]));
+        CHECK(cni_value.C_ID > 0) << "C_ID is not valid.";
         table->insert(&cni_key, &cni_value);
       }
     }

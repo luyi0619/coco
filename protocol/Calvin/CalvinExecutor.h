@@ -169,7 +169,7 @@ public:
   }
 
   void generate_transactions() {
-    if (!context.calvin_same_batch || !init_transaction) {
+    if (!context.same_batch || !init_transaction) {
       init_transaction = true;
       for (auto i = id; i < transactions.size(); i += context.worker_num) {
         // generate transaction
@@ -198,7 +198,7 @@ public:
       txn.abort_no_retry = true;
     }
 
-    if (context.calvin_same_batch) {
+    if (context.same_batch) {
       txn.save_read_count();
     }
 

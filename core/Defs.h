@@ -15,6 +15,10 @@ enum class ExecutorStatus {
   Execute,
   Kiva_READ,
   Kiva_COMMIT,
+  Bohm_Analysis,
+  Bohm_Insert,
+  Bohm_Execute,
+  Bohm_GC,
   STOP,
   EXIT
 };

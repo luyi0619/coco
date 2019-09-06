@@ -62,7 +62,7 @@ public:
   bool star_dynamic_batch_size = true;
   bool parallel_locking_and_validation = true;
 
-  bool calvin_same_batch = false;
+  bool same_batch = false; // calvin and bohm
 
   bool kiva_read_only_optmization = true;
   bool kiva_reordering_optmization = true;

@@ -33,10 +33,12 @@ public:
     return c;
   }
 
-  bool write_to_w_ytd = true;
   int n_district = 10;
   int newOrderCrossPartitionProbability = 10; // out of 100
   int paymentCrossPartitionProbability = 15;  // out of 100
+
+  bool write_to_w_ytd = true;
+  bool payment_look_up = false;
 };
 } // namespace tpcc
 } // namespace scar

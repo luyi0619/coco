@@ -11,9 +11,6 @@ DEFINE_int32(cross_ratio, 0, "cross partition transaction ratio");
 DEFINE_int32(read_only_ratio, 80, "read only transaction ratio");
 DEFINE_double(zipf, 0, "skew factor");
 
-// ./main --logtostderr=1 --id=1 --servers="127.0.0.1:10010;127.0.0.1:10011"
-// cmake -DCMAKE_BUILD_TYPE=Release
-
 int main(int argc, char *argv[]) {
 
   google::InitGoogleLogging(argv[0]);

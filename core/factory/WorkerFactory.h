@@ -43,6 +43,11 @@
 #include "protocol/Calvin/CalvinManager.h"
 #include "protocol/Calvin/CalvinTransaction.h"
 
+#include "protocol/Bohm/Bohm.h"
+#include "protocol/Bohm/BohmExecutor.h"
+#include "protocol/Bohm/BohmManager.h"
+#include "protocol/Bohm/BohmTransaction.h"
+
 #include "protocol/Kiva/Kiva.h"
 #include "protocol/Kiva/KivaExecutor.h"
 #include "protocol/Kiva/KivaManager.h"
@@ -81,8 +86,8 @@ public:
                  const Context &context, std::atomic<bool> &stop_flag) {
 
     std::unordered_set<std::string> protocols = {
-        "Silo",   "SiloGC", "SiloSI", "SiloRC",  "Scar",   "ScarGC",
-        "ScarSI", "Star",   "TwoPL",  "TwoPLGC", "Calvin", "Kiva"};
+        "Silo", "SiloGC", "SiloSI",  "SiloRC", "Scar", "ScarGC", "ScarSI",
+        "Star", "TwoPL",  "TwoPLGC", "Calvin", "Bohm", "Kiva"};
     CHECK(protocols.count(context.protocol) == 1);
 
     std::vector<std::shared_ptr<Worker>> workers;
@@ -289,6 +294,27 @@ public:
         static_cast<CalvinExecutor<WorkloadType> *>(workers[i].get())
             ->set_all_executors(all_executors);
       }
+    } else if (context.protocol == "Bohm") {
+
+      using TransactionType = scar::BohmTransaction;
+      using WorkloadType =
+          typename InferType<Context>::template WorkloadType<TransactionType>;
+
+      // create manager
+
+      auto manager = std::make_shared<BohmManager<WorkloadType>>(
+          coordinator_id, context.worker_num, db, context, stop_flag);
+
+      // create worker
+
+      for (auto i = 0u; i < context.worker_num; i++) {
+        workers.push_back(std::make_shared<BohmExecutor<WorkloadType>>(
+            coordinator_id, i, db, context, manager->transactions,
+            manager->storages, manager->epoch, manager->worker_status,
+            manager->n_completed_workers, manager->n_started_workers));
+      }
+
+      workers.push_back(manager);
     } else if (context.protocol == "Kiva") {
 
       using TransactionType = scar::KivaTransaction;
@@ -311,6 +337,8 @@ public:
       }
 
       workers.push_back(manager);
+    } else {
+      CHECK(false) << "protocol: " << context.protocol << " is not supported.";
     }
 
     return workers;

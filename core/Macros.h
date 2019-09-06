@@ -28,7 +28,8 @@ DEFINE_bool(rts_sync, false, "rts sync");
 DEFINE_bool(star_sync, false, "synchronous write in the single-master phase");
 DEFINE_bool(star_dynamic_batch_size, true, "dynamic batch size");
 DEFINE_bool(plv, true, "parallel locking and validation");
-DEFINE_bool(calvin_same_batch, false, "always run the same batch of txns.");
+DEFINE_bool(same_batch, false,
+            "always run the same batch of txns in calvin and bohm.");
 DEFINE_bool(kiva_read_only, true, "kiva read only optimization");
 DEFINE_bool(kiva_reordering, true, "kiva reordering optimization");
 DEFINE_bool(kiva_si, false, "kiva snapshot isolation");
@@ -67,7 +68,7 @@ DEFINE_bool(mvcc, false, "use mvcc storage for BOHM.");
   context.star_sync_in_single_master_phase = FLAGS_star_sync;                  \
   context.star_dynamic_batch_size = FLAGS_star_dynamic_batch_size;             \
   context.parallel_locking_and_validation = FLAGS_plv;                         \
-  context.calvin_same_batch = FLAGS_calvin_same_batch;                         \
+  context.same_batch = FLAGS_same_batch;                                       \
   context.kiva_read_only_optmization = FLAGS_kiva_read_only;                   \
   context.kiva_reordering_optmization = FLAGS_kiva_reordering;                 \
   context.kiva_snapshot_isolation = FLAGS_kiva_si;                             \
@@ -81,4 +82,6 @@ DEFINE_bool(mvcc, false, "use mvcc storage for BOHM.");
   context.durable_write_cost = FLAGS_durable_write_cost;                       \
   context.exact_group_commit = FLAGS_exact_group_commit;                       \
   context.mvcc = FLAGS_mvcc;                                                   \
+  CHECK((context.mvcc ^ (context.protocol == "Bohm")) == 0)                    \
+      << "MVCC must be used in Bohm.";                                         \
   context.set_star_partitioner();

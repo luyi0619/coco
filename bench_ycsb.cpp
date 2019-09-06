@@ -10,9 +10,6 @@ DEFINE_double(zipf, 0, "skew factor");
 
 DEFINE_string(skew_pattern, "both", "skew pattern: both, read, write");
 
-// ./main --logtostderr=1 --id=1 --servers="127.0.0.1:10010;127.0.0.1:10011"
-// cmake -DCMAKE_BUILD_TYPE=Release
-
 int main(int argc, char *argv[]) {
 
   google::InitGoogleLogging(argv[0]);
