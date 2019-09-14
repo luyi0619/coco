@@ -118,7 +118,12 @@ public:
     }
   }
 
-  void onExit() override {}
+  void onExit() override {
+    LOG(INFO) << "Worker " << id << " latency: " << percentile.nth(50)
+              << " us (50%) " << percentile.nth(75) << " us (75%) "
+              << percentile.nth(95) << " us (95%) " << percentile.nth(99)
+              << " us (99%).";
+  }
 
   void push_message(Message *message) override { in_queue.push(message); }
 
@@ -310,6 +315,11 @@ public:
       if (result == TransactionResult::READY_TO_COMMIT) {
         protocol.commit(*transaction, lock_manager_id, n_lock_manager,
                         partitioner.replica_group_size);
+        auto latency =
+            std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now() - transaction->startTime)
+                .count();
+        percentile.add(latency);
       } else if (result == TransactionResult::ABORT) {
         // non-active transactions, release lock
         protocol.abort(*transaction, lock_manager_id, n_lock_manager,
@@ -436,6 +446,7 @@ private:
   RandomType random;
   ProtocolType protocol;
   std::unique_ptr<Delay> delay;
+  Percentile<int64_t> percentile;
   std::vector<std::unique_ptr<Message>> messages;
   std::vector<
       std::function<void(MessagePiece, Message &, ITable &,

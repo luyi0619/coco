@@ -353,6 +353,11 @@ public:
       if (context.kiva_read_only_optmization &&
           transactions[i]->is_read_only()) {
         n_commit.fetch_add(1);
+        auto latency =
+            std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now() - transactions[i]->startTime)
+                .count();
+        percentile.add(latency);
         continue;
       }
 
@@ -365,11 +370,22 @@ public:
       if (context.kiva_snapshot_isolation) {
         protocol.commit(*transactions[i], messages);
         n_commit.fetch_add(1);
+        auto latency =
+            std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now() - transactions[i]->startTime)
+                .count();
+        percentile.add(latency);
       } else {
         if (context.kiva_reordering_optmization) {
           if (transactions[i]->war == false || transactions[i]->raw == false) {
             protocol.commit(*transactions[i], messages);
             n_commit.fetch_add(1);
+            auto latency =
+                std::chrono::duration_cast<std::chrono::microseconds>(
+                    std::chrono::steady_clock::now() -
+                    transactions[i]->startTime)
+                    .count();
+            percentile.add(latency);
           } else {
             n_abort_lock.fetch_add(1);
             protocol.abort(*transactions[i], messages);
@@ -381,6 +397,12 @@ public:
           } else {
             protocol.commit(*transactions[i], messages);
             n_commit.fetch_add(1);
+            auto latency =
+                std::chrono::duration_cast<std::chrono::microseconds>(
+                    std::chrono::steady_clock::now() -
+                    transactions[i]->startTime)
+                    .count();
+            percentile.add(latency);
           }
         }
       }
@@ -429,7 +451,12 @@ public:
     txn.message_flusher = [this]() { this->flush_messages(); };
   }
 
-  void onExit() override {}
+  void onExit() override {
+    LOG(INFO) << "Worker " << id << " latency: " << percentile.nth(50)
+              << " us (50%) " << percentile.nth(75) << " us (75%) "
+              << percentile.nth(95) << " us (95%) " << percentile.nth(99)
+              << " us (99%).";
+  }
 
   void push_message(Message *message) override { in_queue.push(message); }
 
@@ -518,6 +545,7 @@ private:
   RandomType random;
   ProtocolType protocol;
   std::unique_ptr<Delay> delay;
+  Percentile<int64_t> percentile;
   std::vector<std::unique_ptr<Message>> messages;
   std::vector<
       std::function<void(MessagePiece, Message &, ITable &,

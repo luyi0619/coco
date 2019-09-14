@@ -116,7 +116,12 @@ public:
     }
   }
 
-  void onExit() override {}
+  void onExit() override {
+    LOG(INFO) << "Worker " << id << " latency: " << percentile.nth(50)
+              << " us (50%) " << percentile.nth(75) << " us (75%) "
+              << percentile.nth(95) << " us (95%) " << percentile.nth(99)
+              << " us (99%).";
+  }
 
   void push_message(Message *message) override { in_queue.push(message); }
 
@@ -295,7 +300,11 @@ public:
         if (result == TransactionResult::READY_TO_COMMIT) {
           protocol.commit(*transactions[i], messages);
           n_commit.fetch_add(1);
-          flush_messages();
+          auto latency =
+              std::chrono::duration_cast<std::chrono::microseconds>(
+                  std::chrono::steady_clock::now() - transactions[i]->startTime)
+                  .count();
+          percentile.add(latency);
           break;
         } else if (result == TransactionResult::ABORT) {
           protocol.abort(*transactions[i], messages);
@@ -309,6 +318,7 @@ public:
               << "abort no retry transactions should not be scheduled.";
         }
       }
+      flush_messages();
     }
   }
 
@@ -370,6 +380,7 @@ private:
   RandomType random, sleep_random;
   ProtocolType protocol;
   std::unique_ptr<Delay> delay;
+  Percentile<int64_t> percentile;
   std::vector<std::unique_ptr<Message>> messages;
   std::vector<
       std::function<void(MessagePiece, Message &, ITable &,
