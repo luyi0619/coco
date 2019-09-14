@@ -7,8 +7,8 @@ DEFINE_int32(read_only_ratio, 0, "read only transaction ratio");
 DEFINE_int32(cross_ratio, 0, "cross partition transaction ratio");
 DEFINE_int32(keys, 200000, "keys in a partition.");
 DEFINE_double(zipf, 0, "skew factor");
-
 DEFINE_string(skew_pattern, "both", "skew pattern: both, read, write");
+DEFINE_bool(two_partitions, false, "dist transactions access two partitions.");
 
 int main(int argc, char *argv[]) {
 
@@ -33,6 +33,7 @@ int main(int argc, char *argv[]) {
   context.readOnlyTransaction = FLAGS_read_only_ratio;
   context.crossPartitionProbability = FLAGS_cross_ratio;
   context.keysPerPartition = FLAGS_keys;
+  context.two_partitions = FLAGS_two_partitions;
 
   if (FLAGS_zipf > 0) {
     context.isUniform = false;

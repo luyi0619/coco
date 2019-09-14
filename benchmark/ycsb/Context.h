@@ -65,6 +65,7 @@ public:
   std::size_t keysPerPartition = 200000;
 
   bool isUniform = true;
+  bool two_partitions = false;
 
   PartitionStrategy strategy = PartitionStrategy::ROUND_ROBIN;
 };
