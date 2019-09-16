@@ -44,6 +44,7 @@ DEFINE_int32(durable_write_cost, 0,
              "the cost of durable write in microseconds");
 DEFINE_bool(exact_group_commit, false, "dynamically adjust group time.");
 DEFINE_bool(mvcc, false, "use mvcc storage for BOHM.");
+DEFINE_bool(bohm_local, false, "locality optimization for Bohm.");
 
 #define SETUP_CONTEXT(context)                                                 \
   boost::algorithm::split(context.peers, FLAGS_servers,                        \
@@ -82,6 +83,7 @@ DEFINE_bool(mvcc, false, "use mvcc storage for BOHM.");
   context.durable_write_cost = FLAGS_durable_write_cost;                       \
   context.exact_group_commit = FLAGS_exact_group_commit;                       \
   context.mvcc = FLAGS_mvcc;                                                   \
+  context.bohm_local = FLAGS_bohm_local;                                       \
   CHECK((context.mvcc ^ (context.protocol == "Bohm")) == 0)                    \
       << "MVCC must be used in Bohm.";                                         \
   context.set_star_partitioner();

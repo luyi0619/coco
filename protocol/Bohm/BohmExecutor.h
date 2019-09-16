@@ -286,28 +286,28 @@ public:
   }
 
   void run_transactions() {
-    for (auto i = id + coordinator_id * context.worker_num;
-         i < transactions.size();
-         i += context.worker_num * context.coordinator_num) {
-      if (transactions[i]->abort_no_retry) {
-        continue;
+
+    auto run_transaction = [this](TransactionType *transaction) {
+      if (transaction->abort_no_retry) {
+        return;
       }
+
       // spin until the reads are ready
       for (;;) {
         process_request();
-        auto result = transactions[i]->execute(id);
-        n_network_size += transactions[i]->network_size;
+        auto result = transaction->execute(id);
+        n_network_size += transaction->network_size;
         if (result == TransactionResult::READY_TO_COMMIT) {
-          protocol.commit(*transactions[i], messages);
+          protocol.commit(*transaction, messages);
           n_commit.fetch_add(1);
           auto latency =
               std::chrono::duration_cast<std::chrono::microseconds>(
-                  std::chrono::steady_clock::now() - transactions[i]->startTime)
+                  std::chrono::steady_clock::now() - transaction->startTime)
                   .count();
           percentile.add(latency);
           break;
         } else if (result == TransactionResult::ABORT) {
-          protocol.abort(*transactions[i], messages);
+          protocol.abort(*transaction, messages);
           n_abort_lock.fetch_add(1);
           if (context.sleep_on_retry) {
             std::this_thread::sleep_for(std::chrono::microseconds(
@@ -319,6 +319,21 @@ public:
         }
       }
       flush_messages();
+    };
+
+    if (context.bohm_local) {
+      for (auto i = id; i < transactions.size(); i += context.worker_num) {
+        if (!partitioner.has_master_partition(transactions[i]->partition_id)) {
+          continue;
+        }
+        run_transaction(transactions[i].get());
+      }
+    } else {
+      for (auto i = id + coordinator_id * context.worker_num;
+           i < transactions.size();
+           i += context.worker_num * context.coordinator_num) {
+        run_transaction(transactions[i].get());
+      }
     }
   }
 

@@ -54,6 +54,7 @@ public:
   bool exact_group_commit = false;
 
   bool mvcc = false;
+  bool bohm_local = false;
 
   bool read_on_replica = false;
   bool local_validation = false;
