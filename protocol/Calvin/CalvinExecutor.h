@@ -185,11 +185,13 @@ public:
         prepare_transaction(*transactions[i]);
       }
     } else {
+      auto now = std::chrono::steady_clock::now();
       for (auto i = id; i < transactions.size(); i += context.worker_num) {
         // a soft reset
         transactions[i]->network_size.store(0);
         transactions[i]->load_read_count();
         transactions[i]->clear_execution_bit();
+        transactions[i]->startTime = now;
       }
     }
   }
