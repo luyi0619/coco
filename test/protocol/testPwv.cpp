@@ -49,12 +49,14 @@ TEST(TestPwvNewOrderStatement, TestBasic) {
   constexpr int partitionID = 0;
   scar::tpcc::NewOrderQuery q1 =
       scar::tpcc::makeNewOrderQuery()(context, 1, random);
+  float total_amount;
 
   PwvNewOrderWarehouseStatement s1(db, context, random, storage, partitionID,
                                    q1);
   PwvNewOrderStockStatement s2(db, context, random, storage, partitionID, q1,
                                0);
-  PwvNewOrderOrderStatement s3(db, context, random, storage, partitionID, q1);
+  PwvNewOrderOrderStatement s3(db, context, random, storage, partitionID, q1,
+                               total_amount);
 
   scar::tpcc::PaymentQuery q2 =
       scar::tpcc::makePaymentQuery()(context, 1, random);

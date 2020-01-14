@@ -114,7 +114,7 @@ public:
   ycsb::Random &random;
   ycsb::Storage &storage;
   std::size_t partition_id;
-  const ycsb::YCSBQuery<keys_num> query;
+  const ycsb::YCSBQuery<keys_num> &query;
   int idx;
 };
 
@@ -144,14 +144,14 @@ public:
 
     auto warehouseTableID = tpcc::warehouse::tableID;
     storage.warehouse_key = tpcc::warehouse::key(W_ID);
-
-    PwvRWKey warehouse_rwkey;
-    warehouse_rwkey.set_table_id(warehouseTableID);
-    warehouse_rwkey.set_partition_id(W_ID - 1);
-    warehouse_rwkey.set_key(&storage.warehouse_key);
-    warehouse_rwkey.set_value(&storage.warehouse_value);
-    readSet.push_back(warehouse_rwkey);
-
+    {
+      PwvRWKey rwkey;
+      rwkey.set_table_id(warehouseTableID);
+      rwkey.set_partition_id(W_ID - 1);
+      rwkey.set_key(&storage.warehouse_key);
+      rwkey.set_value(&storage.warehouse_value);
+      readSet.push_back(rwkey);
+    }
     // The row in the DISTRICT table with matching D_W_ID and D_ ID is selected,
     // D_TAX, the district tax rate, is retrieved, and D_NEXT_O_ID, the next
     // available order number for the district, is retrieved and incremented by
@@ -159,15 +159,16 @@ public:
 
     auto districtTableID = tpcc::district::tableID;
     storage.district_key = tpcc::district::key(W_ID, D_ID);
+    {
+      PwvRWKey rwkey;
+      rwkey.set_table_id(districtTableID);
+      rwkey.set_partition_id(W_ID - 1);
+      rwkey.set_key(&storage.district_key);
+      rwkey.set_value(&storage.district_value);
 
-    PwvRWKey district_rwkey;
-    district_rwkey.set_table_id(districtTableID);
-    district_rwkey.set_partition_id(W_ID - 1);
-    district_rwkey.set_key(&storage.district_key);
-    district_rwkey.set_value(&storage.district_value);
-
-    readSet.push_back(district_rwkey);
-    writeSet.push_back(district_rwkey);
+      readSet.push_back(rwkey);
+      writeSet.push_back(rwkey);
+    }
 
     // The row in the CUSTOMER table with matching C_W_ID, C_D_ID, and C_ID is
     // selected and C_DISCOUNT, the customer's discount rate, C_LAST, the
@@ -176,42 +177,25 @@ public:
 
     auto customerTableID = tpcc::customer::tableID;
     storage.customer_key = tpcc::customer::key(W_ID, D_ID, C_ID);
-    PwvRWKey customer_rwkey;
-    customer_rwkey.set_table_id(customerTableID);
-    customer_rwkey.set_partition_id(W_ID - 1);
-    customer_rwkey.set_key(&storage.customer_key);
-    customer_rwkey.set_value(&storage.customer_value);
-    readSet.push_back(customer_rwkey);
-
+    {
+      PwvRWKey rwkey;
+      rwkey.set_table_id(customerTableID);
+      rwkey.set_partition_id(W_ID - 1);
+      rwkey.set_key(&storage.customer_key);
+      rwkey.set_value(&storage.customer_value);
+      readSet.push_back(rwkey);
+    }
     CHECK(readSet.size() == 3) << "Check on readSet size failed!";
     CHECK(writeSet.size() == 1) << "Check on writeSet size failed!";
   }
 
-  void execute() override {}
+  void execute() override {
 
-public:
-  tpcc::Database &db;
-  const tpcc::Context &context;
-  tpcc::Random &random;
-  tpcc::Storage &storage;
-  std::size_t partition_id;
-  const tpcc::NewOrderQuery &query;
-};
+    // The changes are committed in transaction.commit();
 
-class PwvNewOrderOrderStatement : public PwvStatement {
-public:
-  PwvNewOrderOrderStatement(tpcc::Database &db, const tpcc::Context &context,
-                            tpcc::Random &random, tpcc::Storage &storage,
-                            std::size_t partition_id,
-                            const tpcc::NewOrderQuery &query)
-      : db(db), context(context), random(random), storage(storage),
-        partition_id(partition_id), query(query) {}
-
-  ~PwvNewOrderOrderStatement() override = default;
-
-  void prepare_read_and_write_set() override {}
-
-  void execute() override {}
+    int32_t D_NEXT_O_ID = storage.district_value.D_NEXT_O_ID;
+    storage.district_value.D_NEXT_O_ID += 1;
+  }
 
 public:
   tpcc::Database &db;
@@ -251,33 +235,80 @@ public:
     storage.item_keys[idx] = tpcc::item::key(OL_I_ID);
 
     // If I_ID has an unused value, rollback.
-    // In OCC, rollback can return without going through commit protocal
+    // In OCC, rollback can return without going through commit protocol
 
     if (storage.item_keys[idx].I_ID == 0) {
-      // TODO handle abort;
+      return; // abort
     }
 
-    // TODO handle index read
-    /*
-    this->search_local_index(itemTableID, 0, storage.item_keys[i],
-                             storage.item_values[i]);
-    */
+    auto tableId = itemTableID;
+    auto partitionId = 0;
+    auto key = &storage.item_keys[idx];
+    auto value = &storage.item_values[idx];
+    ITable *table = db.find_table(tableId, partitionId);
+    auto value_bytes = table->value_size();
+    auto row = table->search(key);
+    PwvHelper::read(row, value, value_bytes);
 
     // The row in the STOCK table with matching S_I_ID (equals OL_I_ID) and
     // S_W_ID (equals OL_SUPPLY_W_ID) is selected.
 
     storage.stock_keys[idx] = tpcc::stock::key(OL_SUPPLY_W_ID, OL_I_ID);
 
-    PwvRWKey stock_rwkey;
-    stock_rwkey.set_table_id(stockTableID);
-    stock_rwkey.set_partition_id(OL_SUPPLY_W_ID - 1);
-    stock_rwkey.set_key(&storage.stock_keys[idx]);
-    stock_rwkey.set_value(&storage.stock_values[idx]);
-    readSet.push_back(stock_rwkey);
-    writeSet.push_back(stock_rwkey);
+    PwvRWKey rwkey;
+    rwkey.set_table_id(stockTableID);
+    rwkey.set_partition_id(OL_SUPPLY_W_ID - 1);
+    rwkey.set_key(&storage.stock_keys[idx]);
+    rwkey.set_value(&storage.stock_values[idx]);
+    readSet.push_back(rwkey);
+    writeSet.push_back(rwkey);
+
+    CHECK(readSet.size() == 1) << "Check on readSet size failed!";
+    CHECK(writeSet.size() == 1) << "Check on writeSet size failed!";
   }
 
-  void execute() override {}
+  void execute() override {
+
+    int32_t W_ID = this->partition_id + 1;
+    int32_t OL_I_ID = query.INFO[idx].OL_I_ID;
+    int8_t OL_QUANTITY = query.INFO[idx].OL_QUANTITY;
+    int32_t OL_SUPPLY_W_ID = query.INFO[idx].OL_SUPPLY_W_ID;
+    float I_PRICE = storage.item_values[idx].I_PRICE;
+
+    // read
+    auto tableId = tpcc::stock::tableID;
+    auto partitionId = OL_SUPPLY_W_ID - 1;
+    auto key = &storage.stock_keys[idx];
+    auto value = &storage.stock_values[idx];
+    ITable *table = db.find_table(tableId, partitionId);
+    auto value_bytes = table->value_size();
+    auto row = table->search(key);
+    PwvHelper::read(row, value, value_bytes);
+
+    // compute
+
+    // S_QUANTITY, the quantity in stock, S_DIST_xx, where xx represents the
+    // district number, and S_DATA are retrieved. If the retrieved value for
+    // S_QUANTITY exceeds OL_QUANTITY by 10 or more, then S_QUANTITY is
+    // decreased by OL_QUANTITY; otherwise S_QUANTITY is updated to
+    // (S_QUANTITY - OL_QUANTITY)+91. S_YTD is increased by OL_QUANTITY and
+    // S_ORDER_CNT is incremented by 1. If the order-line is remote, then
+    // S_REMOTE_CNT is incremented by 1.
+
+    if (storage.stock_values[idx].S_QUANTITY >= OL_QUANTITY + 10) {
+      storage.stock_values[idx].S_QUANTITY -= OL_QUANTITY;
+    } else {
+      storage.stock_values[idx].S_QUANTITY =
+          storage.stock_values[idx].S_QUANTITY - OL_QUANTITY + 91;
+    }
+
+    storage.stock_values[idx].S_YTD += OL_QUANTITY;
+    storage.stock_values[idx].S_ORDER_CNT++;
+
+    if (OL_SUPPLY_W_ID != W_ID) {
+      storage.stock_values[idx].S_REMOTE_CNT++;
+    }
+  }
 
 public:
   tpcc::Database &db;
@@ -287,6 +318,131 @@ public:
   std::size_t partition_id;
   const tpcc::NewOrderQuery &query;
   int idx;
+};
+
+class PwvNewOrderOrderStatement : public PwvStatement {
+public:
+  PwvNewOrderOrderStatement(tpcc::Database &db, const tpcc::Context &context,
+                            tpcc::Random &random, tpcc::Storage &storage,
+                            std::size_t partition_id,
+                            const tpcc::NewOrderQuery &query,
+                            float &total_amount)
+      : db(db), context(context), random(random), storage(storage),
+        partition_id(partition_id), query(query), total_amount(total_amount) {}
+
+  ~PwvNewOrderOrderStatement() override = default;
+
+  void prepare_read_and_write_set() override {
+    // no read/write set currently
+  }
+
+  void execute() override {
+    // just pure computation
+
+    int32_t W_ID = this->partition_id + 1;
+    // The input data (see Clause 2.4.3.2) are communicated to the SUT.
+
+    int32_t D_ID = query.D_ID;
+    int32_t C_ID = query.C_ID;
+
+    int32_t D_NEXT_O_ID = storage.district_value.D_NEXT_O_ID;
+
+    float W_TAX = storage.warehouse_value.W_YTD;
+    float D_TAX = storage.district_value.D_TAX;
+    float C_DISCOUNT = storage.customer_value.C_DISCOUNT;
+
+    // new order
+
+    storage.new_order_key = tpcc::new_order::key(W_ID, D_ID, D_NEXT_O_ID);
+
+    // order
+
+    storage.order_key = tpcc::order::key(W_ID, D_ID, D_NEXT_O_ID);
+    storage.order_value.O_ENTRY_D = Time::now();
+    storage.order_value.O_CARRIER_ID = 0;
+    storage.order_value.O_OL_CNT = query.O_OL_CNT;
+    storage.order_value.O_C_ID = query.C_ID;
+    storage.order_value.O_ALL_LOCAL = !query.isRemote();
+
+    // orderline
+
+    auto orderLineTableID = tpcc::order_line::tableID;
+
+    for (int i = 0; i < query.O_OL_CNT; i++) {
+
+      int32_t OL_I_ID = query.INFO[i].OL_I_ID;
+      int8_t OL_QUANTITY = query.INFO[i].OL_QUANTITY;
+      int32_t OL_SUPPLY_W_ID = query.INFO[i].OL_SUPPLY_W_ID;
+
+      float I_PRICE = storage.item_values[i].I_PRICE;
+
+      float OL_AMOUNT = I_PRICE * OL_QUANTITY;
+      storage.order_line_keys[i] =
+          tpcc::order_line::key(W_ID, D_ID, D_NEXT_O_ID, i + 1);
+
+      storage.order_line_values[i].OL_I_ID = OL_I_ID;
+      storage.order_line_values[i].OL_SUPPLY_W_ID = OL_SUPPLY_W_ID;
+      storage.order_line_values[i].OL_DELIVERY_D = 0;
+      storage.order_line_values[i].OL_QUANTITY = OL_QUANTITY;
+      storage.order_line_values[i].OL_AMOUNT = OL_AMOUNT;
+
+      switch (D_ID) {
+      case 1:
+        storage.order_line_values[i].OL_DIST_INFO =
+            storage.stock_values[i].S_DIST_01;
+        break;
+      case 2:
+        storage.order_line_values[i].OL_DIST_INFO =
+            storage.stock_values[i].S_DIST_02;
+        break;
+      case 3:
+        storage.order_line_values[i].OL_DIST_INFO =
+            storage.stock_values[i].S_DIST_03;
+        break;
+      case 4:
+        storage.order_line_values[i].OL_DIST_INFO =
+            storage.stock_values[i].S_DIST_04;
+        break;
+      case 5:
+        storage.order_line_values[i].OL_DIST_INFO =
+            storage.stock_values[i].S_DIST_05;
+        break;
+      case 6:
+        storage.order_line_values[i].OL_DIST_INFO =
+            storage.stock_values[i].S_DIST_06;
+        break;
+      case 7:
+        storage.order_line_values[i].OL_DIST_INFO =
+            storage.stock_values[i].S_DIST_07;
+        break;
+      case 8:
+        storage.order_line_values[i].OL_DIST_INFO =
+            storage.stock_values[i].S_DIST_08;
+        break;
+      case 9:
+        storage.order_line_values[i].OL_DIST_INFO =
+            storage.stock_values[i].S_DIST_09;
+        break;
+      case 10:
+        storage.order_line_values[i].OL_DIST_INFO =
+            storage.stock_values[i].S_DIST_10;
+        break;
+      default:
+        DCHECK(false);
+        break;
+      }
+      total_amount += OL_AMOUNT * (1 - C_DISCOUNT) * (1 + W_TAX + D_TAX);
+    }
+  }
+
+public:
+  tpcc::Database &db;
+  const tpcc::Context &context;
+  tpcc::Random &random;
+  tpcc::Storage &storage;
+  std::size_t partition_id;
+  const tpcc::NewOrderQuery &query;
+  float &total_amount;
 };
 
 class PwvPaymentDistrictStatement : public PwvStatement {
@@ -312,6 +468,22 @@ public:
     int32_t C_W_ID = query.C_W_ID;
     float H_AMOUNT = query.H_AMOUNT;
 
+    if (context.write_to_w_ytd) {
+      auto warehouseTableID = tpcc::warehouse::tableID;
+      // The row in the WAREHOUSE table with matching W_ID is selected.
+      // W_NAME, W_STREET_1, W_STREET_2, W_CITY, W_STATE, and W_ZIP are
+      // retrieved and W_YTD,
+      storage.warehouse_key = tpcc::warehouse::key(W_ID);
+      PwvRWKey rwkey;
+      rwkey.set_table_id(warehouseTableID);
+      rwkey.set_partition_id(W_ID - 1);
+      rwkey.set_key(&storage.warehouse_key);
+      rwkey.set_value(&storage.warehouse_value);
+
+      readSet.push_back(rwkey);
+      writeSet.push_back(rwkey);
+    }
+
     // The row in the DISTRICT table with matching D_W_ID and D_ID is selected.
     // D_NAME, D_STREET_1, D_STREET_2, D_CITY, D_STATE, and D_ZIP are retrieved
     // and D_YTD,
@@ -319,20 +491,59 @@ public:
     auto districtTableID = tpcc::district::tableID;
     storage.district_key = tpcc::district::key(W_ID, D_ID);
 
-    PwvRWKey rwkey;
-    rwkey.set_table_id(districtTableID);
-    rwkey.set_partition_id(W_ID - 1);
-    rwkey.set_key(&storage.district_key);
-    rwkey.set_value(&storage.district_value);
+    {
+      PwvRWKey rwkey;
+      rwkey.set_table_id(districtTableID);
+      rwkey.set_partition_id(W_ID - 1);
+      rwkey.set_key(&storage.district_key);
+      rwkey.set_value(&storage.district_value);
 
-    readSet.push_back(rwkey);
-    writeSet.push_back(rwkey);
+      readSet.push_back(rwkey);
+      writeSet.push_back(rwkey);
+    }
 
-    CHECK(readSet.size() == 1) << "Check on readSet size failed!";
-    CHECK(writeSet.size() == 1) << "Check on writeSet size failed!";
+    CHECK(readSet.size() == (context.write_to_w_ytd ? 2 : 1))
+        << "Check on readSet size failed!";
+    CHECK(writeSet.size() == (context.write_to_w_ytd ? 2 : 1))
+        << "Check on writeSet size failed!";
   }
 
-  void execute() override {}
+  void execute() override {
+
+    int32_t W_ID = this->partition_id + 1;
+
+    // The input data (see Clause 2.5.3.2) are communicated to the SUT.
+
+    int32_t D_ID = query.D_ID;
+    int32_t C_ID = query.C_ID;
+    int32_t C_D_ID = query.C_D_ID;
+    int32_t C_W_ID = query.C_W_ID;
+    float H_AMOUNT = query.H_AMOUNT;
+    auto partitionId = W_ID - 1;
+
+    // read & compute & write
+    if (context.write_to_w_ytd) {
+      auto warehouseTableId = tpcc::warehouse::tableID;
+      ITable *warehouseTable = db.find_table(warehouseTableId, partitionId);
+      auto warehouse_key = &storage.warehouse_key;
+      auto warehouse_value = &storage.warehouse_value;
+      auto value_bytes = warehouseTable->value_size();
+      auto row = warehouseTable->search(warehouse_key);
+      PwvHelper::read(row, warehouse_value, value_bytes);
+      storage.warehouse_value.W_YTD += H_AMOUNT;
+      warehouseTable->update(warehouse_key, warehouse_value);
+    }
+
+    auto districtTableId = tpcc::district::tableID;
+    ITable *districtTable = db.find_table(districtTableId, partitionId);
+    auto district_key = &storage.district_key;
+    auto district_value = &storage.district_value;
+    auto value_bytes = districtTable->value_size();
+    auto row = districtTable->search(district_key);
+    PwvHelper::read(row, district_value, value_bytes);
+    storage.district_value.D_YTD += H_AMOUNT;
+    districtTable->update(district_key, district_value);
+  }
 
 public:
   tpcc::Database &db;
@@ -389,7 +600,83 @@ public:
     CHECK(writeSet.size() == 1) << "Check on writeSet size failed!";
   }
 
-  void execute() override {}
+  void execute() override {
+
+    int32_t W_ID = this->partition_id + 1;
+
+    // The input data (see Clause 2.5.3.2) are communicated to the SUT.
+
+    int32_t D_ID = query.D_ID;
+    int32_t C_ID = query.C_ID;
+    int32_t C_D_ID = query.C_D_ID;
+    int32_t C_W_ID = query.C_W_ID;
+    float H_AMOUNT = query.H_AMOUNT;
+
+    // read
+
+    auto tableId = tpcc::customer::tableID;
+    auto partitionId = C_W_ID - 1;
+    auto key = &storage.customer_key;
+    auto value = &storage.customer_value;
+    ITable *table = db.find_table(tableId, partitionId);
+    auto value_bytes = table->value_size();
+    auto row = table->search(key);
+    PwvHelper::read(row, value, value_bytes);
+
+    char C_DATA[501];
+    int total_written = 0;
+
+    if (storage.customer_value.C_CREDIT == "BC") {
+      int written;
+
+      written = std::sprintf(C_DATA + total_written, "%d ", C_ID);
+      total_written += written;
+
+      written = std::sprintf(C_DATA + total_written, "%d ", C_D_ID);
+      total_written += written;
+
+      written = std::sprintf(C_DATA + total_written, "%d ", C_W_ID);
+      total_written += written;
+
+      written = std::sprintf(C_DATA + total_written, "%d ", D_ID);
+      total_written += written;
+
+      written = std::sprintf(C_DATA + total_written, "%d ", W_ID);
+      total_written += written;
+
+      written = std::sprintf(C_DATA + total_written, "%.2f ", H_AMOUNT);
+      total_written += written;
+
+      const char *old_C_DATA = storage.customer_value.C_DATA.c_str();
+
+      std::memcpy(C_DATA + total_written, old_C_DATA, 500 - total_written);
+      C_DATA[500] = 0;
+
+      storage.customer_value.C_DATA.assign(C_DATA);
+    }
+
+    storage.customer_value.C_BALANCE -= H_AMOUNT;
+    storage.customer_value.C_YTD_PAYMENT += H_AMOUNT;
+    storage.customer_value.C_PAYMENT_CNT += 1;
+
+    // compute for history
+
+    char H_DATA[25];
+    int written;
+
+    written =
+        std::sprintf(H_DATA, "%s    %s", storage.warehouse_value.W_NAME.c_str(),
+                     storage.district_value.D_NAME.c_str());
+    H_DATA[written] = 0;
+
+    storage.h_key =
+        tpcc::history::key(W_ID, D_ID, C_W_ID, C_D_ID, C_ID, Time::now());
+    storage.h_value.H_AMOUNT = H_AMOUNT;
+    storage.h_value.H_DATA.assign(H_DATA, written);
+
+    // write
+    table->update(key, value);
+  }
 
 public:
   tpcc::Database &db;

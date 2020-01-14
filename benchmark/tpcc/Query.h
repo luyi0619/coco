@@ -13,7 +13,7 @@ namespace scar {
 namespace tpcc {
 
 struct NewOrderQuery {
-  bool isRemote() {
+  bool isRemote() const {
     for (auto i = 0; i < O_OL_CNT; i++) {
       if (INFO[i].OL_SUPPLY_W_ID != W_ID) {
         return true;

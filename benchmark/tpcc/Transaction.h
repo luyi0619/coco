@@ -91,7 +91,7 @@ public:
       storage.item_keys[i] = item::key(OL_I_ID);
 
       // If I_ID has an unused value, rollback.
-      // In OCC, rollback can return without going through commit protocal
+      // In OCC, rollback can return without going through commit protocol
 
       if (storage.item_keys[i].I_ID == 0) {
         // abort();
