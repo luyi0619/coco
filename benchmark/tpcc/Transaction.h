@@ -151,7 +151,7 @@ public:
 
     float total_amount = 0;
 
-    auto orderLineTableID = stock::tableID;
+    auto orderLineTableID = order_line::tableID;
 
     for (int i = 0; i < query.O_OL_CNT; i++) {
 

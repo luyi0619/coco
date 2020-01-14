@@ -53,6 +53,11 @@
 #include "protocol/Kiva/KivaManager.h"
 #include "protocol/Kiva/KivaTransaction.h"
 
+#include "protocol/Pwv/Pwv.h"
+#include "protocol/Pwv/PwvExecutor.h"
+#include "protocol/Pwv/PwvManager.h"
+#include "protocol/Pwv/PwvTransaction.h"
+
 #include <unordered_set>
 
 namespace scar {
