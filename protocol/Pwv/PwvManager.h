@@ -14,16 +14,13 @@
 #include <vector>
 
 namespace scar {
-
-template <class Workload> class PwvManager : public scar::Manager {
+template <class Database> class PwvManager : public scar::Manager {
 public:
   using base_type = scar::Manager;
-
-  using WorkloadType = Workload;
-  using DatabaseType = typename WorkloadType::DatabaseType;
-  using StorageType = typename WorkloadType::StorageType;
-
-  using TransactionType = BohmTransaction;
+  using DatabaseType = Database;
+  using WorkloadType = PwvWorkload<Database>;
+  using StorageType = typename DatabaseType::StorageType;
+  using TransactionType = PwvTransaction;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
 

@@ -7,6 +7,7 @@
 #include "benchmark/ycsb/Context.h"
 #include "benchmark/ycsb/Random.h"
 #include "benchmark/ycsb/Schema.h"
+#include "benchmark/ycsb/Storage.h"
 #include "common/Operation.h"
 #include "core/Partitioner.h"
 #include "core/Table.h"
@@ -25,6 +26,7 @@ public:
   using MetaDataType = std::atomic<uint64_t>;
   using ContextType = Context;
   using RandomType = Random;
+  using StorageType = Storage;
 
   ITable *find_table(std::size_t table_id, std::size_t partition_id) {
     DCHECK(table_id < tbl_vecs.size());

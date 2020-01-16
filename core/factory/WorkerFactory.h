@@ -91,7 +91,7 @@ public:
 
     std::unordered_set<std::string> protocols = {
         "Silo", "SiloGC", "SiloSI",  "SiloRC", "Scar", "ScarGC", "ScarSI",
-        "Star", "TwoPL",  "TwoPLGC", "Calvin", "Bohm", "Kiva"};
+        "Star", "TwoPL",  "TwoPLGC", "Calvin", "Bohm", "Kiva",   "Pwv"};
     CHECK(protocols.count(context.protocol) == 1);
 
     std::vector<std::shared_ptr<Worker>> workers;
@@ -341,6 +341,22 @@ public:
       }
 
       workers.push_back(manager);
+    } else if (context.protocol == "Pwv") {
+
+      // create manager
+      auto manager = std::make_shared<PwvManager<Database>>(
+          coordinator_id, context.worker_num, db, context, stop_flag);
+
+      // create worker
+      for (auto i = 0u; i < context.worker_num; i++) {
+        workers.push_back(std::make_shared<PwvExecutor<Database>>(
+            coordinator_id, i, db, context, manager->transactions,
+            manager->storages, manager->epoch, manager->worker_status,
+            manager->n_completed_workers, manager->n_started_workers));
+      }
+
+      workers.push_back(manager);
+
     } else {
       CHECK(false) << "protocol: " << context.protocol << " is not supported.";
     }

@@ -9,25 +9,24 @@
 #include "core/Worker.h"
 #include "glog/logging.h"
 
-#include "protocol/Bohm/Bohm.h"
-#include "protocol/Bohm/BohmHelper.h"
-#include "protocol/Bohm/BohmMessage.h"
-#include "protocol/Bohm/BohmPartitioner.h"
+#include "protocol/Pwv/PwvHelper.h"
+#include "protocol/Pwv/PwvPartitioner.h"
+#include "protocol/Pwv/PwvTransaction.h"
+#include "protocol/Pwv/PwvWorkload.h"
 
 #include <chrono>
 #include <thread>
 
 namespace scar {
 
-template <class Workload> class PwvExecutor : public Worker {
+template <class Database> class PwvExecutor : public Worker {
 public:
-  using WorkloadType = Workload;
-  using DatabaseType = typename WorkloadType::DatabaseType;
-  using StorageType = typename WorkloadType::StorageType;
-  using TransactionType = BohmTransaction;
+  using DatabaseType = Database;
+  using WorkloadType = PwvWorkload<Database>;
+  using StorageType = typename DatabaseType::StorageType;
+  using TransactionType = PwvTransaction;
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
-  using ProtocolType = Bohm<DatabaseType>;
 
   PwvExecutor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
               const ContextType &context,
@@ -91,84 +90,15 @@ public:
               << " us (99%).";
   }
 
-  void generate_transactions() {
-    uint32_t cur_epoch = epoch.load();
-    for (auto i = id; i < transactions.size(); i += context.worker_num) {
-      if (!context.same_batch || !init_transaction) {
-        // generate transaction
-        auto partition_id = random.uniform_dist(0, context.partition_num - 1);
-        transactions[i] =
-            workload.next_transaction(context, partition_id, storages[i]);
-        prepare_transaction(*transactions[i]);
-      } else {
-        // a soft reset
-        transactions[i]->network_size = 0;
-        transactions[i]->load_read_count();
-        transactions[i]->clear_execution_bit();
-      }
-      transactions[i]->set_id(epoch, i);
-    }
-    init_transaction = true;
-  }
+  void push_message(Message *message) override {}
 
-  void prepare_transaction(TransactionType &txn) {
-    // run execute to prepare read/write set
-    auto result = txn.execute(id);
-    if (result == TransactionResult::ABORT_NORETRY) {
-      txn.abort_no_retry = true;
-      n_abort_no_retry.fetch_add(1);
-    }
-  }
+  Message *pop_message() override { return nullptr; }
 
-  void run_transactions() {
+  void generate_transactions() {}
 
-    auto run_transaction = [this](TransactionType *transaction) {
-      if (transaction->abort_no_retry) {
-        return;
-      }
+  void prepare_transaction(TransactionType &txn) {}
 
-      // spin until the reads are ready
-      for (;;) {
-        auto result = transaction->execute(id);
-        n_network_size += transaction->network_size;
-        if (result == TransactionResult::READY_TO_COMMIT) {
-          protocol.commit(*transaction);
-          n_commit.fetch_add(1);
-          auto latency =
-              std::chrono::duration_cast<std::chrono::microseconds>(
-                  std::chrono::steady_clock::now() - transaction->startTime)
-                  .count();
-          percentile.add(latency);
-          break;
-        } else if (result == TransactionResult::ABORT) {
-          protocol.abort(*transaction);
-          n_abort_lock.fetch_add(1);
-          if (context.sleep_on_retry) {
-            std::this_thread::sleep_for(std::chrono::microseconds(
-                sleep_random.uniform_dist(0, context.sleep_time)));
-          }
-        } else {
-          CHECK(false)
-              << "abort no retry transactions should not be scheduled.";
-        }
-      }
-    };
-
-    if (context.bohm_local) {
-      for (auto i = id; i < transactions.size(); i += context.worker_num) {
-        if (!partitioner.has_master_partition(transactions[i]->partition_id)) {
-          continue;
-        }
-        run_transaction(transactions[i].get());
-      }
-    } else {
-      for (auto i = id + coordinator_id * context.worker_num;
-           i < transactions.size();
-           i += context.worker_num * context.coordinator_num) {
-        run_transaction(transactions[i].get());
-      }
-    }
-  }
+  void run_transactions() {}
 
 private:
   DatabaseType &db;
@@ -181,7 +111,6 @@ private:
   WorkloadType workload;
   bool init_transaction;
   RandomType random, sleep_random;
-  ProtocolType protocol;
   Percentile<int64_t> percentile;
 };
 } // namespace scar

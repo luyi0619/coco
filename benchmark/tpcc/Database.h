@@ -15,6 +15,7 @@
 #include "benchmark/tpcc/Context.h"
 #include "benchmark/tpcc/Random.h"
 #include "benchmark/tpcc/Schema.h"
+#include "benchmark/tpcc/Storage.h"
 #include "common/Operation.h"
 #include "common/Time.h"
 #include "core/Partitioner.h"
@@ -30,6 +31,7 @@ public:
   using MetaDataType = std::atomic<uint64_t>;
   using ContextType = Context;
   using RandomType = Random;
+  using StorageType = Storage;
 
   ITable *find_table(std::size_t table_id, std::size_t partition_id) {
     DCHECK(table_id < tbl_vecs.size());
