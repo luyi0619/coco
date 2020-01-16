@@ -19,6 +19,8 @@ enum class ExecutorStatus {
   Bohm_Insert,
   Bohm_Execute,
   Bohm_GC,
+  Pwv_Analysis,
+  Pwv_Execute,
   STOP,
   EXIT
 };

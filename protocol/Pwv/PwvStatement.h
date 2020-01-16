@@ -23,6 +23,8 @@ public:
 
   virtual void prepare_read_and_write_set() = 0;
 
+  virtual int piece_partition_id() = 0;
+
   virtual void execute() = 0;
 
 public:
@@ -61,6 +63,11 @@ public:
     CHECK(readSet.size() == 1) << "Check on readSet size failed!";
     CHECK(query.UPDATE[idx] ? writeSet.size() == 1 : writeSet.size() == 0)
         << "Check on writeSet size failed!";
+  }
+
+  int piece_partition_id() override {
+    auto key = query.Y_KEY[idx];
+    return context.getPartitionID(key);
   }
 
   void execute() override {
@@ -189,6 +196,8 @@ public:
     CHECK(writeSet.size() == 1) << "Check on writeSet size failed!";
   }
 
+  int piece_partition_id() override { return partition_id; }
+
   void execute() override {
 
     // The changes are committed in transaction.commit();
@@ -211,9 +220,11 @@ public:
   PwvNewOrderStockStatement(tpcc::Database &db, const tpcc::Context &context,
                             tpcc::Random &random, tpcc::Storage &storage,
                             std::size_t partition_id,
-                            const tpcc::NewOrderQuery &query, int idx)
+                            const tpcc::NewOrderQuery &query, int idx,
+                            std::atomic<int> &commit_rvp)
       : db(db), context(context), random(random), storage(storage),
-        partition_id(partition_id), query(query), idx(idx) {}
+        partition_id(partition_id), query(query), idx(idx),
+        commit_rvp(commit_rvp) {}
 
   ~PwvNewOrderStockStatement() override = default;
 
@@ -267,6 +278,11 @@ public:
     CHECK(writeSet.size() == 1) << "Check on writeSet size failed!";
   }
 
+  int piece_partition_id() override {
+    int32_t OL_SUPPLY_W_ID = query.INFO[idx].OL_SUPPLY_W_ID;
+    return OL_SUPPLY_W_ID - 1;
+  }
+
   void execute() override {
 
     int32_t W_ID = this->partition_id + 1;
@@ -318,6 +334,7 @@ public:
   std::size_t partition_id;
   const tpcc::NewOrderQuery &query;
   int idx;
+  std::atomic<int> &commit_rvp;
 };
 
 class PwvNewOrderOrderStatement : public PwvStatement {
@@ -336,6 +353,8 @@ public:
     // no read/write set currently
   }
 
+  int piece_partition_id() override { return partition_id; }
+
   void execute() override {
     // just pure computation
 
@@ -350,6 +369,28 @@ public:
     float W_TAX = storage.warehouse_value.W_YTD;
     float D_TAX = storage.district_value.D_TAX;
     float C_DISCOUNT = storage.customer_value.C_DISCOUNT;
+
+    // write to district
+    {
+      auto tableId = tpcc::warehouse::tableID;
+      auto partitionId = W_ID - 1;
+      auto key = &storage.district_key;
+      auto value = &storage.district_value;
+      ITable *table = db.find_table(tableId, partitionId);
+      table->update(key, value);
+    }
+
+    // write to stocks
+    for (int i = 0; i < query.O_OL_CNT; i++) {
+
+      int32_t OL_SUPPLY_W_ID = query.INFO[i].OL_SUPPLY_W_ID;
+      auto tableId = tpcc::stock::tableID;
+      auto partitionId = OL_SUPPLY_W_ID - 1;
+      auto key = &storage.stock_keys[i];
+      auto value = &storage.stock_values[i];
+      ITable *table = db.find_table(tableId, partitionId);
+      table->update(key, value);
+    }
 
     // new order
 
@@ -508,6 +549,8 @@ public:
         << "Check on writeSet size failed!";
   }
 
+  int piece_partition_id() override { return partition_id; }
+
   void execute() override {
 
     int32_t W_ID = this->partition_id + 1;
@@ -598,6 +641,11 @@ public:
 
     CHECK(readSet.size() == 1) << "Check on readSet size failed!";
     CHECK(writeSet.size() == 1) << "Check on writeSet size failed!";
+  }
+
+  int piece_partition_id() override {
+    int32_t C_W_ID = query.C_W_ID;
+    return C_W_ID - 1;
   }
 
   void execute() override {

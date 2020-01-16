@@ -13,9 +13,12 @@ class PwvTransaction {
 public:
   virtual ~PwvTransaction() = default;
 
-  // this commit all changes in statements that before commit points, and set
-  // those statements to completed.
-  virtual void commit() = 0;
+  virtual void build_pieces() = 0;
+
+  virtual void execute() = 0;
+
+public:
+  std::vector<std::unique_ptr<PwvStatement>> pieces;
 };
 
 class PwvYCSBTransaction : public PwvTransaction {
@@ -31,7 +34,22 @@ public:
 
   ~PwvYCSBTransaction() override = default;
 
-  void commit() override {}
+  void build_pieces() override {
+    for (int i = 0; i < keys_num; i++) {
+      auto p = std::make_unique<PwvYCSBStatement>(db, context, random, storage,
+                                                  partition_id, query, i);
+      p->prepare_read_and_write_set();
+      pieces.push_back(std::move(p));
+    }
+  }
+
+  void execute() override {
+    for (int i = 0; i < pieces.size(); i++) {
+      if (pieces[i]->piece_partition_id() == partition_id) {
+        pieces[i]->execute();
+      }
+    }
+  }
 
 public:
   ycsb::Database &db;
@@ -53,36 +71,56 @@ public:
 
   ~PwvNewOrderTransaction() override = default;
 
-  void commit() override {
+  void build_pieces() override {
 
-    int32_t W_ID = partition_id + 1;
+    // init commit rvp to query.O_OL_CNT
 
-    // The input data (see Clause 2.4.3.2) are communicated to the SUT.
+    commit_rvp.store(query.O_OL_CNT);
+    for (int i = 0; i < query.O_OL_CNT; i++) {
+      auto stock_piece = std::make_unique<PwvNewOrderStockStatement>(
+          db, context, random, storage, partition_id, query, i, commit_rvp);
+      stock_piece->prepare_read_and_write_set();
+      pieces.push_back(std::move(stock_piece));
+    }
+    auto warehouse_piece = std::make_unique<PwvNewOrderWarehouseStatement>(
+        db, context, random, storage, partition_id, query);
+    warehouse_piece->prepare_read_and_write_set();
+    pieces.push_back(std::move(warehouse_piece));
+    auto order_piece = std::make_unique<PwvNewOrderOrderStatement>(
+        db, context, random, storage, partition_id, query, total_amount);
+    order_piece->prepare_read_and_write_set();
+    pieces.push_back(std::move(order_piece));
+  }
 
-    int32_t D_ID = query.D_ID;
-    int32_t C_ID = query.C_ID;
-    int D_NEXT_O_ID = storage.district_value.D_NEXT_O_ID;
+  void execute() override {
 
-    // write to district
-    {
-      auto tableId = tpcc::warehouse::tableID;
-      auto partitionId = W_ID - 1;
-      auto key = &storage.district_key;
-      auto value = &storage.district_value;
-      ITable *table = db.find_table(tableId, partitionId);
-      table->update(key, value);
+    // run stocks
+    int k = 0;
+    while (k < query.O_OL_CNT) {
+      if (pieces[k]->piece_partition_id() == partition_id) {
+        pieces[k]->execute();
+      }
+      k++;
     }
 
-    // write to stocks
-    for (int i = 0; i < query.O_OL_CNT; i++) {
+    bool abort = false;
+    for (;;) {
+      int rvp = commit_rvp.load();
+      if (rvp < 0) {
+        abort = true;
+        break;
+      }
+      if (rvp == 0) {
+        break;
+      }
+      std::this_thread::yield();
+    }
 
-      int32_t OL_SUPPLY_W_ID = query.INFO[i].OL_SUPPLY_W_ID;
-      auto tableId = tpcc::stock::tableID;
-      auto partitionId = OL_SUPPLY_W_ID - 1;
-      auto key = &storage.stock_keys[i];
-      auto value = &storage.stock_values[i];
-      ITable *table = db.find_table(tableId, partitionId);
-      table->update(key, value);
+    if (!abort) {
+      // run district
+      pieces[k]->execute();
+      // run order
+      pieces[k + 1]->execute();
     }
   }
 
@@ -92,6 +130,8 @@ public:
   tpcc::Random &random;
   tpcc::Storage &storage;
   std::size_t partition_id;
+  float total_amount;
+  std::atomic<int> commit_rvp;
   const tpcc::NewOrderQuery &query;
 };
 
@@ -100,13 +140,30 @@ public:
   PwvPaymentTransaction(tpcc::Database &db, const tpcc::Context &context,
                         tpcc::Random &random, tpcc::Storage &storage,
                         std::size_t partition_id,
-                        const tpcc::NewOrderQuery &query, float &total_amount)
+                        const tpcc::PaymentQuery &query, float &total_amount)
       : db(db), context(context), random(random), storage(storage),
         partition_id(partition_id), query(query) {}
 
   ~PwvPaymentTransaction() override = default;
 
-  void commit() override {}
+  void build_pieces() override {
+    auto district_piece = std::make_unique<PwvPaymentDistrictStatement>(
+        db, context, random, storage, partition_id, query);
+    district_piece->prepare_read_and_write_set();
+    pieces.push_back(std::move(district_piece));
+    auto customer_piece = std::make_unique<PwvPaymentCustomerStatement>(
+        db, context, random, storage, partition_id, query);
+    customer_piece->prepare_read_and_write_set();
+    pieces.push_back(std::move(customer_piece));
+  }
+
+  void execute() override {
+    for (int i = 0; i < pieces.size(); i++) {
+      if (pieces[i]->piece_partition_id() == partition_id) {
+        pieces[i]->execute();
+      }
+    }
+  }
 
 public:
   tpcc::Database &db;
@@ -114,7 +171,7 @@ public:
   tpcc::Random &random;
   tpcc::Storage &storage;
   std::size_t partition_id;
-  const tpcc::NewOrderQuery &query;
+  const tpcc::PaymentQuery &query;
 };
 
 } // namespace scar

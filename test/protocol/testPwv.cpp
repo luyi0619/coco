@@ -50,11 +50,11 @@ TEST(TestPwvNewOrderStatement, TestBasic) {
   scar::tpcc::NewOrderQuery q1 =
       scar::tpcc::makeNewOrderQuery()(context, 1, random);
   float total_amount;
-
+  std::atomic<int> rvp;
   PwvNewOrderWarehouseStatement s1(db, context, random, storage, partitionID,
                                    q1);
-  PwvNewOrderStockStatement s2(db, context, random, storage, partitionID, q1,
-                               0);
+  PwvNewOrderStockStatement s2(db, context, random, storage, partitionID, q1, 0,
+                               rvp);
   PwvNewOrderOrderStatement s3(db, context, random, storage, partitionID, q1,
                                total_amount);
 
