@@ -27,10 +27,10 @@ public:
 
   PwvYCSBTransaction(ycsb::Database &db, const ycsb::Context &context,
                      ycsb::Random &random, ycsb::Storage &storage,
-                     std::size_t partition_id,
-                     const ycsb::YCSBQuery<keys_num> &query, int idx)
+                     std::size_t partition_id)
       : db(db), context(context), random(random), storage(storage),
-        partition_id(partition_id), query(query) {}
+        partition_id(partition_id),
+        query(ycsb::makeYCSBQuery<keys_num>()(context, partition_id, random)) {}
 
   ~PwvYCSBTransaction() override = default;
 
@@ -57,24 +57,23 @@ public:
   ycsb::Random &random;
   ycsb::Storage &storage;
   std::size_t partition_id;
-  const ycsb::YCSBQuery<keys_num> &query;
+  const ycsb::YCSBQuery<keys_num> query;
 };
 
 class PwvNewOrderTransaction : public PwvTransaction {
 public:
   PwvNewOrderTransaction(tpcc::Database &db, const tpcc::Context &context,
                          tpcc::Random &random, tpcc::Storage &storage,
-                         std::size_t partition_id,
-                         const tpcc::NewOrderQuery &query, float &total_amount)
+                         std::size_t partition_id)
       : db(db), context(context), random(random), storage(storage),
-        partition_id(partition_id), query(query) {}
+        partition_id(partition_id),
+        query(tpcc::makeNewOrderQuery()(context, partition_id + 1, random)) {}
 
   ~PwvNewOrderTransaction() override = default;
 
   void build_pieces() override {
-
+    total_amount = 0;
     // init commit rvp to query.O_OL_CNT
-
     commit_rvp.store(query.O_OL_CNT);
     for (int i = 0; i < query.O_OL_CNT; i++) {
       auto stock_piece = std::make_unique<PwvNewOrderStockStatement>(
@@ -132,17 +131,17 @@ public:
   std::size_t partition_id;
   float total_amount;
   std::atomic<int> commit_rvp;
-  const tpcc::NewOrderQuery &query;
+  const tpcc::NewOrderQuery query;
 };
 
 class PwvPaymentTransaction : public PwvTransaction {
 public:
   PwvPaymentTransaction(tpcc::Database &db, const tpcc::Context &context,
                         tpcc::Random &random, tpcc::Storage &storage,
-                        std::size_t partition_id,
-                        const tpcc::PaymentQuery &query, float &total_amount)
+                        std::size_t partition_id)
       : db(db), context(context), random(random), storage(storage),
-        partition_id(partition_id), query(query) {}
+        partition_id(partition_id),
+        query(tpcc::makePaymentQuery()(context, partition_id + 1, random)) {}
 
   ~PwvPaymentTransaction() override = default;
 
@@ -171,7 +170,7 @@ public:
   tpcc::Random &random;
   tpcc::Storage &storage;
   std::size_t partition_id;
-  const tpcc::PaymentQuery &query;
+  const tpcc::PaymentQuery query;
 };
 
 } // namespace scar

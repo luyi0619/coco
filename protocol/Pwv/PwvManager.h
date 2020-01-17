@@ -7,7 +7,6 @@
 #include "core/Manager.h"
 #include "protocol/Pwv/PwvExecutor.h"
 #include "protocol/Pwv/PwvHelper.h"
-#include "protocol/Pwv/PwvPartitioner.h"
 #include "protocol/Pwv/PwvTransaction.h"
 
 #include <thread>
@@ -26,8 +25,7 @@ public:
 
   PwvManager(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
              const ContextType &context, std::atomic<bool> &stopFlag)
-      : base_type(coordinator_id, id, context, stopFlag), db(db), epoch(0),
-        partitioner(coordinator_id, context.coordinator_num) {
+      : base_type(coordinator_id, id, context, stopFlag), db(db), epoch(0) {
 
     storages.resize(context.batch_size);
     transactions.resize(context.batch_size);
@@ -68,7 +66,6 @@ public:
   RandomType random;
   DatabaseType &db;
   std::atomic<uint32_t> epoch;
-  PwvPartitioner partitioner;
   std::vector<StorageType> storages;
   std::vector<std::unique_ptr<TransactionType>> transactions;
 };

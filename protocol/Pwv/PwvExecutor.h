@@ -10,7 +10,6 @@
 #include "glog/logging.h"
 
 #include "protocol/Pwv/PwvHelper.h"
-#include "protocol/Pwv/PwvPartitioner.h"
 #include "protocol/Pwv/PwvTransaction.h"
 #include "protocol/Pwv/PwvWorkload.h"
 
@@ -38,9 +37,7 @@ public:
       : Worker(coordinator_id, id), db(db), context(context),
         transactions(transactions), storages(storages), epoch(epoch),
         worker_status(worker_status), n_complete_workers(n_complete_workers),
-        n_started_workers(n_started_workers),
-        partitioner(coordinator_id, context.coordinator_num),
-        workload(coordinator_id, db, random, partitioner),
+        n_started_workers(n_started_workers), workload(db, random),
         init_transaction(false),
         random(id), // make sure each worker has a different seed.
         sleep_random(reinterpret_cast<uint64_t>(this)) {}
@@ -96,8 +93,6 @@ public:
 
   void generate_transactions() {}
 
-  void prepare_transaction(TransactionType &txn) {}
-
   void run_transactions() {}
 
 private:
@@ -107,7 +102,6 @@ private:
   std::vector<StorageType> &storages;
   std::atomic<uint32_t> &epoch, &worker_status;
   std::atomic<uint32_t> &n_complete_workers, &n_started_workers;
-  BohmPartitioner partitioner;
   WorkloadType workload;
   bool init_transaction;
   RandomType random, sleep_random;
