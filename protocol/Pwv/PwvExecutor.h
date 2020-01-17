@@ -91,9 +91,22 @@ public:
 
   Message *pop_message() override { return nullptr; }
 
-  void generate_transactions() {}
+  void generate_transactions() {
+    for (auto i = id; i < transactions.size(); i += context.worker_num) {
+      auto partition_id = random.uniform_dist(0, context.partition_num - 1);
+      transactions[i] =
+          workload.next_transaction(context, partition_id, storages[i]);
+      transactions[i]->build_pieces();
+    }
+    init_transaction = true;
+  }
 
-  void run_transactions() {}
+  void run_transactions() {
+
+    for (auto i = 0; i < transactions.size(); i++) {
+      transactions[i]->execute();
+    }
+  }
 
 private:
   DatabaseType &db;

@@ -21,6 +21,12 @@ public:
   PwvWorkload(DatabaseType &db, RandomType &random) {
     CHECK(false) << "this workload is not supported";
   }
+  std::unique_ptr<TransactionType> next_transaction(const ContextType &context,
+                                                    std::size_t partition_id,
+                                                    StorageType &storage) {
+    CHECK(false) << "this workload is not supported";
+    return nullptr;
+  }
 };
 
 template <> class PwvWorkload<tpcc::Database> {
