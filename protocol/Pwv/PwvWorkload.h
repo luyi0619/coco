@@ -38,7 +38,6 @@ public:
   using RandomType = typename DatabaseType::RandomType;
 
   PwvWorkload(DatabaseType &db, RandomType &random) : db(db), random(random) {
-    CHECK(false) << "this workload is not supported";
   }
 
   std::unique_ptr<TransactionType> next_transaction(const ContextType &context,
@@ -81,7 +80,6 @@ public:
   using RandomType = typename DatabaseType::RandomType;
 
   PwvWorkload(DatabaseType &db, RandomType &random) : db(db), random(random) {
-    CHECK(false) << "this workload is not supported";
   }
 
   std::unique_ptr<TransactionType> next_transaction(const ContextType &context,
