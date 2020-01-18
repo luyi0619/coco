@@ -37,8 +37,7 @@ public:
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
 
-  PwvWorkload(DatabaseType &db, RandomType &random) : db(db), random(random) {
-  }
+  PwvWorkload(DatabaseType &db, RandomType &random) : db(db), random(random) {}
 
   std::unique_ptr<TransactionType> next_transaction(const ContextType &context,
                                                     std::size_t partition_id,
@@ -79,8 +78,7 @@ public:
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
 
-  PwvWorkload(DatabaseType &db, RandomType &random) : db(db), random(random) {
-  }
+  PwvWorkload(DatabaseType &db, RandomType &random) : db(db), random(random) {}
 
   std::unique_ptr<TransactionType> next_transaction(const ContextType &context,
                                                     std::size_t partition_id,

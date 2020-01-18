@@ -291,6 +291,11 @@ public:
     int32_t OL_SUPPLY_W_ID = query.INFO[idx].OL_SUPPLY_W_ID;
     float I_PRICE = storage.item_values[idx].I_PRICE;
 
+    if (storage.item_keys[idx].I_ID == 0) {
+      commit_rvp.fetch_add(-query.O_OL_CNT - 1);
+      return;
+    }
+
     // read
     auto tableId = tpcc::stock::tableID;
     auto partitionId = OL_SUPPLY_W_ID - 1;
@@ -324,6 +329,7 @@ public:
     if (OL_SUPPLY_W_ID != W_ID) {
       storage.stock_values[idx].S_REMOTE_CNT++;
     }
+    commit_rvp.fetch_add(-1);
   }
 
 public:

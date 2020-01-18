@@ -11,13 +11,13 @@ namespace scar {
 class PwvTransaction {
 
 public:
-  PwvTransaction(std::size_t partition_id): partition_id(partition_id) {}
+  PwvTransaction(std::size_t partition_id) : partition_id(partition_id) {}
 
   virtual ~PwvTransaction() = default;
 
   virtual void build_pieces() = 0;
 
-  virtual bool commit() = 0;
+  virtual bool commit(std::size_t core_id) = 0;
 
 public:
   std::size_t partition_id;
@@ -30,8 +30,9 @@ public:
 
   PwvYCSBTransaction(ycsb::Database &db, const ycsb::Context &context,
                      ycsb::Random &random, ycsb::Storage &storage,
-                     std::size_t partition_id) : PwvTransaction(partition_id),
-      db(db), context(context), random(random), storage(storage),
+                     std::size_t partition_id)
+      : PwvTransaction(partition_id), db(db), context(context), random(random),
+        storage(storage),
         query(ycsb::makeYCSBQuery<keys_num>()(context, partition_id, random)) {}
 
   ~PwvYCSBTransaction() override = default;
@@ -45,9 +46,9 @@ public:
     }
   }
 
-  bool commit() override {
+  bool commit(std::size_t core_id) override {
     for (int i = 0; i < pieces.size(); i++) {
-      if (pieces[i]->piece_partition_id() == partition_id) {
+      if (pieces[i]->piece_partition_id() == core_id) {
         pieces[i]->execute();
       }
     }
@@ -66,8 +67,9 @@ class PwvNewOrderTransaction : public PwvTransaction {
 public:
   PwvNewOrderTransaction(tpcc::Database &db, const tpcc::Context &context,
                          tpcc::Random &random, tpcc::Storage &storage,
-                         std::size_t partition_id) :PwvTransaction(partition_id),
-      db(db), context(context), random(random), storage(storage),
+                         std::size_t partition_id)
+      : PwvTransaction(partition_id), db(db), context(context), random(random),
+        storage(storage),
         query(tpcc::makeNewOrderQuery()(context, partition_id + 1, random)) {}
 
   ~PwvNewOrderTransaction() override = default;
@@ -92,12 +94,12 @@ public:
     pieces.push_back(std::move(order_piece));
   }
 
-  bool commit() override {
+  bool commit(std::size_t core_id) override {
 
     // run stocks
     int k = 0;
     while (k < query.O_OL_CNT) {
-      if (pieces[k]->piece_partition_id() == partition_id) {
+      if (pieces[k]->piece_partition_id() == core_id) {
         pieces[k]->execute();
       }
       k++;
@@ -115,15 +117,15 @@ public:
       }
       std::this_thread::yield();
     }
-    if (abort){
+    if (abort) {
       return false;
     }
     // run district
-    if (pieces[k]->piece_partition_id() == partition_id){
+    if (pieces[k]->piece_partition_id() == core_id) {
       pieces[k]->execute();
     }
 
-    if (pieces[k + 1]->piece_partition_id() == partition_id){
+    if (pieces[k + 1]->piece_partition_id() == core_id) {
       // run order
       pieces[k + 1]->execute();
     }
@@ -144,8 +146,9 @@ class PwvPaymentTransaction : public PwvTransaction {
 public:
   PwvPaymentTransaction(tpcc::Database &db, const tpcc::Context &context,
                         tpcc::Random &random, tpcc::Storage &storage,
-                        std::size_t partition_id): PwvTransaction(partition_id),
-      db(db), context(context), random(random), storage(storage),
+                        std::size_t partition_id)
+      : PwvTransaction(partition_id), db(db), context(context), random(random),
+        storage(storage),
         query(tpcc::makePaymentQuery()(context, partition_id + 1, random)) {}
 
   ~PwvPaymentTransaction() override = default;
@@ -161,9 +164,9 @@ public:
     pieces.push_back(std::move(customer_piece));
   }
 
-  bool commit() override {
+  bool commit(std::size_t core_id) override {
     for (int i = 0; i < pieces.size(); i++) {
-      if (pieces[i]->piece_partition_id() == partition_id) {
+      if (pieces[i]->piece_partition_id() == core_id) {
         pieces[i]->execute();
       }
     }

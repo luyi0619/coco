@@ -103,9 +103,9 @@ public:
 
   void run_transactions() {
     for (auto i = 0; i < transactions.size(); i++) {
-      bool commit = transactions[i]->commit();
-      if (transactions[i]->partition_id == id){
-        if (commit){
+      bool commit = transactions[i]->commit(id);
+      if (transactions[i]->partition_id == id) {
+        if (commit) {
           n_commit.fetch_add(1);
         } else {
           n_abort_no_retry.fetch_add(1);
