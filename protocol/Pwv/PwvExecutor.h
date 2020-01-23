@@ -102,7 +102,7 @@ public:
   }
 
   void run_transactions() {
-    for (auto i = 0; i < transactions.size(); i++) {
+    for (auto i = 0u; i < transactions.size(); i++) {
       bool commit = transactions[i]->commit(id);
       if (transactions[i]->partition_id == id) {
         if (commit) {

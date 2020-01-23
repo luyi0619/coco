@@ -23,7 +23,7 @@ public:
 
   virtual void prepare_read_and_write_set() = 0;
 
-  virtual int piece_partition_id() = 0;
+  virtual std::size_t piece_partition_id() = 0;
 
   virtual void execute() = 0;
 
@@ -65,7 +65,7 @@ public:
         << "Check on writeSet size failed!";
   }
 
-  int piece_partition_id() override {
+  std::size_t piece_partition_id() override {
     auto key = query.Y_KEY[idx];
     return context.getPartitionID(key);
   }
@@ -196,7 +196,7 @@ public:
     CHECK(writeSet.size() == 1) << "Check on writeSet size failed!";
   }
 
-  int piece_partition_id() override { return partition_id; }
+  std::size_t piece_partition_id() override { return partition_id; }
 
   void execute() override {
 
@@ -278,7 +278,7 @@ public:
     CHECK(writeSet.size() == 1) << "Check on writeSet size failed!";
   }
 
-  int piece_partition_id() override {
+  std::size_t piece_partition_id() override {
     int32_t OL_SUPPLY_W_ID = query.INFO[idx].OL_SUPPLY_W_ID;
     return OL_SUPPLY_W_ID - 1;
   }
@@ -359,7 +359,7 @@ public:
     // no read/write set currently
   }
 
-  int piece_partition_id() override { return partition_id; }
+  std::size_t piece_partition_id() override { return partition_id; }
 
   void execute() override {
     // just pure computation
@@ -555,7 +555,7 @@ public:
         << "Check on writeSet size failed!";
   }
 
-  int piece_partition_id() override { return partition_id; }
+  std::size_t piece_partition_id() override { return partition_id; }
 
   void execute() override {
 
@@ -649,7 +649,7 @@ public:
     CHECK(writeSet.size() == 1) << "Check on writeSet size failed!";
   }
 
-  int piece_partition_id() override {
+  std::size_t piece_partition_id() override {
     int32_t C_W_ID = query.C_W_ID;
     return C_W_ID - 1;
   }

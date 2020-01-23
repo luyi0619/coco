@@ -38,7 +38,7 @@ public:
   ~PwvYCSBTransaction() override = default;
 
   void build_pieces() override {
-    for (int i = 0; i < keys_num; i++) {
+    for (auto i = 0u; i < keys_num; i++) {
       auto p = std::make_unique<PwvYCSBStatement>(db, context, random, storage,
                                                   partition_id, query, i);
       p->prepare_read_and_write_set();
@@ -47,7 +47,7 @@ public:
   }
 
   bool commit(std::size_t core_id) override {
-    for (int i = 0; i < pieces.size(); i++) {
+    for (auto i = 0u; i < pieces.size(); i++) {
       if (pieces[i]->piece_partition_id() == core_id) {
         pieces[i]->execute();
       }
@@ -165,7 +165,7 @@ public:
   }
 
   bool commit(std::size_t core_id) override {
-    for (int i = 0; i < pieces.size(); i++) {
+    for (auto i = 0u; i < pieces.size(); i++) {
       if (pieces[i]->piece_partition_id() == core_id) {
         pieces[i]->execute();
       }

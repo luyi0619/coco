@@ -3,6 +3,7 @@
 //
 
 #include "common/Random.h"
+#include <algorithm>
 #include <gtest/gtest.h>
 
 TEST(TestRandom, TestBasic) {
