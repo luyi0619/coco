@@ -238,12 +238,24 @@ public:
         // set tid meta_data
         auto row = table->search_prev(key, tid);
         std::atomic<uint64_t> &placeholder = *std::get<0>(row);
-        bool success = BohmHelper::is_placeholder_ready(placeholder);
-        if (success) {
-          BohmHelper::read(row, value, table->value_size());
-          readKey.clear_read_request_bit();
+
+        if (context.bohm_single_spin) {
+          for (;;) {
+            bool success = BohmHelper::is_placeholder_ready(placeholder);
+            if (success) {
+              BohmHelper::read(row, value, table->value_size());
+              readKey.clear_read_request_bit();
+              break;
+            }
+          }
         } else {
-          txn.abort_read_not_ready = true;
+          bool success = BohmHelper::is_placeholder_ready(placeholder);
+          if (success) {
+            BohmHelper::read(row, value, table->value_size());
+            readKey.clear_read_request_bit();
+          } else {
+            txn.abort_read_not_ready = true;
+          }
         }
       } else {
         auto coordinatorID = this->partitioner.master_coordinator(partition_id);
