@@ -69,6 +69,9 @@ public:
   bool kiva_read_only_optmization = true;
   bool kiva_reordering_optmization = true;
   bool kiva_snapshot_isolation = false;
+
+  bool pwv_ycsb_star = false;
+
   bool operation_replication = false;
 
   std::vector<std::string> peers;

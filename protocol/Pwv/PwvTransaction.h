@@ -63,6 +63,76 @@ public:
   const ycsb::YCSBQuery<keys_num> query;
 };
 
+class PwvYCSBStarTransaction : public PwvTransaction {
+public:
+  static constexpr std::size_t keys_num = 10;
+
+  PwvYCSBStarTransaction(ycsb::Database &db, const ycsb::Context &context,
+                         ycsb::Random &random, ycsb::Storage &storage,
+                         std::size_t partition_id)
+      : PwvTransaction(partition_id), db(db), context(context), random(random),
+        storage(storage),
+        query(ycsb::makeYCSBQuery<keys_num>()(context, partition_id, random)) {}
+
+  ~PwvYCSBStarTransaction() override = default;
+
+  void build_pieces() override {
+    for (auto i = 0u; i < keys_num; i++) {
+      auto p = std::make_unique<PwvYCSBStarStatement>(
+          db, context, random, storage, partition_id, query, i, true,
+          commit_rvp);
+      p->prepare_read_and_write_set();
+      pieces.push_back(std::move(p));
+    }
+    for (auto i = 0u; i < keys_num; i++) {
+      if (query.UPDATE[i]) {
+        auto p = std::make_unique<PwvYCSBStarStatement>(
+            db, context, random, storage, partition_id, query, i, false,
+            commit_rvp);
+        p->prepare_read_and_write_set();
+        pieces.push_back(std::move(p));
+      }
+    }
+    commit_rvp.store(keys_num);
+  }
+
+  bool commit(std::size_t core_id) override {
+    // run reads
+
+    for (int k = 0; k < keys_num; k++) {
+      if (pieces[k]->piece_partition_id() == core_id) {
+        pieces[k]->execute();
+      }
+    }
+
+    int k = keys_num;
+
+    for (;;) {
+      int rvp = commit_rvp.load();
+      if (rvp == 0) {
+        break;
+      }
+      std::this_thread::yield();
+    }
+
+    // run writes
+    for (int k = keys_num; k < pieces.size(); k++) {
+      if (pieces[k]->piece_partition_id() == core_id) {
+        pieces[k]->execute();
+      }
+    }
+    return true;
+  }
+
+public:
+  ycsb::Database &db;
+  const ycsb::Context &context;
+  ycsb::Random &random;
+  ycsb::Storage &storage;
+  std::atomic<int> commit_rvp;
+  const ycsb::YCSBQuery<keys_num> query;
+};
+
 class PwvNewOrderTransaction : public PwvTransaction {
 public:
   PwvNewOrderTransaction(tpcc::Database &db, const tpcc::Context &context,

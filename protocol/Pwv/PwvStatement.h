@@ -125,6 +125,105 @@ public:
   int idx;
 };
 
+class PwvYCSBStarStatement : public PwvStatement {
+public:
+  static constexpr std::size_t keys_num = 10;
+
+  PwvYCSBStarStatement(ycsb::Database &db, const ycsb::Context &context,
+                       ycsb::Random &random, ycsb::Storage &storage,
+                       std::size_t partition_id,
+                       const ycsb::YCSBQuery<keys_num> &query, int idx,
+                       bool read, std::atomic<int> &commit_rvp)
+      : db(db), context(context), random(random), storage(storage),
+        partition_id(partition_id), query(query), idx(idx), read(read),
+        commit_rvp(commit_rvp) {}
+
+  ~PwvYCSBStarStatement() override = default;
+
+  void prepare_read_and_write_set() override {
+    int ycsbTableID = ycsb::ycsb::tableID;
+
+    auto key = query.Y_KEY[idx];
+    storage.ycsb_keys[idx].Y_KEY = key;
+    PwvRWKey rwkey;
+    rwkey.set_table_id(ycsbTableID);
+    rwkey.set_partition_id(context.getPartitionID(key));
+    rwkey.set_key(&storage.ycsb_keys[idx]);
+    rwkey.set_value(&storage.ycsb_values[idx]);
+
+    readSet.push_back(rwkey);
+    if (query.UPDATE[idx]) {
+      writeSet.push_back(rwkey);
+    }
+
+    CHECK(readSet.size() == 1) << "Check on readSet size failed!";
+    CHECK(query.UPDATE[idx] ? writeSet.size() == 1 : writeSet.size() == 0)
+        << "Check on writeSet size failed!";
+  }
+
+  std::size_t piece_partition_id() override {
+    auto key = query.Y_KEY[idx];
+    return context.getPartitionID(key);
+  }
+
+  void execute() override {
+
+    int ycsbTableID = ycsb::ycsb::tableID;
+
+    auto tableId = ycsbTableID;
+    auto partitionId = context.getPartitionID(storage.ycsb_keys[idx].Y_KEY);
+    auto key = &storage.ycsb_keys[idx];
+    auto value = &storage.ycsb_values[idx];
+    ITable *table = db.find_table(tableId, partitionId);
+
+    if (read) {
+      auto value_bytes = table->value_size();
+      auto row = table->search(key);
+      PwvHelper::read(row, value, value_bytes);
+      commit_rvp.fetch_add(-1);
+    } else {
+      // compute
+      CHECK(query.UPDATE[idx]) << idx << " is not supposed to be updated.";
+
+      ycsb::Random local_random;
+      storage.ycsb_values[idx].Y_F01.assign(
+          local_random.a_string(ycsb::YCSB_FIELD_SIZE, ycsb::YCSB_FIELD_SIZE));
+      storage.ycsb_values[idx].Y_F02.assign(
+          local_random.a_string(ycsb::YCSB_FIELD_SIZE, ycsb::YCSB_FIELD_SIZE));
+      storage.ycsb_values[idx].Y_F03.assign(
+          local_random.a_string(ycsb::YCSB_FIELD_SIZE, ycsb::YCSB_FIELD_SIZE));
+      storage.ycsb_values[idx].Y_F04.assign(
+          local_random.a_string(ycsb::YCSB_FIELD_SIZE, ycsb::YCSB_FIELD_SIZE));
+      storage.ycsb_values[idx].Y_F05.assign(
+          local_random.a_string(ycsb::YCSB_FIELD_SIZE, ycsb::YCSB_FIELD_SIZE));
+      storage.ycsb_values[idx].Y_F06.assign(
+          local_random.a_string(ycsb::YCSB_FIELD_SIZE, ycsb::YCSB_FIELD_SIZE));
+      storage.ycsb_values[idx].Y_F07.assign(
+          local_random.a_string(ycsb::YCSB_FIELD_SIZE, ycsb::YCSB_FIELD_SIZE));
+      storage.ycsb_values[idx].Y_F08.assign(
+          local_random.a_string(ycsb::YCSB_FIELD_SIZE, ycsb::YCSB_FIELD_SIZE));
+      storage.ycsb_values[idx].Y_F09.assign(
+          local_random.a_string(ycsb::YCSB_FIELD_SIZE, ycsb::YCSB_FIELD_SIZE));
+      storage.ycsb_values[idx].Y_F10.assign(
+          local_random.a_string(ycsb::YCSB_FIELD_SIZE, ycsb::YCSB_FIELD_SIZE));
+
+      // write
+      table->update(key, value);
+    }
+  }
+
+public:
+  ycsb::Database &db;
+  const ycsb::Context &context;
+  ycsb::Random &random;
+  ycsb::Storage &storage;
+  std::size_t partition_id;
+  const ycsb::YCSBQuery<keys_num> &query;
+  int idx;
+  bool read;
+  std::atomic<int> &commit_rvp;
+};
+
 class PwvNewOrderWarehouseStatement : public PwvStatement {
 public:
   PwvNewOrderWarehouseStatement(tpcc::Database &db,

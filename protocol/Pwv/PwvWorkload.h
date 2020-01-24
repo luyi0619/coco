@@ -29,6 +29,36 @@ public:
   }
 };
 
+template <> class PwvWorkload<ycsb::Database> {
+public:
+  using DatabaseType = ycsb::Database;
+  using StorageType = typename DatabaseType::StorageType;
+  using TransactionType = PwvTransaction;
+  using ContextType = typename DatabaseType::ContextType;
+  using RandomType = typename DatabaseType::RandomType;
+
+  PwvWorkload(DatabaseType &db, RandomType &random) : db(db), random(random) {}
+
+  std::unique_ptr<TransactionType> next_transaction(const ContextType &context,
+                                                    std::size_t partition_id,
+                                                    StorageType &storage) {
+
+    if (context.pwv_ycsb_star) {
+      auto p = std::make_unique<PwvYCSBStarTransaction>(db, context, random,
+                                                        storage, partition_id);
+      return p;
+    } else {
+      auto p = std::make_unique<PwvYCSBTransaction>(db, context, random,
+                                                    storage, partition_id);
+      return p;
+    }
+  }
+
+private:
+  DatabaseType &db;
+  RandomType &random;
+};
+
 template <> class PwvWorkload<tpcc::Database> {
 public:
   using DatabaseType = tpcc::Database;
@@ -70,27 +100,4 @@ private:
   RandomType &random;
 };
 
-template <> class PwvWorkload<ycsb::Database> {
-public:
-  using DatabaseType = ycsb::Database;
-  using StorageType = typename DatabaseType::StorageType;
-  using TransactionType = PwvTransaction;
-  using ContextType = typename DatabaseType::ContextType;
-  using RandomType = typename DatabaseType::RandomType;
-
-  PwvWorkload(DatabaseType &db, RandomType &random) : db(db), random(random) {}
-
-  std::unique_ptr<TransactionType> next_transaction(const ContextType &context,
-                                                    std::size_t partition_id,
-                                                    StorageType &storage) {
-
-    auto p = std::make_unique<PwvYCSBTransaction>(db, context, random, storage,
-                                                  partition_id);
-    return p;
-  }
-
-private:
-  DatabaseType &db;
-  RandomType &random;
-};
 } // namespace scar

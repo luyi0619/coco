@@ -9,6 +9,7 @@ DEFINE_int32(keys, 200000, "keys in a partition.");
 DEFINE_double(zipf, 0, "skew factor");
 DEFINE_string(skew_pattern, "both", "skew pattern: both, read, write");
 DEFINE_bool(two_partitions, false, "dist transactions access two partitions.");
+DEFINE_bool(pwv_ycsb_star, false, "ycsb keys dependency.");
 
 int main(int argc, char *argv[]) {
 
@@ -34,6 +35,7 @@ int main(int argc, char *argv[]) {
   context.crossPartitionProbability = FLAGS_cross_ratio;
   context.keysPerPartition = FLAGS_keys;
   context.two_partitions = FLAGS_two_partitions;
+  context.pwv_ycsb_star = FLAGS_pwv_ycsb_star;
 
   if (FLAGS_zipf > 0) {
     context.isUniform = false;
