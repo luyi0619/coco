@@ -99,25 +99,24 @@ public:
   bool commit(std::size_t core_id) override {
     // run reads
 
-    for (int k = 0; k < keys_num; k++) {
+    for (auto k = 0u; k < keys_num; k++) {
       if (pieces[k]->piece_partition_id() == core_id) {
         pieces[k]->execute();
       }
     }
 
-    int k = keys_num;
-
-    for (;;) {
-      int rvp = commit_rvp.load();
-      if (rvp == 0) {
-        break;
-      }
-      std::this_thread::yield();
-    }
-
     // run writes
-    for (int k = keys_num; k < pieces.size(); k++) {
+    for (auto k = keys_num; k < pieces.size(); k++) {
       if (pieces[k]->piece_partition_id() == core_id) {
+
+        for (;;) {
+          int rvp = commit_rvp.load();
+          if (rvp == 0) {
+            break;
+          }
+          std::this_thread::yield();
+        }
+
         pieces[k]->execute();
       }
     }
