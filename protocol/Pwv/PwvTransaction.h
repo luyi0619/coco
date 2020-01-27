@@ -174,28 +174,39 @@ public:
       k++;
     }
 
-    bool abort = false;
-    for (;;) {
-      int rvp = commit_rvp.load();
-      if (rvp < 0) {
-        abort = true;
-        break;
-      }
-      if (rvp == 0) {
-        break;
-      }
-      std::this_thread::yield();
-    }
-    if (abort) {
-      return false;
-    }
     // run district
     if (pieces[k]->piece_partition_id() == core_id) {
+
+      for (;;) {
+        int rvp = commit_rvp.load();
+        if (rvp < 0) {
+          return false;
+          break;
+        }
+        if (rvp == 0) {
+          break;
+        }
+        std::this_thread::yield();
+      }
+
       pieces[k]->execute();
     }
 
     if (pieces[k + 1]->piece_partition_id() == core_id) {
       // run order
+
+      for (;;) {
+        int rvp = commit_rvp.load();
+        if (rvp < 0) {
+          return false;
+          break;
+        }
+        if (rvp == 0) {
+          break;
+        }
+        std::this_thread::yield();
+      }
+
       pieces[k + 1]->execute();
     }
     return true;

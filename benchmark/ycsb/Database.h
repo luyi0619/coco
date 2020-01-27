@@ -94,11 +94,12 @@ public:
                    std::back_inserter(tbl_vecs[0]), tFunc);
 
     using std::placeholders::_1;
-    initTables("ycsb",
-               [&context, this](std::size_t partitionID) {
-                 ycsbInit(context, partitionID);
-               },
-               partitionNum, threadsNum, partitioner.get());
+    initTables(
+        "ycsb",
+        [&context, this](std::size_t partitionID) {
+          ycsbInit(context, partitionID);
+        },
+        partitionNum, threadsNum, partitioner.get());
   }
 
   void apply_operation(const Operation &operation) {
