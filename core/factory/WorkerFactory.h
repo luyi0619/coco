@@ -53,6 +53,11 @@
 #include "protocol/Kiva/KivaManager.h"
 #include "protocol/Kiva/KivaTransaction.h"
 
+#include "protocol/Aria/Aria.h"
+#include "protocol/Aria/AriaExecutor.h"
+#include "protocol/Aria/AriaManager.h"
+#include "protocol/Aria/AriaTransaction.h"
+
 #include "protocol/Pwv/PwvExecutor.h"
 #include "protocol/Pwv/PwvManager.h"
 #include "protocol/Pwv/PwvTransaction.h"
@@ -90,8 +95,9 @@ public:
                  const Context &context, std::atomic<bool> &stop_flag) {
 
     std::unordered_set<std::string> protocols = {
-        "Silo", "SiloGC", "SiloSI",  "SiloRC", "Scar", "ScarGC", "ScarSI",
-        "Star", "TwoPL",  "TwoPLGC", "Calvin", "Bohm", "Kiva",   "Pwv"};
+        "Silo",   "SiloGC", "SiloSI", "SiloRC", "Scar",
+        "ScarGC", "ScarSI", "Star",   "TwoPL",  "TwoPLGC",
+        "Calvin", "Bohm",   "Kiva",   "Aria",   "Pwv"};
     CHECK(protocols.count(context.protocol) == 1);
 
     std::vector<std::shared_ptr<Worker>> workers;
@@ -334,6 +340,28 @@ public:
 
       for (auto i = 0u; i < context.worker_num; i++) {
         workers.push_back(std::make_shared<KivaExecutor<WorkloadType>>(
+            coordinator_id, i, db, context, manager->transactions,
+            manager->storages, manager->epoch, manager->worker_status,
+            manager->total_abort, manager->n_completed_workers,
+            manager->n_started_workers));
+      }
+
+      workers.push_back(manager);
+    } else if (context.protocol == "Aria") {
+
+      using TransactionType = scar::AriaTransaction;
+      using WorkloadType =
+          typename InferType<Context>::template WorkloadType<TransactionType>;
+
+      // create manager
+
+      auto manager = std::make_shared<AriaManager<WorkloadType>>(
+          coordinator_id, context.worker_num, db, context, stop_flag);
+
+      // create worker
+
+      for (auto i = 0u; i < context.worker_num; i++) {
+        workers.push_back(std::make_shared<AriaExecutor<WorkloadType>>(
             coordinator_id, i, db, context, manager->transactions,
             manager->storages, manager->epoch, manager->worker_status,
             manager->total_abort, manager->n_completed_workers,
