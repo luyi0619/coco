@@ -31,6 +31,9 @@ public:
   virtual ~AriaTransaction() = default;
 
   void reset() {
+    local_read.store(0);
+    remote_read.store(0);
+
     abort_lock = false;
     abort_no_retry = false;
     abort_read_validation = false;
@@ -168,6 +171,8 @@ public:
   std::chrono::steady_clock::time_point startTime;
   std::size_t pendingResponses;
   std::size_t network_size;
+
+  std::atomic<int32_t> local_read, remote_read;
 
   bool abort_lock, abort_no_retry, abort_read_validation;
   bool distributed_transaction;

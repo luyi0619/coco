@@ -17,6 +17,7 @@ enum class ExecutorStatus {
   Kiva_COMMIT,
   Aria_READ,
   Aria_COMMIT,
+  Aria_Fallback_Prepare,
   Aria_Fallback,
   Bohm_Analysis,
   Bohm_Insert,

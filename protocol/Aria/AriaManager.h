@@ -82,6 +82,35 @@ public:
       wait_all_workers_finish();
       // wait for all machines until they finish the Aria_COMMIT phase.
       wait4_ack();
+
+      // prepare transactions for calvin and clear the metadata
+      cleanup_batch();
+      n_started_workers.store(0);
+      n_completed_workers.store(0);
+      signal_worker(ExecutorStatus::Aria_Fallback_Prepare);
+      wait_all_workers_start();
+      wait_all_workers_finish();
+      broadcast_stop();
+      wait4_stop(n_coordinators - 1);
+      n_completed_workers.store(0);
+      set_worker_status(ExecutorStatus::STOP);
+      wait_all_workers_finish();
+      // wait for all machines until they finish the Aria_COMMIT phase.
+      wait4_ack();
+
+      // calvin execution
+      n_started_workers.store(0);
+      n_completed_workers.store(0);
+      signal_worker(ExecutorStatus::Aria_Fallback);
+      wait_all_workers_start();
+      wait_all_workers_finish();
+      broadcast_stop();
+      wait4_stop(n_coordinators - 1);
+      n_completed_workers.store(0);
+      set_worker_status(ExecutorStatus::STOP);
+      wait_all_workers_finish();
+      // wait for all machines until they finish the Aria_COMMIT phase.
+      wait4_ack();
     }
 
     signal_worker(ExecutorStatus::EXIT);
@@ -125,6 +154,35 @@ public:
       n_started_workers.store(0);
       n_completed_workers.store(0);
       set_worker_status(ExecutorStatus::Aria_COMMIT);
+      wait_all_workers_start();
+      wait_all_workers_finish();
+      broadcast_stop();
+      wait4_stop(n_coordinators - 1);
+      n_completed_workers.store(0);
+      set_worker_status(ExecutorStatus::STOP);
+      wait_all_workers_finish();
+      send_ack();
+
+      status = wait4_signal();
+      DCHECK(status == ExecutorStatus::Aria_Fallback_Prepare);
+      cleanup_batch();
+      n_started_workers.store(0);
+      n_completed_workers.store(0);
+      set_worker_status(ExecutorStatus::Aria_Fallback_Prepare);
+      wait_all_workers_start();
+      wait_all_workers_finish();
+      broadcast_stop();
+      wait4_stop(n_coordinators - 1);
+      n_completed_workers.store(0);
+      set_worker_status(ExecutorStatus::STOP);
+      wait_all_workers_finish();
+      send_ack();
+
+      status = wait4_signal();
+      DCHECK(status == ExecutorStatus::Aria_Fallback);
+      n_started_workers.store(0);
+      n_completed_workers.store(0);
+      set_worker_status(ExecutorStatus::Aria_Fallback);
       wait_all_workers_start();
       wait_all_workers_finish();
       broadcast_stop();
