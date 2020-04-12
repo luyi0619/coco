@@ -70,6 +70,8 @@ public:
   bool kiva_reordering_optmization = true;
   bool kiva_snapshot_isolation = false;
 
+  std::size_t aria_lock_manager;
+
   bool pwv_ycsb_star = false;
 
   bool operation_replication = false;

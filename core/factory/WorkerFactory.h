@@ -360,15 +360,26 @@ public:
 
       // create worker
 
+      std::vector<AriaExecutor<WorkloadType> *> all_executors;
+
       for (auto i = 0u; i < context.worker_num; i++) {
-        workers.push_back(std::make_shared<AriaExecutor<WorkloadType>>(
+        auto w = std::make_shared<AriaExecutor<WorkloadType>>(
             coordinator_id, i, db, context, manager->transactions,
-            manager->storages, manager->epoch, manager->worker_status,
-            manager->total_abort, manager->n_completed_workers,
-            manager->n_started_workers));
+            manager->storages, manager->epoch, manager->lock_manager_status,
+            manager->worker_status, manager->total_abort,
+            manager->n_completed_workers, manager->n_started_workers);
+        workers.push_back(w);
+        manager->add_worker(w);
+        all_executors.push_back(w.get());
       }
 
+      // push manager to workers
       workers.push_back(manager);
+
+      for (auto i = 0u; i < context.worker_num; i++) {
+        static_cast<AriaExecutor<WorkloadType> *>(workers[i].get())
+            ->set_all_executors(all_executors);
+      }
     } else if (context.protocol == "Pwv") {
 
       // create manager

@@ -44,18 +44,25 @@ public:
                const ContextType &context,
                std::vector<std::unique_ptr<TransactionType>> &transactions,
                std::vector<StorageType> &storages, std::atomic<uint32_t> &epoch,
+               std::atomic<uint32_t> &lock_manager_status,
                std::atomic<uint32_t> &worker_status,
                std::atomic<uint32_t> &total_abort,
                std::atomic<uint32_t> &n_complete_workers,
                std::atomic<uint32_t> &n_started_workers)
       : Worker(coordinator_id, id), db(db), context(context),
         transactions(transactions), storages(storages), epoch(epoch),
-        worker_status(worker_status), total_abort(total_abort),
-        n_complete_workers(n_complete_workers),
+        lock_manager_status(lock_manager_status), worker_status(worker_status),
+        total_abort(total_abort), n_complete_workers(n_complete_workers),
         n_started_workers(n_started_workers),
         partitioner(PartitionerFactory::create_partitioner(
             context.partitioner, coordinator_id, context.coordinator_num)),
-        workload(coordinator_id, db, random, *partitioner), random(id),
+        workload(coordinator_id, db, random, *partitioner),
+        n_lock_manager(context.aria_lock_manager),
+        n_workers(context.worker_num - n_lock_manager),
+        lock_manager_id(AriaHelper::worker_id_to_lock_manager_id(
+            id, n_lock_manager, n_workers)),
+        init_transaction(false),
+        random(id), // make sure each worker has a different seed.
         protocol(db, context, *partitioner),
         delay(std::make_unique<SameDelay>(
             coordinator_id, context.coordinator_num, context.delay_time)) {
@@ -109,6 +116,38 @@ public:
       // wait to Aria_COMMIT
       while (static_cast<ExecutorStatus>(worker_status.load()) ==
              ExecutorStatus::Aria_COMMIT) {
+        process_request();
+      }
+      process_request();
+      n_complete_workers.fetch_add(1);
+
+      // wait till Aria_Fallback_Prepare
+      while (static_cast<ExecutorStatus>(worker_status.load()) !=
+             ExecutorStatus::Aria_Fallback_Prepare) {
+        std::this_thread::yield();
+      }
+      n_started_workers.fetch_add(1);
+      // commit_transactions();
+      n_complete_workers.fetch_add(1);
+      // wait to Aria_COMMIT
+      while (static_cast<ExecutorStatus>(worker_status.load()) ==
+             ExecutorStatus::Aria_Fallback_Prepare) {
+        process_request();
+      }
+      process_request();
+      n_complete_workers.fetch_add(1);
+
+      // wait till Aria_Fallback
+      while (static_cast<ExecutorStatus>(worker_status.load()) !=
+             ExecutorStatus::Aria_Fallback) {
+        std::this_thread::yield();
+      }
+      n_started_workers.fetch_add(1);
+      // commit_transactions();
+      n_complete_workers.fetch_add(1);
+      // wait to Aria_COMMIT
+      while (static_cast<ExecutorStatus>(worker_status.load()) ==
+             ExecutorStatus::Aria_Fallback) {
         process_request();
       }
       process_request();
@@ -563,10 +602,14 @@ private:
   const ContextType &context;
   std::vector<std::unique_ptr<TransactionType>> &transactions;
   std::vector<StorageType> &storages;
-  std::atomic<uint32_t> &epoch, &worker_status, &total_abort;
+  std::atomic<uint32_t> &epoch, &lock_manager_status, &worker_status,
+      &total_abort;
   std::atomic<uint32_t> &n_complete_workers, &n_started_workers;
   std::unique_ptr<Partitioner> partitioner;
   WorkloadType workload;
+  std::size_t n_lock_manager, n_workers;
+  std::size_t lock_manager_id;
+  bool init_transaction;
   RandomType random;
   ProtocolType protocol;
   std::unique_ptr<Delay> delay;

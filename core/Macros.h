@@ -46,6 +46,8 @@ DEFINE_bool(exact_group_commit, false, "dynamically adjust group time.");
 DEFINE_bool(mvcc, false, "use mvcc storage for BOHM.");
 DEFINE_bool(bohm_local, false, "locality optimization for Bohm.");
 DEFINE_bool(bohm_single_spin, false, "spin optimization for Bohm.");
+DEFINE_int32(aria_lock_manager, 0,
+             "# of lock manager in aria's fallback mode.");
 
 #define SETUP_CONTEXT(context)                                                 \
   boost::algorithm::split(context.peers, FLAGS_servers,                        \
@@ -86,6 +88,7 @@ DEFINE_bool(bohm_single_spin, false, "spin optimization for Bohm.");
   context.mvcc = FLAGS_mvcc;                                                   \
   context.bohm_local = FLAGS_bohm_local;                                       \
   context.bohm_single_spin = FLAGS_bohm_single_spin;                           \
+  context.aria_lock_manager = FLAGS_aria_lock_manager;                         \
   CHECK(context.coordinator_num == 1 || context.bohm_single_spin == false)     \
       << "bohm_single_spin must be used in single-node mode.";                 \
   CHECK((context.mvcc ^ (context.protocol == "Bohm")) == 0)                    \
