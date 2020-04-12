@@ -55,8 +55,7 @@ public:
         n_started_workers(n_started_workers),
         partitioner(PartitionerFactory::create_partitioner(
             context.partitioner, coordinator_id, context.coordinator_num)),
-        workload(coordinator_id, db, random, *partitioner),
-        random(reinterpret_cast<uint64_t>(this)),
+        workload(coordinator_id, db, random, *partitioner), random(id),
         protocol(db, context, *partitioner),
         delay(std::make_unique<SameDelay>(
             coordinator_id, context.coordinator_num, context.delay_time)) {
@@ -74,6 +73,7 @@ public:
   void start() override {
 
     LOG(INFO) << "AriaExecutor " << id << " started. ";
+    generate_transactions();
 
     for (;;) {
 
@@ -116,48 +116,57 @@ public:
     }
   }
 
-  std::size_t get_partition_id() {
-
+  std::size_t get_partition_id(int coord) {
     std::size_t partition_id;
-
     CHECK(context.partition_num % context.coordinator_num == 0);
-
     auto partition_num_per_node =
         context.partition_num / context.coordinator_num;
     partition_id = random.uniform_dist(0, partition_num_per_node - 1) *
                        context.coordinator_num +
-                   coordinator_id;
-    CHECK(partitioner->has_master_partition(partition_id));
+                   coord;
     return partition_id;
   }
+
+  /*
+   * We run the same batch of transactions in Aria for simplicity
+   * Each node generates the same set of transactions.
+   * */
+
+  void generate_transactions() {
+    for (auto i = id; i < transactions.size(); i += context.worker_num) {
+      auto partition_id = get_partition_id(i % context.coordinator_num);
+      transactions[i] =
+          workload.next_transaction(context, partition_id, storages[i]);
+      transactions[i]->setup_process_requests_in_execution_phase();
+      transactions[i]->set_id(i + 1); // tid starts from 1
+      transactions[i]->set_tid_offset(i);
+      transactions[i]->execution_phase = false;
+      setupHandlers(*transactions[i]);
+    }
+  }
+
+  /*
+   * Assume there are 2 nodes and each node has 3 threads.
+   * Node A runs, 0, 2, 4, 6, 8, 10
+   * Node B runs, 1, 3, 5, 7, 9, 11
+   *
+   * The first thread on Node A runs 0, 6
+   * the second thread on Node A runs 2, 8
+   */
 
   void read_snapshot() {
     // load epoch
     auto cur_epoch = epoch.load();
     auto n_abort = total_abort.load();
     std::size_t count = 0;
-    for (auto i = id; i < transactions.size(); i += context.worker_num) {
+    for (auto i = id * context.coordinator_num + coordinator_id;
+         i < transactions.size();
+         i += context.worker_num * context.coordinator_num) {
+
+      transactions[i]->reset();
+      transactions[i]->set_epoch(cur_epoch);
 
       process_request();
-
-      // if null, generate a new transaction, on this node.
-      // else only reset the query
-
-      if (transactions[i] == nullptr || i >= n_abort) {
-        auto partition_id = get_partition_id();
-        transactions[i] =
-            workload.next_transaction(context, partition_id, storages[i]);
-      } else {
-        transactions[i]->reset();
-      }
-
-      transactions[i]->set_epoch(cur_epoch);
-      transactions[i]->set_id(i * context.coordinator_num + coordinator_id +
-                              1); // tid starts from 1
-      transactions[i]->set_tid_offset(i);
-      transactions[i]->execution_phase = false;
-      setupHandlers(*transactions[i]);
-
       count++;
 
       // run transactions
@@ -175,7 +184,9 @@ public:
 
     // reserve
     count = 0;
-    for (auto i = id; i < transactions.size(); i += context.worker_num) {
+    for (auto i = id * context.coordinator_num + coordinator_id;
+         i < transactions.size();
+         i += context.worker_num * context.coordinator_num) {
 
       if (transactions[i]->abort_no_retry) {
         continue;
@@ -323,7 +334,9 @@ public:
 
   void commit_transactions() {
     std::size_t count = 0;
-    for (auto i = id; i < transactions.size(); i += context.worker_num) {
+    for (auto i = id * context.coordinator_num + coordinator_id;
+         i < transactions.size();
+         i += context.worker_num * context.coordinator_num) {
       if (transactions[i]->abort_no_retry) {
         continue;
       }
@@ -338,7 +351,9 @@ public:
     flush_messages();
 
     count = 0;
-    for (auto i = id; i < transactions.size(); i += context.worker_num) {
+    for (auto i = id * context.coordinator_num + coordinator_id;
+         i < transactions.size();
+         i += context.worker_num * context.coordinator_num) {
       if (transactions[i]->abort_no_retry) {
         n_abort_no_retry.fetch_add(1);
         continue;
@@ -416,8 +431,8 @@ public:
 
   void setupHandlers(TransactionType &txn) {
 
-    txn.readRequestHandler = [this, &txn](AriaRWKey &readKey, std::size_t tid,
-                                          uint32_t key_offset) {
+    txn.aria_read_handler = [this, &txn](AriaRWKey &readKey, std::size_t tid,
+                                         uint32_t key_offset) {
       auto table_id = readKey.get_table_id();
       auto partition_id = readKey.get_partition_id();
       const void *key = readKey.get_key();
@@ -447,8 +462,14 @@ public:
       }
     };
 
-    txn.remote_request_handler = [this]() { return this->process_request(); };
-    txn.message_flusher = [this]() { this->flush_messages(); };
+    txn.remote_request_handler = [this](std::size_t worker_id) {
+      auto *worker = this->all_executors[worker_id];
+      return worker->process_request();
+    };
+    txn.message_flusher = [this](std::size_t worker_id) {
+      auto *worker = this->all_executors[worker_id];
+      worker->flush_messages();
+    };
   }
 
   void onExit() override {
@@ -506,6 +527,10 @@ public:
     message->set_worker_id(id);
   }
 
+  void set_all_executors(const std::vector<AriaExecutor *> &executors) {
+    all_executors = executors;
+  }
+
   std::size_t process_request() {
 
     std::size_t size = 0;
@@ -552,5 +577,6 @@ private:
                          std::vector<std::unique_ptr<TransactionType>> &)>>
       messageHandlers;
   LockfreeQueue<Message *> in_queue, out_queue;
+  std::vector<AriaExecutor *> all_executors;
 };
 } // namespace scar

@@ -32,18 +32,22 @@ public:
 
   void reset() {
     local_read.store(0);
+    saved_local_read = 0;
     remote_read.store(0);
+    saved_remote_read = 0;
 
     abort_lock = false;
     abort_no_retry = false;
     abort_read_validation = false;
     distributed_transaction = false;
     execution_phase = false;
+
     waw = false;
     war = false;
     raw = false;
     pendingResponses = 0;
     network_size = 0;
+    active_coordinators.clear();
     operation.clear();
     readSet.clear();
     writeSet.clear();
@@ -80,6 +84,7 @@ public:
     if (execution_phase) {
       return;
     }
+
     AriaRWKey readKey;
 
     readKey.set_table_id(table_id);
@@ -99,6 +104,7 @@ public:
     if (execution_phase) {
       return;
     }
+
     AriaRWKey readKey;
 
     readKey.set_table_id(table_id);
@@ -118,6 +124,7 @@ public:
     if (execution_phase) {
       return;
     }
+
     AriaRWKey writeKey;
 
     writeKey.set_table_id(table_id);
@@ -146,24 +153,51 @@ public:
 
   void set_epoch(uint32_t epoch) { this->epoch = epoch; }
 
-  bool process_requests(std::size_t worker_id) {
+  bool is_read_only() { return writeSet.size() == 0; }
 
-    // cannot use unsigned type in reverse iteration
-    for (int i = int(readSet.size()) - 1; i >= 0; i--) {
-      // early return
-      if (!readSet[i].get_read_request_bit()) {
-        break;
+  void setup_process_requests_in_execution_phase() {
+
+    process_requests = [this](std::size_t worker_id) {
+      // cannot use unsigned type in reverse iteration
+      for (int i = int(readSet.size()) - 1; i >= 0; i--) {
+        // early return
+        if (!readSet[i].get_read_request_bit()) {
+          break;
+        }
+
+        AriaRWKey &readKey = readSet[i];
+        aria_read_handler(readKey, id, i);
+        readSet[i].clear_read_request_bit();
       }
-
-      AriaRWKey &readKey = readSet[i];
-      readRequestHandler(readKey, id, i);
-      readSet[i].clear_read_request_bit();
-    }
-
-    return false;
+      return false;
+    };
   }
 
-  bool is_read_only() { return writeSet.size() == 0; }
+  void
+  setup_process_requests_in_fallback_phase(std::size_t n_lock_manager,
+                                           std::size_t n_worker,
+                                           std::size_t replica_group_size) {}
+
+  void save_read_count() {
+    saved_local_read = local_read.load();
+    saved_remote_read = remote_read.load();
+  }
+
+  void load_read_count() {
+    local_read.store(saved_local_read);
+    remote_read.store(saved_remote_read);
+  }
+
+  void clear_execution_bit() {
+    for (auto i = 0u; i < readSet.size(); i++) {
+
+      if (readSet[i].get_local_index_read_bit()) {
+        continue;
+      }
+
+      readSet[i].clear_execution_processed_bit();
+    }
+  }
 
 public:
   std::size_t coordinator_id, partition_id, id, tid_offset;
@@ -173,25 +207,34 @@ public:
   std::size_t network_size;
 
   std::atomic<int32_t> local_read, remote_read;
+  int32_t saved_local_read, saved_remote_read;
 
   bool abort_lock, abort_no_retry, abort_read_validation;
   bool distributed_transaction;
   bool execution_phase;
   bool waw, war, raw;
 
+  std::function<bool(std::size_t)> process_requests;
+
   // table id, partition id, key, value
   std::function<void(std::size_t, std::size_t, const void *, void *)>
       local_index_read_handler;
 
   // read_key, id, key_offset
-  std::function<void(AriaRWKey &, std::size_t, std::size_t)> readRequestHandler;
+  std::function<void(AriaRWKey &, std::size_t, std::size_t)> aria_read_handler;
+
+  // table id, partition id, id, key_offset, key, value
+  std::function<void(std::size_t, std::size_t, std::size_t, std::size_t,
+                     uint32_t, const void *, void *)>
+      calvin_read_handler;
 
   // processed a request?
-  std::function<std::size_t(void)> remote_request_handler;
+  std::function<std::size_t(std::size_t)> remote_request_handler;
 
-  std::function<void()> message_flusher;
+  std::function<void(std::size_t)> message_flusher;
 
   Partitioner &partitioner;
+  std::vector<bool> active_coordinators;
   Operation operation; // never used
   std::vector<AriaRWKey> readSet, writeSet;
 };

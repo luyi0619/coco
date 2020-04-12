@@ -250,6 +250,9 @@ public:
     case ControlMessage::SIGNAL:
       signal_in_queue.push(message);
       break;
+    case ControlMessage::VECTOR:
+      vector_in_queue.push(message);
+      break;
     case ControlMessage::ACK:
       ack_in_queue.push(message);
       break;
@@ -312,8 +315,8 @@ protected:
 protected:
   const Context &context;
   std::atomic<bool> &stopFlag;
-  LockfreeQueue<Message *> ack_in_queue, signal_in_queue, stop_in_queue,
-      out_queue;
+  LockfreeQueue<Message *> ack_in_queue, vector_in_queue, signal_in_queue,
+      stop_in_queue, out_queue;
   std::vector<std::unique_ptr<Message>> messages;
 
 public:
