@@ -31,10 +31,6 @@ public:
   virtual ~AriaTransaction() = default;
 
   void reset() {
-    local_read.store(0);
-    saved_local_read = 0;
-    remote_read.store(0);
-    saved_remote_read = 0;
 
     abort_lock = false;
     abort_no_retry = false;
@@ -46,11 +42,17 @@ public:
     war = false;
     raw = false;
     pendingResponses = 0;
-    network_size = 0;
-    active_coordinators.clear();
+    network_size.store(0);
     operation.clear();
     readSet.clear();
     writeSet.clear();
+
+    // the following is for Calvin, and should not be reset
+    local_read.store(0);
+    saved_local_read = 0;
+    remote_read.store(0);
+    saved_remote_read = 0;
+    relevant = false;
   }
 
   virtual TransactionResult execute(std::size_t worker_id) = 0;
@@ -155,6 +157,40 @@ public:
 
   bool is_read_only() { return writeSet.size() == 0; }
 
+  void setup_process_requests_in_prepare_phase() {
+    // process the reads in read-only index
+    // for general reads, increment the local_read and remote_read counter.
+    // the function may be called multiple times, the keys are processed in
+    // reverse order.
+    process_requests = [this](std::size_t worker_id) {
+      // cannot use unsigned type in reverse iteration
+      for (int i = int(readSet.size()) - 1; i >= 0; i--) {
+        // early return
+        if (readSet[i].get_prepare_processed_bit()) {
+          break;
+        }
+
+        if (readSet[i].get_local_index_read_bit()) {
+          // this is a local index read
+          auto &readKey = readSet[i];
+          local_index_read_handler(readKey.get_table_id(),
+                                   readKey.get_partition_id(),
+                                   readKey.get_key(), readKey.get_value());
+        } else {
+
+          if (partitioner.has_master_partition(readSet[i].get_partition_id())) {
+            local_read.fetch_add(1);
+          } else {
+            remote_read.fetch_add(1);
+          }
+        }
+
+        readSet[i].set_prepare_processed_bit();
+      }
+      return false;
+    };
+  }
+
   void setup_process_requests_in_execution_phase() {
 
     process_requests = [this](std::size_t worker_id) {
@@ -204,13 +240,14 @@ public:
   uint32_t epoch;
   std::chrono::steady_clock::time_point startTime;
   std::size_t pendingResponses;
-  std::size_t network_size;
 
+  std::atomic<int32_t> network_size;
   std::atomic<int32_t> local_read, remote_read;
   int32_t saved_local_read, saved_remote_read;
 
   bool abort_lock, abort_no_retry, abort_read_validation;
   bool distributed_transaction;
+  bool relevant;
   bool execution_phase;
   bool waw, war, raw;
 

@@ -63,6 +63,7 @@ public:
             id, n_lock_manager, n_workers)),
         init_transaction(false),
         random(id), // make sure each worker has a different seed.
+        // random(reinterpret_cast<uint64_t >(this)),
         protocol(db, context, *partitioner),
         delay(std::make_unique<SameDelay>(
             coordinator_id, context.coordinator_num, context.delay_time)) {
@@ -80,7 +81,6 @@ public:
   void start() override {
 
     LOG(INFO) << "AriaExecutor " << id << " started. ";
-    generate_transactions();
 
     for (;;) {
 
@@ -95,6 +95,8 @@ public:
       } while (status != ExecutorStatus::Aria_READ);
 
       n_started_workers.fetch_add(1);
+      // we find active coord and relevant transactions
+      generate_transactions();
       read_snapshot();
       n_complete_workers.fetch_add(1);
       // wait to Aria_READ
@@ -127,7 +129,7 @@ public:
         std::this_thread::yield();
       }
       n_started_workers.fetch_add(1);
-      // commit_transactions();
+      prepare_calvin_input();
       n_complete_workers.fetch_add(1);
       // wait to Aria_COMMIT
       while (static_cast<ExecutorStatus>(worker_status.load()) ==
@@ -143,7 +145,14 @@ public:
         std::this_thread::yield();
       }
       n_started_workers.fetch_add(1);
-      // commit_transactions();
+      // work as lock manager
+      if (id < n_lock_manager) {
+        // schedule transactions
+        schedule_calvin_transactions();
+      } else {
+        // work as executor
+        run_calvin_transactions();
+      }
       n_complete_workers.fetch_add(1);
       // wait to Aria_COMMIT
       while (static_cast<ExecutorStatus>(worker_status.load()) ==
@@ -172,15 +181,198 @@ public:
    * */
 
   void generate_transactions() {
+    if (!context.same_batch || !init_transaction) {
+      init_transaction = true;
+      for (auto i = id; i < transactions.size(); i += context.worker_num) {
+        auto partition_id = get_partition_id(i % context.coordinator_num);
+        transactions[i] =
+            workload.next_transaction(context, partition_id, storages[i]);
+        transactions[i]->setup_process_requests_in_execution_phase();
+        transactions[i]->set_id(i + 1); // tid starts from 1
+        transactions[i]->set_tid_offset(i);
+        transactions[i]->execution_phase = false;
+        setupHandlers(*transactions[i]);
+        prepare_transaction(*transactions[i]);
+      }
+    } else {
+      auto now = std::chrono::steady_clock::now();
+      for (auto i = id; i < transactions.size(); i += context.worker_num) {
+        transactions[i]->reset();
+        transactions[i]->startTime = now;
+      }
+    }
+  }
+
+  void prepare_transaction(TransactionType &txn) {
+
+    txn.setup_process_requests_in_execution_phase();
+    // run execute to prepare read/write set
+    auto result = txn.execute(id);
+    if (result == TransactionResult::ABORT_NORETRY) {
+      txn.abort_no_retry = true;
+    }
+
+    if (context.same_batch) {
+      txn.save_read_count();
+    }
+
+    analyze_transaction(txn);
+  }
+
+  void analyze_transaction(TransactionType &transaction) {
+
+    // assuming no blind write
+    auto &readSet = transaction.readSet;
+    auto &active_coordinators = transaction.active_coordinators;
+    active_coordinators =
+        std::vector<bool>(partitioner->total_coordinators(), false);
+
+    for (auto i = 0u; i < readSet.size(); i++) {
+      auto &readkey = readSet[i];
+      if (readkey.get_local_index_read_bit()) {
+        continue;
+      }
+      auto partitionID = readkey.get_partition_id();
+      if (readkey.get_write_lock_bit()) {
+        active_coordinators[partitioner->master_coordinator(partitionID)] =
+            true;
+      }
+      if (partitioner->master_coordinator(partitionID) == coordinator_id) {
+        transaction.relevant = true;
+      }
+    }
+  }
+
+  void prepare_calvin_input() {
+    // if a transaction commit, continue
+    // if a transaction is not relevant, continue,
+    // otherwise, we analyse the read and write set.
     for (auto i = id; i < transactions.size(); i += context.worker_num) {
-      auto partition_id = get_partition_id(i % context.coordinator_num);
-      transactions[i] =
-          workload.next_transaction(context, partition_id, storages[i]);
-      transactions[i]->setup_process_requests_in_execution_phase();
-      transactions[i]->set_id(i + 1); // tid starts from 1
-      transactions[i]->set_tid_offset(i);
-      transactions[i]->execution_phase = false;
-      setupHandlers(*transactions[i]);
+      // commit in kiva
+      if (transactions[i]->abort_lock == false)
+        continue;
+      // not relevant
+      if (transactions[i]->relevant == false)
+        continue;
+      transactions[i]->reset();
+      prepare_transaction(*transactions[i]);
+    }
+  }
+
+  void schedule_calvin_transactions() {
+    // grant locks, once all locks are acquired, assign the transaction to
+    // a worker thread in a round-robin manner.
+    std::size_t request_id = 0;
+    for (auto i = 0u; i < transactions.size(); i++) {
+      // not relevant
+      if (transactions[i]->relevant == false)
+        continue;
+      // do not grant locks to abort no retry transaction
+      if (transactions[i]->abort_no_retry)
+        continue;
+
+      bool grant_lock = false;
+      auto &readSet = transactions[i]->readSet;
+      for (auto k = 0u; k < readSet.size(); k++) {
+        auto &readKey = readSet[k];
+        auto tableId = readKey.get_table_id();
+        auto partitionId = readKey.get_partition_id();
+
+        if (!partitioner->has_master_partition(partitionId)) {
+          continue;
+        }
+
+        auto table = db.find_table(tableId, partitionId);
+        auto key = readKey.get_key();
+
+        if (readKey.get_local_index_read_bit()) {
+          continue;
+        }
+
+        if (AriaHelper::partition_id_to_lock_manager_id(
+                readKey.get_partition_id(), n_lock_manager,
+                context.coordinator_num) != lock_manager_id) {
+          continue;
+        }
+
+        grant_lock = true;
+        std::atomic<uint64_t> &tid = table->search_metadata(key);
+        if (readKey.get_write_lock_bit()) {
+          AriaHelper::write_lock(tid);
+        } else if (readKey.get_read_lock_bit()) {
+          AriaHelper::read_lock(tid);
+        } else {
+          CHECK(false);
+        }
+      }
+      if (grant_lock) {
+        auto worker = get_available_worker(request_id++);
+        all_executors[worker]->transaction_queue.push(transactions[i].get());
+      }
+      // only count once
+      if (i % n_lock_manager == id) {
+        n_commit.fetch_add(1);
+      }
+    }
+    set_lock_manager_bit(id);
+  }
+
+  void set_lock_manager_bit(int id) {
+    uint32_t old_value, new_value;
+    do {
+      old_value = lock_manager_status.load();
+      DCHECK(((old_value >> id) & 1) == 0);
+      new_value = old_value | (1 << id);
+    } while (!lock_manager_status.compare_exchange_weak(old_value, new_value));
+  }
+
+  bool get_lock_manager_bit(int id) {
+    return (lock_manager_status.load() >> id) & 1;
+  }
+
+  std::size_t get_available_worker(std::size_t request_id) {
+    // assume there are n lock managers and m workers
+    // 0, 1, .. n-1 are lock managers
+    // n, n + 1, .., n + m -1 are workers
+
+    // the first lock managers assign transactions to n, .. , n + m/n - 1
+
+    auto start_worker_id = n_lock_manager + n_workers / n_lock_manager * id;
+    auto len = n_workers / n_lock_manager;
+    return request_id % len + start_worker_id;
+  }
+
+  void run_calvin_transactions() {
+
+    while (!get_lock_manager_bit(lock_manager_id) ||
+           !transaction_queue.empty()) {
+
+      if (transaction_queue.empty()) {
+        process_request();
+        continue;
+      }
+
+      TransactionType *transaction = transaction_queue.front();
+      bool ok = transaction_queue.pop();
+      DCHECK(ok);
+
+      auto result = transaction->execute(id);
+      n_network_size.fetch_add(transaction->network_size.load());
+      if (result == TransactionResult::READY_TO_COMMIT) {
+        protocol.calvin_commit(*transaction, lock_manager_id, n_lock_manager,
+                               context.coordinator_num);
+        auto latency =
+            std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now() - transaction->startTime)
+                .count();
+        percentile.add(latency);
+      } else if (result == TransactionResult::ABORT) {
+        // non-active transactions, release lock
+        protocol.calvin_abort(*transaction, lock_manager_id, n_lock_manager,
+                              context.coordinator_num);
+      } else {
+        CHECK(false) << "abort no retry transaction should not be scheduled.";
+      }
     }
   }
 
@@ -201,7 +393,6 @@ public:
     for (auto i = id * context.coordinator_num + coordinator_id;
          i < transactions.size();
          i += context.worker_num * context.coordinator_num) {
-
       transactions[i]->reset();
       transactions[i]->set_epoch(cur_epoch);
 
@@ -501,6 +692,13 @@ public:
       }
     };
 
+    txn.local_index_read_handler = [this](std::size_t table_id,
+                                          std::size_t partition_id,
+                                          const void *key, void *value) {
+      ITable *table = this->db.find_table(table_id, partition_id);
+      AriaHelper::read(table->search(key), value, table->value_size());
+    };
+
     txn.remote_request_handler = [this](std::size_t worker_id) {
       auto *worker = this->all_executors[worker_id];
       return worker->process_request();
@@ -620,6 +818,7 @@ private:
                          std::vector<std::unique_ptr<TransactionType>> &)>>
       messageHandlers;
   LockfreeQueue<Message *> in_queue, out_queue;
+  LockfreeQueue<TransactionType *> transaction_queue;
   std::vector<AriaExecutor *> all_executors;
 };
 } // namespace scar

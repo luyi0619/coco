@@ -13,6 +13,7 @@
 
 #include <atomic>
 #include <thread>
+#include <unordered_set>
 #include <vector>
 
 namespace scar {
@@ -85,8 +86,8 @@ public:
       // wait for all machines until they finish the Aria_COMMIT phase.
       // this can be skipped
       // wait4_ack();
-      wait4_commit_tids_from_non_master();
-      broadcast_commit_tids();
+      wait4_abort_tids_from_non_master();
+      broadcast_abort_tids();
 
       // prepare transactions for calvin and clear the metadata
       n_started_workers.store(0);
@@ -169,8 +170,8 @@ public:
       cleanup_batch();
       // this can be skipped
       // send_ack();
-      send_commit_tids_to_master();
-      wait4_commit_tids_from_master();
+      send_abort_tids_to_master();
+      wait4_abort_tids_from_master();
 
       status = wait4_signal();
       DCHECK(status == ExecutorStatus::Aria_Fallback_Prepare);
@@ -210,18 +211,18 @@ public:
    */
 
   void cleanup_batch() {
-    commit_tids.clear();
+    abort_tids.clear();
     for (auto i = coordinator_id; i < transactions.size();
          i += context.coordinator_num) {
-      if (transactions[i]->abort_lock || transactions[i]->abort_no_retry)
-        continue;
-      commit_tids.push_back(transactions[i]->id);
+      if (transactions[i]->abort_lock) {
+        abort_tids.push_back(transactions[i]->id);
+      }
     }
   }
 
   // the following two functions are called on master
 
-  void wait4_commit_tids_from_non_master() {
+  void wait4_abort_tids_from_non_master() {
     CHECK(coordinator_id == 0);
 
     std::size_t n_coordinators = context.coordinator_num;
@@ -237,38 +238,39 @@ public:
       auto type = static_cast<ControlMessage>(messagePiece.get_message_type());
       CHECK(type == ControlMessage::VECTOR);
 
-      decltype(commit_tids.size()) sz;
+      decltype(abort_tids.size()) sz;
       StringPiece stringPiece = messagePiece.toStringPiece();
       Decoder dec(stringPiece);
       dec >> sz;
       for (auto k = 0u; k < sz; k++) {
         int val;
         dec >> val;
-        commit_tids.push_back(val);
+        transactions[val - 1]->abort_lock = true;
+        abort_tids.push_back(val);
       }
     }
   }
 
-  void broadcast_commit_tids() {
+  void broadcast_abort_tids() {
     CHECK(coordinator_id == 0);
     std::size_t n_coordinators = context.coordinator_num;
     for (auto i = 0u; i < n_coordinators; i++) {
       if (i == coordinator_id)
         continue;
-      ControlMessageFactory::new_vector_message(*messages[i], commit_tids);
+      ControlMessageFactory::new_vector_message(*messages[i], abort_tids);
       flush_messages();
     }
   }
 
   // the following two functions are called on non-master
-  void send_commit_tids_to_master() {
+  void send_abort_tids_to_master() {
     CHECK(coordinator_id != 0);
 
-    ControlMessageFactory::new_vector_message(*messages[0], commit_tids);
+    ControlMessageFactory::new_vector_message(*messages[0], abort_tids);
     flush_messages();
   }
 
-  void wait4_commit_tids_from_master() {
+  void wait4_abort_tids_from_master() {
     CHECK(coordinator_id != 0);
     std::size_t n_coordinators = context.coordinator_num;
 
@@ -282,15 +284,16 @@ public:
     auto type = static_cast<ControlMessage>(messagePiece.get_message_type());
     CHECK(type == ControlMessage::VECTOR);
 
-    decltype(commit_tids.size()) sz;
-    commit_tids.clear();
+    decltype(abort_tids.size()) sz;
+    abort_tids.clear();
     StringPiece stringPiece = messagePiece.toStringPiece();
     Decoder dec(stringPiece);
     dec >> sz;
     for (auto k = 0u; k < sz; k++) {
       int val;
       dec >> val;
-      commit_tids.push_back(val);
+      abort_tids.push_back(val);
+      transactions[val - 1]->abort_lock = true;
     }
   }
 
@@ -311,6 +314,6 @@ public:
   std::vector<StorageType> storages;
   std::vector<std::unique_ptr<TransactionType>> transactions;
   std::atomic<uint32_t> total_abort;
-  std::vector<int> commit_tids;
+  std::vector<int> abort_tids;
 };
 } // namespace scar
