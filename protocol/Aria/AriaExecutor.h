@@ -192,7 +192,7 @@ public:
         transactions[i]->set_tid_offset(i);
         transactions[i]->execution_phase = false;
         setupHandlers(*transactions[i]);
-        prepare_transaction(*transactions[i]);
+        prepare_transaction(*transactions[i], false);
       }
     } else {
       auto now = std::chrono::steady_clock::now();
@@ -203,7 +203,7 @@ public:
     }
   }
 
-  void prepare_transaction(TransactionType &txn) {
+  void prepare_transaction(TransactionType &txn, bool fallback) {
 
     txn.setup_process_requests_in_execution_phase();
     // run execute to prepare read/write set
@@ -217,6 +217,13 @@ public:
     }
 
     analyze_transaction(txn);
+
+    if (fallback) {
+      // setup handlers for execution
+      txn.setup_process_requests_in_fallback_phase(n_lock_manager, n_workers,
+                                                   context.coordinator_num);
+      txn.execution_phase = true;
+    }
   }
 
   void analyze_transaction(TransactionType &transaction) {
@@ -254,8 +261,9 @@ public:
       // not relevant
       if (transactions[i]->relevant == false)
         continue;
-      transactions[i]->reset();
-      prepare_transaction(*transactions[i]);
+      LOG(INFO) << "rerun " << transactions[i]->id << " in calvin.";
+      transactions[i]->clear_working_set();
+      prepare_transaction(*transactions[i], true);
     }
   }
 
@@ -264,12 +272,18 @@ public:
     // a worker thread in a round-robin manner.
     std::size_t request_id = 0;
     for (auto i = 0u; i < transactions.size(); i++) {
+      // commit in kiva
+      if (transactions[i]->abort_lock == false) {
+        continue;
+      }
       // not relevant
-      if (transactions[i]->relevant == false)
+      if (transactions[i]->relevant == false) {
         continue;
+      }
       // do not grant locks to abort no retry transaction
-      if (transactions[i]->abort_no_retry)
+      if (transactions[i]->abort_no_retry) {
         continue;
+      }
 
       bool grant_lock = false;
       auto &readSet = transactions[i]->readSet;
@@ -691,6 +705,27 @@ public:
         txn.pendingResponses++;
       }
     };
+
+    txn.calvin_read_handler =
+        [this, &txn](std::size_t worker_id, std::size_t table_id,
+                     std::size_t partition_id, std::size_t id,
+                     uint32_t key_offset, const void *key, void *value) {
+          auto *worker = this->all_executors[worker_id];
+          if (worker->partitioner->has_master_partition(partition_id)) {
+            ITable *table = worker->db.find_table(table_id, partition_id);
+            AriaHelper::read(table->search(key), value, table->value_size());
+            auto &active_coordinators = txn.active_coordinators;
+            for (auto i = 0u; i < active_coordinators.size(); i++) {
+              if (i == worker->coordinator_id || !active_coordinators[i])
+                continue;
+              auto sz = MessageFactoryType::new_calvin_read_message(
+                  *worker->messages[i], *table, id, key_offset, value);
+              txn.network_size.fetch_add(sz);
+              txn.distributed_transaction = true;
+            }
+            txn.local_read.fetch_add(-1);
+          }
+        };
 
     txn.local_index_read_handler = [this](std::size_t table_id,
                                           std::size_t partition_id,

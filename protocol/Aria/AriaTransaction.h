@@ -25,6 +25,7 @@ public:
                   Partitioner &partitioner)
       : coordinator_id(coordinator_id), partition_id(partition_id),
         startTime(std::chrono::steady_clock::now()), partitioner(partitioner) {
+    relevant = false;
     reset();
   }
 
@@ -43,16 +44,19 @@ public:
     raw = false;
     pendingResponses = 0;
     network_size.store(0);
-    operation.clear();
-    readSet.clear();
-    writeSet.clear();
 
-    // the following is for Calvin, and should not be reset
+    clear_working_set();
+
     local_read.store(0);
     saved_local_read = 0;
     remote_read.store(0);
     saved_remote_read = 0;
-    relevant = false;
+  }
+
+  void clear_working_set() {
+    operation.clear();
+    readSet.clear();
+    writeSet.clear();
   }
 
   virtual TransactionResult execute(std::size_t worker_id) = 0;
@@ -212,7 +216,57 @@ public:
   void
   setup_process_requests_in_fallback_phase(std::size_t n_lock_manager,
                                            std::size_t n_worker,
-                                           std::size_t replica_group_size) {}
+                                           std::size_t replica_group_size) {
+
+    // only read the keys with locks from the lock_manager_id
+    process_requests = [this, n_lock_manager, n_worker,
+                        replica_group_size](std::size_t worker_id) {
+      auto lock_manager_id = CalvinHelper::worker_id_to_lock_manager_id(
+          worker_id, n_lock_manager, n_worker);
+
+      // cannot use unsigned type in reverse iteration
+      for (int i = int(readSet.size()) - 1; i >= 0; i--) {
+
+        if (readSet[i].get_local_index_read_bit()) {
+          continue;
+        }
+
+        if (CalvinHelper::partition_id_to_lock_manager_id(
+                readSet[i].get_partition_id(), n_lock_manager,
+                replica_group_size) != lock_manager_id) {
+          continue;
+        }
+
+        // early return
+        if (readSet[i].get_execution_processed_bit()) {
+          break;
+        }
+
+        auto &readKey = readSet[i];
+        calvin_read_handler(worker_id, readKey.get_table_id(),
+                            readKey.get_partition_id(), id, i,
+                            readKey.get_key(), readKey.get_value());
+
+        readSet[i].set_execution_processed_bit();
+      }
+
+      message_flusher(worker_id);
+
+      if (active_coordinators[coordinator_id]) {
+
+        // spin on local & remote read
+        while (local_read.load() > 0 || remote_read.load() > 0) {
+          // process remote reads for other workers
+          remote_request_handler(worker_id);
+        }
+
+        return false;
+      } else {
+        // abort if not active
+        return true;
+      }
+    };
+  }
 
   void save_read_count() {
     saved_local_read = local_read.load();
