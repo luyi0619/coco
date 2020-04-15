@@ -187,12 +187,12 @@ public:
         auto partition_id = get_partition_id(i % context.coordinator_num);
         transactions[i] =
             workload.next_transaction(context, partition_id, storages[i]);
-        transactions[i]->setup_process_requests_in_execution_phase();
         transactions[i]->set_id(i + 1); // tid starts from 1
         transactions[i]->set_tid_offset(i);
         transactions[i]->execution_phase = false;
         setupHandlers(*transactions[i]);
-        prepare_transaction(*transactions[i], false);
+        prepare_transaction(*transactions[i]);
+        transactions[i]->setup_process_requests_in_execution_phase();
       }
     } else {
       auto now = std::chrono::steady_clock::now();
@@ -203,26 +203,30 @@ public:
     }
   }
 
-  void prepare_transaction(TransactionType &txn, bool fallback) {
+  void prepare_transaction(TransactionType &txn) {
 
-    txn.setup_process_requests_in_execution_phase();
+    txn.setup_process_requests_in_prepare_phase();
     // run execute to prepare read/write set
     auto result = txn.execute(id);
     if (result == TransactionResult::ABORT_NORETRY) {
       txn.abort_no_retry = true;
     }
 
-    if (context.same_batch) {
-      txn.save_read_count();
-    }
-
     analyze_transaction(txn);
+  }
 
-    if (fallback) {
-      // setup handlers for execution
-      txn.setup_process_requests_in_fallback_phase(n_lock_manager, n_workers,
-                                                   context.coordinator_num);
-      txn.execution_phase = true;
+  void clear_metadata(TransactionType &transaction) {
+    // assuming no blind write
+    auto &readSet = transaction.readSet;
+    for (auto i = 0u; i < readSet.size(); i++) {
+      auto &readkey = readSet[i];
+      if (readkey.get_local_index_read_bit()) {
+        continue;
+      }
+      auto partitionID = readkey.get_partition_id();
+      if (partitioner->master_coordinator(partitionID) == coordinator_id) {
+        readSet[i].get_tid()->store(0);
+      }
     }
   }
 
@@ -233,6 +237,8 @@ public:
     auto &active_coordinators = transaction.active_coordinators;
     active_coordinators =
         std::vector<bool>(partitioner->total_coordinators(), false);
+
+    auto &n_active_coordinators = transaction.n_active_coordinators;
 
     for (auto i = 0u; i < readSet.size(); i++) {
       auto &readkey = readSet[i];
@@ -248,6 +254,12 @@ public:
         transaction.relevant = true;
       }
     }
+
+    n_active_coordinators = 0;
+    for (auto i = 0u; i < readSet.size(); i++) {
+      if (active_coordinators[i])
+        n_active_coordinators++;
+    }
   }
 
   void prepare_calvin_input() {
@@ -258,16 +270,32 @@ public:
       // commit in kiva
       if (transactions[i]->abort_lock == false)
         continue;
+      if (transactions[i]->abort_no_retry)
+        continue;
       // not relevant
       if (transactions[i]->relevant == false)
         continue;
-      LOG(INFO) << "rerun " << transactions[i]->id << " in calvin.";
-      transactions[i]->clear_working_set();
-      prepare_transaction(*transactions[i], true);
+
+      // LOG(INFO) << "rerun " << transactions[i]->id << " in calvin.";
+
+      if (transactions[i]->run_in_kiva == false) {
+        // read & write set are not ready
+        transactions[i]->setup_process_requests_in_prepare_phase();
+        transactions[i]->execute(id);
+      }
+
+      clear_metadata(*transactions[i]);
+      analyze_transaction(*transactions[i]);
+      // setup handlers for execution
+      transactions[i]->setup_process_requests_in_fallback_phase(
+          n_lock_manager, n_workers, context.coordinator_num);
+      transactions[i]->execution_phase = true;
     }
   }
 
   void schedule_calvin_transactions() {
+
+    RandomType local_random(reinterpret_cast<uint64_t>(this));
     // grant locks, once all locks are acquired, assign the transaction to
     // a worker thread in a round-robin manner.
     std::size_t request_id = 0;
@@ -323,8 +351,9 @@ public:
         auto worker = get_available_worker(request_id++);
         all_executors[worker]->transaction_queue.push(transactions[i].get());
       }
-      // only count once
-      if (i % n_lock_manager == id) {
+      // avoid double counting
+      if (local_random.uniform_dist(0, transactions[i]->n_active_coordinators -
+                                           1) == 0) {
         n_commit.fetch_add(1);
       }
     }
@@ -375,6 +404,7 @@ public:
       if (result == TransactionResult::READY_TO_COMMIT) {
         protocol.calvin_commit(*transaction, lock_manager_id, n_lock_manager,
                                context.coordinator_num);
+        // LOG(INFO) << "commit " << transaction->id << " in calvin";
         auto latency =
             std::chrono::duration_cast<std::chrono::microseconds>(
                 std::chrono::steady_clock::now() - transaction->startTime)
@@ -409,7 +439,7 @@ public:
          i += context.worker_num * context.coordinator_num) {
       transactions[i]->reset();
       transactions[i]->set_epoch(cur_epoch);
-
+      transactions[i]->run_in_kiva = true;
       process_request();
       count++;
 

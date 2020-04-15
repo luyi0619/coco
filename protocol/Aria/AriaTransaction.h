@@ -26,6 +26,7 @@ public:
       : coordinator_id(coordinator_id), partition_id(partition_id),
         startTime(std::chrono::steady_clock::now()), partitioner(partitioner) {
     relevant = false;
+    run_in_kiva = false;
     reset();
   }
 
@@ -45,15 +46,16 @@ public:
     pendingResponses = 0;
     network_size.store(0);
 
+    n_active_coordinators = 0;
+
     clear_working_set();
 
     local_read.store(0);
-    saved_local_read = 0;
     remote_read.store(0);
-    saved_remote_read = 0;
   }
 
   void clear_working_set() {
+    execution_phase = false;
     operation.clear();
     readSet.clear();
     writeSet.clear();
@@ -100,6 +102,7 @@ public:
     readKey.set_value(&value);
 
     readKey.set_read_request_bit();
+    readKey.set_read_lock_bit();
 
     add_to_read_set(readKey);
   }
@@ -120,6 +123,7 @@ public:
     readKey.set_value(&value);
 
     readKey.set_read_request_bit();
+    readKey.set_write_lock_bit();
 
     add_to_read_set(readKey);
   }
@@ -206,6 +210,13 @@ public:
         }
 
         AriaRWKey &readKey = readSet[i];
+
+        if (partitioner.has_master_partition(readSet[i].get_partition_id())) {
+          local_read.fetch_add(1);
+        } else {
+          remote_read.fetch_add(1);
+        }
+
         aria_read_handler(readKey, id, i);
         readSet[i].clear_read_request_bit();
       }
@@ -268,16 +279,6 @@ public:
     };
   }
 
-  void save_read_count() {
-    saved_local_read = local_read.load();
-    saved_remote_read = remote_read.load();
-  }
-
-  void load_read_count() {
-    local_read.store(saved_local_read);
-    remote_read.store(saved_remote_read);
-  }
-
   void clear_execution_bit() {
     for (auto i = 0u; i < readSet.size(); i++) {
 
@@ -297,11 +298,10 @@ public:
 
   std::atomic<int32_t> network_size;
   std::atomic<int32_t> local_read, remote_read;
-  int32_t saved_local_read, saved_remote_read;
 
   bool abort_lock, abort_no_retry, abort_read_validation;
   bool distributed_transaction;
-  bool relevant;
+  bool relevant, run_in_kiva;
   bool execution_phase;
   bool waw, war, raw;
 
@@ -326,6 +326,7 @@ public:
 
   Partitioner &partitioner;
   std::vector<bool> active_coordinators;
+  std::size_t n_active_coordinators;
   Operation operation; // never used
   std::vector<AriaRWKey> readSet, writeSet;
 };
