@@ -26,13 +26,14 @@ public:
       : coordinator_id(coordinator_id), partition_id(partition_id),
         startTime(std::chrono::steady_clock::now()), partitioner(partitioner) {
     relevant = false;
-    run_in_kiva = false;
     reset();
   }
 
   virtual ~AriaTransaction() = default;
 
   void reset() {
+
+    run_in_kiva = false;
 
     abort_lock = false;
     abort_no_retry = false;
@@ -210,11 +211,12 @@ public:
         }
 
         AriaRWKey &readKey = readSet[i];
-
-        if (partitioner.has_master_partition(readSet[i].get_partition_id())) {
-          local_read.fetch_add(1);
-        } else {
-          remote_read.fetch_add(1);
+        if (readSet[i].get_local_index_read_bit() == false) {
+          if (partitioner.has_master_partition(readSet[i].get_partition_id())) {
+            local_read.fetch_add(1);
+          } else {
+            remote_read.fetch_add(1);
+          }
         }
 
         aria_read_handler(readKey, id, i);

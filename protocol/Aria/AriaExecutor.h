@@ -266,6 +266,7 @@ public:
     // if a transaction commit, continue
     // if a transaction is not relevant, continue,
     // otherwise, we analyse the read and write set.
+
     for (auto i = id; i < transactions.size(); i += context.worker_num) {
       // commit in kiva
       if (transactions[i]->abort_lock == false)
@@ -338,7 +339,8 @@ public:
         }
 
         grant_lock = true;
-        std::atomic<uint64_t> &tid = table->search_metadata(key);
+        std::atomic<uint64_t> &tid = *(readKey.get_tid());
+
         if (readKey.get_write_lock_bit()) {
           AriaHelper::write_lock(tid);
         } else if (readKey.get_read_lock_bit()) {
@@ -412,6 +414,7 @@ public:
         percentile.add(latency);
       } else if (result == TransactionResult::ABORT) {
         // non-active transactions, release lock
+        CHECK(false) << "never happens in aria.";
         protocol.calvin_abort(*transaction, lock_manager_id, n_lock_manager,
                               context.coordinator_num);
       } else {
