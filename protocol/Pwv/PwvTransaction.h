@@ -48,7 +48,7 @@ public:
 
   bool commit(std::size_t core_id) override {
     for (auto i = 0u; i < pieces.size(); i++) {
-      if (pieces[i]->piece_partition_id() == core_id) {
+      if (pieces[i]->piece_partition_id() % context.worker_num == core_id) {
         pieces[i]->execute();
       }
     }
@@ -100,14 +100,14 @@ public:
     // run reads
 
     for (auto k = 0u; k < keys_num; k++) {
-      if (pieces[k]->piece_partition_id() == core_id) {
+      if (pieces[k]->piece_partition_id() % context.worker_num == core_id) {
         pieces[k]->execute();
       }
     }
 
     // run writes
     for (auto k = keys_num; k < pieces.size(); k++) {
-      if (pieces[k]->piece_partition_id() == core_id) {
+      if (pieces[k]->piece_partition_id() % context.worker_num == core_id) {
 
         for (;;) {
           int rvp = commit_rvp.load();
@@ -168,14 +168,14 @@ public:
     // run stocks
     int k = 0;
     while (k < query.O_OL_CNT) {
-      if (pieces[k]->piece_partition_id() == core_id) {
+      if (pieces[k]->piece_partition_id() % context.worker_num == core_id) {
         pieces[k]->execute();
       }
       k++;
     }
 
     // run district
-    if (pieces[k]->piece_partition_id() == core_id) {
+    if (pieces[k]->piece_partition_id() % context.worker_num == core_id) {
 
       for (;;) {
         int rvp = commit_rvp.load();
@@ -192,7 +192,7 @@ public:
       pieces[k]->execute();
     }
 
-    if (pieces[k + 1]->piece_partition_id() == core_id) {
+    if (pieces[k + 1]->piece_partition_id() % context.worker_num == core_id) {
       // run order
 
       for (;;) {
@@ -246,7 +246,7 @@ public:
 
   bool commit(std::size_t core_id) override {
     for (auto i = 0u; i < pieces.size(); i++) {
-      if (pieces[i]->piece_partition_id() == core_id) {
+      if (pieces[i]->piece_partition_id() % context.worker_num == core_id) {
         pieces[i]->execute();
       }
     }

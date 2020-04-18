@@ -51,7 +51,7 @@ public:
     Encoder encoder(message.data);
     encoder << message_piece_header;
     encoder << v.size();
-    for (int i = 0; i < v.size(); i++) {
+    for (auto i = 0u; i < v.size(); i++) {
       encoder << v[i];
     }
     message.flush();
