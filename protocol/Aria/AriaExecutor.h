@@ -295,8 +295,6 @@ public:
   }
 
   void schedule_calvin_transactions() {
-
-    RandomType local_random(reinterpret_cast<uint64_t>(this));
     // grant locks, once all locks are acquired, assign the transaction to
     // a worker thread in a round-robin manner.
     std::size_t request_id = 0;
@@ -353,9 +351,8 @@ public:
         auto worker = get_available_worker(request_id++);
         all_executors[worker]->transaction_queue.push(transactions[i].get());
       }
-      // avoid double counting
-      if (local_random.uniform_dist(0, transactions[i]->n_active_coordinators -
-                                           1) == 0) {
+      // only count once
+      if (i % n_lock_manager == id) {
         n_commit.fetch_add(1);
       }
     }

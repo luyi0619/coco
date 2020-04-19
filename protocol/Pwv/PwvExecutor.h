@@ -104,7 +104,7 @@ public:
   void run_transactions() {
     for (auto i = 0u; i < transactions.size(); i++) {
       bool commit = transactions[i]->commit(id);
-      if (transactions[i]->partition_id == id) {
+      if (transactions[i]->partition_id % context.worker_num == id) {
         if (commit) {
           n_commit.fetch_add(1);
         } else {
