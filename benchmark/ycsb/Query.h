@@ -138,15 +138,63 @@ private:
     }
   }
 
+  void make_global_key_space_query(YCSBQuery<N> &query, const Context &context,
+                                   uint32_t partitionID, Random &random) const {
+    int readOnly = random.uniform_dist(1, 100);
+
+    for (auto i = 0u; i < N; i++) {
+      // read or write
+      if (readOnly <= context.readOnlyTransaction) {
+        query.UPDATE[i] = false;
+      } else {
+        int readOrWrite = random.uniform_dist(1, 100);
+        if (readOrWrite <= context.readWriteRatio) {
+          query.UPDATE[i] = false;
+        } else {
+          query.UPDATE[i] = true;
+        }
+      }
+
+      int32_t key;
+
+      bool retry;
+      do {
+        retry = false;
+
+        if (context.isUniform) {
+          key =
+              random.uniform_dist(0, static_cast<int>(context.keysPerPartition *
+                                                      context.partition_num) -
+                                         1);
+        } else {
+          key = Zipf::globalZipf().value(random.next_double());
+        }
+        query.Y_KEY[i] = key;
+
+        for (auto k = 0u; k < i; k++) {
+          if (query.Y_KEY[k] == query.Y_KEY[i]) {
+            retry = true;
+            break;
+          }
+        }
+      } while (retry);
+    }
+  }
+
 public:
   YCSBQuery<N> operator()(const Context &context, uint32_t partitionID,
                           Random &random) const {
 
     YCSBQuery<N> query;
-    if (context.two_partitions) {
-      make_two_partitions(query, context, partitionID, random);
+
+    if (context.global_key_space) {
+      make_global_key_space_query(query, context, partitionID, random);
     } else {
-      make_multi_partitions(query, context, partitionID, random);
+      if (context.two_partitions) {
+        make_two_partitions(query, context, partitionID, random);
+      } else {
+        make_multi_partitions(query, context, partitionID, random);
+      }
     }
     return query;
   }

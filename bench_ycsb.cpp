@@ -10,6 +10,7 @@ DEFINE_double(zipf, 0, "skew factor");
 DEFINE_string(skew_pattern, "both", "skew pattern: both, read, write");
 DEFINE_bool(two_partitions, false, "dist transactions access two partitions.");
 DEFINE_bool(pwv_ycsb_star, false, "ycsb keys dependency.");
+DEFINE_bool(global_key_space, false, "ycsb global key space.");
 
 int main(int argc, char *argv[]) {
 
@@ -36,10 +37,16 @@ int main(int argc, char *argv[]) {
   context.keysPerPartition = FLAGS_keys;
   context.two_partitions = FLAGS_two_partitions;
   context.pwv_ycsb_star = FLAGS_pwv_ycsb_star;
+  context.global_key_space = FLAGS_global_key_space;
 
   if (FLAGS_zipf > 0) {
     context.isUniform = false;
-    scar::Zipf::globalZipf().init(context.keysPerPartition, FLAGS_zipf);
+    if (context.global_key_space) {
+      scar::Zipf::globalZipf().init(
+          context.keysPerPartition * context.partition_num, FLAGS_zipf);
+    } else {
+      scar::Zipf::globalZipf().init(context.keysPerPartition, FLAGS_zipf);
+    }
   }
 
   scar::ycsb::Database db;

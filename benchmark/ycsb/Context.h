@@ -66,6 +66,7 @@ public:
 
   bool isUniform = true;
   bool two_partitions = false;
+  bool global_key_space = false;
 
   PartitionStrategy strategy = PartitionStrategy::ROUND_ROBIN;
 };
