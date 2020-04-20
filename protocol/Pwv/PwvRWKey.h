@@ -26,7 +26,7 @@ public:
   // partition id
 
   void set_partition_id(uint32_t partition_id) {
-    DCHECK(partition_id < (1 << 8));
+    DCHECK(partition_id < (1 << 16));
     clear_partition_id();
     bitvec |= partition_id << PARTITION_ID_OFFSET;
   }
@@ -53,7 +53,7 @@ private:
   /*
    * A bitvec is a 32-bit word.
    *
-   * [ table id (5) ] | partition id (8) | unused bit (19) ]
+   * [ table id (5) ] | partition id (16) | unused bit (11) ]
    *
    */
 
@@ -65,7 +65,7 @@ public:
   static constexpr uint32_t TABLE_ID_MASK = 0x1f;
   static constexpr uint32_t TABLE_ID_OFFSET = 27;
 
-  static constexpr uint32_t PARTITION_ID_MASK = 0xff;
-  static constexpr uint32_t PARTITION_ID_OFFSET = 19;
+  static constexpr uint32_t PARTITION_ID_MASK = 0xffff;
+  static constexpr uint32_t PARTITION_ID_OFFSET = 11;
 };
 } // namespace scar
