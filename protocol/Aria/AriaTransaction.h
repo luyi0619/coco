@@ -179,21 +179,13 @@ public:
           break;
         }
 
-        if (readSet[i].get_local_index_read_bit()) {
-          // this is a local index read
-          auto &readKey = readSet[i];
-          local_index_read_handler(readKey.get_table_id(),
-                                   readKey.get_partition_id(),
-                                   readKey.get_key(), readKey.get_value());
-        } else {
-
+        if (readSet[i].get_local_index_read_bit() == false) {
           if (partitioner.has_master_partition(readSet[i].get_partition_id())) {
             local_read.fetch_add(1);
           } else {
             remote_read.fetch_add(1);
           }
         }
-
         readSet[i].set_prepare_processed_bit();
       }
       return false;
@@ -234,7 +226,7 @@ public:
     // only read the keys with locks from the lock_manager_id
     process_requests = [this, n_lock_manager, n_worker,
                         replica_group_size](std::size_t worker_id) {
-      auto lock_manager_id = CalvinHelper::worker_id_to_lock_manager_id(
+      auto lock_manager_id = AriaHelper::worker_id_to_lock_manager_id(
           worker_id, n_lock_manager, n_worker);
 
       // cannot use unsigned type in reverse iteration
@@ -244,7 +236,7 @@ public:
           continue;
         }
 
-        if (CalvinHelper::partition_id_to_lock_manager_id(
+        if (AriaHelper::partition_id_to_lock_manager_id(
                 readSet[i].get_partition_id(), n_lock_manager,
                 replica_group_size) != lock_manager_id) {
           continue;

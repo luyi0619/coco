@@ -43,6 +43,7 @@ public:
   AriaExecutor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
                const ContextType &context,
                std::vector<std::unique_ptr<TransactionType>> &transactions,
+               std::vector<std::size_t> &partition_ids,
                std::vector<StorageType> &storages, std::atomic<uint32_t> &epoch,
                std::atomic<uint32_t> &lock_manager_status,
                std::atomic<uint32_t> &worker_status,
@@ -50,7 +51,8 @@ public:
                std::atomic<uint32_t> &n_complete_workers,
                std::atomic<uint32_t> &n_started_workers)
       : Worker(coordinator_id, id), db(db), context(context),
-        transactions(transactions), storages(storages), epoch(epoch),
+        transactions(transactions), partition_ids(partition_ids),
+        storages(storages), epoch(epoch),
         lock_manager_status(lock_manager_status), worker_status(worker_status),
         total_abort(total_abort), n_complete_workers(n_complete_workers),
         n_started_workers(n_started_workers),
@@ -164,14 +166,18 @@ public:
     }
   }
 
-  std::size_t get_partition_id(int coord) {
+  std::size_t get_partition_id() {
+
     std::size_t partition_id;
+
     CHECK(context.partition_num % context.coordinator_num == 0);
+
     auto partition_num_per_node =
         context.partition_num / context.coordinator_num;
     partition_id = random.uniform_dist(0, partition_num_per_node - 1) *
                        context.coordinator_num +
-                   coord;
+                   coordinator_id;
+    CHECK(partitioner->has_master_partition(partition_id));
     return partition_id;
   }
 
@@ -184,14 +190,15 @@ public:
     if (!context.same_batch || !init_transaction) {
       init_transaction = true;
       for (auto i = id; i < transactions.size(); i += context.worker_num) {
-        auto partition_id = get_partition_id(i % context.coordinator_num);
+        auto partition_id = get_partition_id();
+        partition_ids[i] = partition_id;
         transactions[i] =
             workload.next_transaction(context, partition_id, storages[i]);
         transactions[i]->set_id(i + 1); // tid starts from 1
         transactions[i]->set_tid_offset(i);
         transactions[i]->execution_phase = false;
-        setupHandlers(*transactions[i]);
         prepare_transaction(*transactions[i]);
+        setupHandlers(*transactions[i]);
         transactions[i]->setup_process_requests_in_execution_phase();
       }
     } else {
@@ -425,7 +432,7 @@ public:
    * Node A runs, 0, 2, 4, 6, 8, 10
    * Node B runs, 1, 3, 5, 7, 9, 11
    *
-   * The first thread on Node A runs 0, 6
+   * The first thread on Node A runs 0, 4
    * the second thread on Node A runs 2, 8
    */
 
@@ -434,9 +441,9 @@ public:
     auto cur_epoch = epoch.load();
     auto n_abort = total_abort.load();
     std::size_t count = 0;
-    for (auto i = id * context.coordinator_num + coordinator_id;
-         i < transactions.size();
-         i += context.worker_num * context.coordinator_num) {
+    for (auto i = id; i < transactions.size(); i += context.worker_num) {
+      if (partitioner->has_master_partition(partition_ids[i]) == false)
+        continue;
       transactions[i]->reset();
       transactions[i]->set_epoch(cur_epoch);
       transactions[i]->run_in_kiva = true;
@@ -458,9 +465,9 @@ public:
 
     // reserve
     count = 0;
-    for (auto i = id * context.coordinator_num + coordinator_id;
-         i < transactions.size();
-         i += context.worker_num * context.coordinator_num) {
+    for (auto i = id; i < transactions.size(); i += context.worker_num) {
+      if (partitioner->has_master_partition(partition_ids[i]) == false)
+        continue;
 
       if (transactions[i]->abort_no_retry) {
         continue;
@@ -608,9 +615,9 @@ public:
 
   void commit_transactions() {
     std::size_t count = 0;
-    for (auto i = id * context.coordinator_num + coordinator_id;
-         i < transactions.size();
-         i += context.worker_num * context.coordinator_num) {
+    for (auto i = id; i < transactions.size(); i += context.worker_num) {
+      if (partitioner->has_master_partition(partition_ids[i]) == false)
+        continue;
       if (transactions[i]->abort_no_retry) {
         continue;
       }
@@ -625,9 +632,9 @@ public:
     flush_messages();
 
     count = 0;
-    for (auto i = id * context.coordinator_num + coordinator_id;
-         i < transactions.size();
-         i += context.worker_num * context.coordinator_num) {
+    for (auto i = id; i < transactions.size(); i += context.worker_num) {
+      if (partitioner->has_master_partition(partition_ids[i]) == false)
+        continue;
       if (transactions[i]->abort_no_retry) {
         n_abort_no_retry.fetch_add(1);
         continue;
@@ -864,6 +871,7 @@ private:
   DatabaseType &db;
   const ContextType &context;
   std::vector<std::unique_ptr<TransactionType>> &transactions;
+  std::vector<std::size_t> &partition_ids;
   std::vector<StorageType> &storages;
   std::atomic<uint32_t> &epoch, &lock_manager_status, &worker_status,
       &total_abort;

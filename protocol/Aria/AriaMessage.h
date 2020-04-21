@@ -43,7 +43,6 @@ public:
     auto message_piece_header = MessagePiece::construct_message_piece_header(
         static_cast<uint32_t>(AriaMessage::SEARCH_REQUEST), message_size,
         table.tableID(), table.partitionID());
-
     Encoder encoder(message.data);
     encoder << message_piece_header;
     encoder.write_n_bytes(key, key_size);
@@ -506,6 +505,7 @@ public:
     v.push_back(check_request_handler);
     v.push_back(check_response_handler);
     v.push_back(write_request_handler);
+    v.push_back(calvin_read_request_handler);
     return v;
   }
 };

@@ -14,7 +14,7 @@ namespace scar {
 /*
  * Message header format
  *
- * | source node id (7=> 128) | dest node id (7=> 128) | worker id (8 => 256)
+ * | source node id (7 => 128) | dest node id (7 => 128) | worker id (8 => 256)
  * | count (15 => 2^15 = 32768) | length (27 => 2^27 = 134217728) |
  *
  * Note that, the header is included in the message size.
@@ -26,7 +26,7 @@ namespace scar {
  *
  * Message piece format
  *
- * | MessagePiece header (32 bits) | binary data |
+ * | MessagePiece header (64 bits) | binary data |
  *
  * It's the user's responsibility to call flush().
  * For each message, flush() can only be called once which increments the count
@@ -68,7 +68,7 @@ public:
     MessagePiece &operator*() { return messagePiece; }
 
   private:
-    uint32_t get_message_length(const char *ptr) {
+    uint64_t get_message_length(const char *ptr) {
       return MessagePiece::get_message_length(
           *reinterpret_cast<const MessagePiece::header_type *>(ptr));
     }

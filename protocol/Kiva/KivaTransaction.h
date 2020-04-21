@@ -174,10 +174,6 @@ public:
   bool execution_phase;
   bool waw, war, raw;
 
-  // table id, partition id, key, value
-  std::function<void(std::size_t, std::size_t, const void *, void *)>
-      local_index_read_handler;
-
   // read_key, id, key_offset
   std::function<void(KivaRWKey &, std::size_t, std::size_t)> readRequestHandler;
 

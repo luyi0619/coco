@@ -39,6 +39,7 @@ public:
 
     storages.resize(context.batch_size);
     transactions.resize(context.batch_size);
+    partition_ids.resize(context.batch_size);
   }
 
   void coordinator_start() override {
@@ -313,6 +314,7 @@ public:
   std::vector<std::shared_ptr<AriaExecutor<WorkloadType>>> workers;
   std::vector<StorageType> storages;
   std::vector<std::unique_ptr<TransactionType>> transactions;
+  std::vector<std::size_t> partition_ids;
   std::atomic<uint32_t> total_abort;
   std::vector<int> abort_tids;
 };
