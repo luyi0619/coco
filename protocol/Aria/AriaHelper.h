@@ -182,7 +182,6 @@ public:
 
   static uint64_t write_lock(std::atomic<uint64_t> &a) {
     uint64_t old_value, new_value;
-
     do {
       do {
         old_value = a.load();

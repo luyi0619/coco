@@ -167,17 +167,9 @@ public:
   }
 
   std::size_t get_partition_id() {
-
     std::size_t partition_id;
-
     CHECK(context.partition_num % context.coordinator_num == 0);
-
-    auto partition_num_per_node =
-        context.partition_num / context.coordinator_num;
-    partition_id = random.uniform_dist(0, partition_num_per_node - 1) *
-                       context.coordinator_num +
-                   coordinator_id;
-    CHECK(partitioner->has_master_partition(partition_id));
+    partition_id = random.uniform_dist(0, context.partition_num - 1);
     return partition_id;
   }
 
@@ -199,12 +191,14 @@ public:
         transactions[i]->execution_phase = false;
         prepare_transaction(*transactions[i]);
         setupHandlers(*transactions[i]);
+        transactions[i]->reset();
         transactions[i]->setup_process_requests_in_execution_phase();
       }
     } else {
       auto now = std::chrono::steady_clock::now();
       for (auto i = id; i < transactions.size(); i += context.worker_num) {
         transactions[i]->reset();
+        transactions[i]->setup_process_requests_in_execution_phase();
         transactions[i]->startTime = now;
       }
     }
@@ -231,7 +225,14 @@ public:
         continue;
       }
       auto partitionID = readkey.get_partition_id();
-      if (partitioner->master_coordinator(partitionID) == coordinator_id) {
+      if (partitioner->has_master_partition(partitionID)) {
+        if (readSet[i].get_tid() == nullptr) {
+          auto table = db.find_table(readSet[i].get_table_id(),
+                                     readSet[i].get_partition_id());
+          std::atomic<uint64_t> &tid =
+              AriaHelper::get_metadata(table, readSet[i]);
+          readSet[i].set_tid(&tid);
+        }
         readSet[i].get_tid()->store(0);
       }
     }
@@ -284,15 +285,17 @@ public:
       if (transactions[i]->relevant == false)
         continue;
 
-      // LOG(INFO) << "rerun " << transactions[i]->id << " in calvin.";
-
       if (transactions[i]->run_in_kiva == false) {
         // read & write set are not ready
+        bool abort = transactions[i]->abort_lock;
+        transactions[i]->reset();
+        transactions[i]->abort_lock = abort;
         transactions[i]->setup_process_requests_in_prepare_phase();
         transactions[i]->execute(id);
       }
 
       clear_metadata(*transactions[i]);
+
       analyze_transaction(*transactions[i]);
       // setup handlers for execution
       transactions[i]->setup_process_requests_in_fallback_phase(
@@ -410,7 +413,6 @@ public:
       if (result == TransactionResult::READY_TO_COMMIT) {
         protocol.calvin_commit(*transaction, lock_manager_id, n_lock_manager,
                                context.coordinator_num);
-        // LOG(INFO) << "commit " << transaction->id << " in calvin";
         auto latency =
             std::chrono::duration_cast<std::chrono::microseconds>(
                 std::chrono::steady_clock::now() - transaction->startTime)
@@ -444,7 +446,6 @@ public:
     for (auto i = id; i < transactions.size(); i += context.worker_num) {
       if (partitioner->has_master_partition(partition_ids[i]) == false)
         continue;
-      transactions[i]->reset();
       transactions[i]->set_epoch(cur_epoch);
       transactions[i]->run_in_kiva = true;
       process_request();

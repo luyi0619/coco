@@ -483,11 +483,14 @@ public:
     StringPiece stringPiece = inputPiece.toStringPiece();
     Decoder dec(stringPiece);
     dec >> tid >> key_offset;
-    DCHECK(tid < txns.size());
-    DCHECK(key_offset < txns[tid]->readSet.size());
-    AriaRWKey &readKey = txns[tid]->readSet[key_offset];
+
+    DCHECK(tid - 1 < txns.size());
+    DCHECK(key_offset < txns[tid - 1]->readSet.size())
+        << key_offset << " " << tid;
+    AriaRWKey &readKey = txns[tid - 1]->readSet[key_offset];
     dec.read_n_bytes(readKey.get_value(), value_size);
-    txns[tid]->remote_read.fetch_add(-1);
+
+    txns[tid - 1]->remote_read.fetch_add(-1);
   }
 
   static std::vector<

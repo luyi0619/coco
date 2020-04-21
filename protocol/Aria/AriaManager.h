@@ -35,7 +35,9 @@ public:
 
   AriaManager(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
               const ContextType &context, std::atomic<bool> &stopFlag)
-      : base_type(coordinator_id, id, context, stopFlag), db(db), epoch(0) {
+      : base_type(coordinator_id, id, context, stopFlag), db(db), epoch(0),
+        partitioner(PartitionerFactory::create_partitioner(
+            context.partitioner, coordinator_id, context.coordinator_num)) {
 
     storages.resize(context.batch_size);
     transactions.resize(context.batch_size);
@@ -205,16 +207,11 @@ public:
     }
   }
 
-  /*
-   * Assume there are 2 nodes and each node has 3 threads.
-   * Node A runs, 0, 2, 4, 6, 8, 10
-   * Node B runs, 1, 3, 5, 7, 9, 11
-   */
-
   void cleanup_batch() {
     abort_tids.clear();
-    for (auto i = coordinator_id; i < transactions.size();
-         i += context.coordinator_num) {
+    for (auto i = 0; i < transactions.size(); i++) {
+      if (partitioner->has_master_partition(partition_ids[i]) == false)
+        continue;
       if (transactions[i]->abort_lock) {
         abort_tids.push_back(transactions[i]->id);
       }
@@ -312,6 +309,7 @@ public:
   std::atomic<uint32_t> epoch;
   std::atomic<uint32_t> lock_manager_status;
   std::vector<std::shared_ptr<AriaExecutor<WorkloadType>>> workers;
+  std::unique_ptr<Partitioner> partitioner;
   std::vector<StorageType> storages;
   std::vector<std::unique_ptr<TransactionType>> transactions;
   std::vector<std::size_t> partition_ids;
