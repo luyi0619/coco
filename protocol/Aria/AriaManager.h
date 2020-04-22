@@ -209,7 +209,7 @@ public:
 
   void cleanup_batch() {
     abort_tids.clear();
-    for (auto i = 0; i < transactions.size(); i++) {
+    for (auto i = 0u; i < transactions.size(); i++) {
       if (partitioner->has_master_partition(partition_ids[i]) == false)
         continue;
       if (transactions[i]->abort_lock) {

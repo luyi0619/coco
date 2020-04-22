@@ -418,12 +418,7 @@ public:
                 std::chrono::steady_clock::now() - transaction->startTime)
                 .count();
         percentile.add(latency);
-      } else if (result == TransactionResult::ABORT) {
-        // non-active transactions, release lock
-        CHECK(false) << "never happens in aria.";
-        protocol.calvin_abort(*transaction, lock_manager_id, n_lock_manager,
-                              context.coordinator_num);
-      } else {
+      } else if (result == TransactionResult::ABORT_NORETRY) {
         CHECK(false) << "abort no retry transaction should not be scheduled.";
       }
     }
