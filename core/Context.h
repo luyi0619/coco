@@ -70,6 +70,9 @@ public:
   bool kiva_reordering_optmization = true;
   bool kiva_snapshot_isolation = false;
 
+  std::size_t barrier_artificial_delay_ms = 0;
+  std::size_t barrier_delayed_percent = 0; // out of 1K
+
   std::size_t aria_lock_manager;
 
   bool pwv_ycsb_star = false;

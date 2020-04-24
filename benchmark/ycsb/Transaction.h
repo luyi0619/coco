@@ -10,6 +10,7 @@
 #include "benchmark/ycsb/Query.h"
 #include "benchmark/ycsb/Schema.h"
 #include "benchmark/ycsb/Storage.h"
+#include "common/FastSleep.h"
 #include "common/Operation.h"
 #include "core/Defs.h"
 #include "core/Partitioner.h"
@@ -91,6 +92,19 @@ public:
 
         this->update(ycsbTableID, context.getPartitionID(key),
                      storage.ycsb_keys[i], storage.ycsb_values[i]);
+      }
+    }
+
+    if (this->execution_phase) {
+      // if context.barrier_artificial_delay_ms > 0, then we delay
+      // make sure context.barrier_artificial_delay_ms *
+      // (context.barrier_delayed_percent / 1K) is a constant in
+      // experiments
+      if (context.barrier_artificial_delay_ms > 0) {
+        uint64_t x = random.uniform_dist(1, 1000);
+        if (x <= context.barrier_delayed_percent) {
+          FastSleep::sleep_for(context.barrier_artificial_delay_ms);
+        }
       }
     }
 

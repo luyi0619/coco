@@ -48,6 +48,10 @@ DEFINE_bool(bohm_local, false, "locality optimization for Bohm.");
 DEFINE_bool(bohm_single_spin, false, "spin optimization for Bohm.");
 DEFINE_int32(aria_lock_manager, 0,
              "# of lock manager in aria's fallback mode.");
+DEFINE_int32(barrier_artificial_delay_ms, 0,
+             "artificial delay (ms) in barrier exp.");
+DEFINE_int32(barrier_delayed_percent, 0,
+             "percentage of transactions that have delay (out of 1 million).");
 
 #define SETUP_CONTEXT(context)                                                 \
   boost::algorithm::split(context.peers, FLAGS_servers,                        \
@@ -89,6 +93,8 @@ DEFINE_int32(aria_lock_manager, 0,
   context.bohm_local = FLAGS_bohm_local;                                       \
   context.bohm_single_spin = FLAGS_bohm_single_spin;                           \
   context.aria_lock_manager = FLAGS_aria_lock_manager;                         \
+  context.barrier_artificial_delay_ms = FLAGS_barrier_artificial_delay_ms;     \
+  context.barrier_delayed_percent = FLAGS_barrier_delayed_percent;             \
   CHECK(context.coordinator_num == 1 || context.bohm_single_spin == false)     \
       << "bohm_single_spin must be used in single-node mode.";                 \
   CHECK((context.mvcc ^ (context.protocol == "Bohm")) == 0)                    \
