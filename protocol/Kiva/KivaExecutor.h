@@ -67,6 +67,8 @@ public:
     }
 
     messageHandlers = MessageHandlerType::get_message_handlers();
+
+    snapshot = exec = reserve = commit = 0;
   }
 
   ~KivaExecutor() = default;
@@ -82,7 +84,9 @@ public:
         status = static_cast<ExecutorStatus>(worker_status.load());
 
         if (status == ExecutorStatus::EXIT) {
-          LOG(INFO) << "KivaExecutor " << id << " exits. ";
+          LOG(INFO) << "KivaExecutor " << id << " exit. snapshot: " << snapshot
+                    << " exec: " << exec << " reserve: " << reserve
+                    << " commit: " << commit;
           return;
         }
       } while (status != ExecutorStatus::Kiva_READ);
@@ -133,6 +137,7 @@ public:
 
   void read_snapshot() {
     // load epoch
+    auto t1 = std::chrono::steady_clock::now();
     auto cur_epoch = epoch.load();
     auto n_abort = total_abort.load();
     std::size_t count = 0;
@@ -172,7 +177,7 @@ public:
       }
     }
     flush_messages();
-
+    snapshot += (std::chrono::steady_clock::now() - t1).count();
     // reserve
     count = 0;
     for (auto i = id; i < transactions.size(); i += context.worker_num) {
@@ -190,10 +195,14 @@ public:
 
       transactions[i]->execution_phase = true;
       // fill in writes in write set
-      transactions[i]->execute(id);
 
+      auto t2 = std::chrono::steady_clock::now();
+      transactions[i]->execute(id);
+      auto t3 = std::chrono::steady_clock::now();
+      exec += (t3 - t2).count();
       // start reservation
       reserve_transaction(*transactions[i]);
+      reserve += (std::chrono::steady_clock::now() - t3).count();
       if (count % context.batch_flush == 0) {
         flush_messages();
       }
@@ -322,6 +331,7 @@ public:
   }
 
   void commit_transactions() {
+    auto t1 = std::chrono::steady_clock::now();
     std::size_t count = 0;
     for (auto i = id; i < transactions.size(); i += context.worker_num) {
       if (transactions[i]->abort_no_retry) {
@@ -412,6 +422,8 @@ public:
       }
     }
     flush_messages();
+
+    commit += (std::chrono::steady_clock::now() - t1).count();
   }
 
   void setupHandlers(TransactionType &txn) {
@@ -552,5 +564,6 @@ private:
                          std::vector<std::unique_ptr<TransactionType>> &)>>
       messageHandlers;
   LockfreeQueue<Message *> in_queue, out_queue;
+  uint64_t snapshot, exec, reserve, commit;
 };
 } // namespace scar
