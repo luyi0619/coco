@@ -67,6 +67,8 @@ public:
 
     messageHandlers = MessageHandlerType::get_message_handlers();
     CHECK(n_workers > 0 && n_workers % n_lock_manager == 0);
+
+    t_gen = t_sched = t_exec = t_spin = 0;
   }
 
   ~CalvinExecutor() = default;
@@ -81,7 +83,9 @@ public:
         status = static_cast<ExecutorStatus>(worker_status.load());
 
         if (status == ExecutorStatus::EXIT) {
-          LOG(INFO) << "CalvinExecutor " << id << " exits. ";
+          LOG(INFO) << "CalvinExecutor " << id << " exits. t_gen: " << t_gen
+                    << " t_sched: " << t_sched << " t_exec: " << t_exec
+                    << " t_spin: " << t_spin;
           return;
         }
       } while (status != ExecutorStatus::Analysis);
@@ -174,6 +178,7 @@ public:
   }
 
   void generate_transactions() {
+    auto now = std::chrono::steady_clock::now();
     if (!context.same_batch || !init_transaction) {
       init_transaction = true;
       for (auto i = id; i < transactions.size(); i += context.worker_num) {
@@ -194,6 +199,7 @@ public:
         transactions[i]->startTime = now;
       }
     }
+    t_gen += (std::chrono::steady_clock::now() - now).count();
   }
 
   void prepare_transaction(TransactionType &txn) {
@@ -243,6 +249,9 @@ public:
 
     std::size_t request_id = 0;
 
+    auto now = std::chrono::steady_clock::now();
+    uint64_t spin_total = 0;
+
     for (auto i = 0u; i < transactions.size(); i++) {
       // do not grant locks to abort no retry transaction
       if (!transactions[i]->abort_no_retry) {
@@ -272,6 +281,8 @@ public:
 
           grant_lock = true;
           std::atomic<uint64_t> &tid = table->search_metadata(key);
+          auto t = std::chrono::steady_clock::now();
+
           if (readKey.get_write_lock_bit()) {
             CalvinHelper::write_lock(tid);
           } else if (readKey.get_read_lock_bit()) {
@@ -279,6 +290,8 @@ public:
           } else {
             CHECK(false);
           }
+
+          spin_total += (std::chrono::steady_clock::now() - t).count();
         }
         if (grant_lock) {
           auto worker = get_available_worker(request_id++);
@@ -296,9 +309,15 @@ public:
       }
     }
     set_lock_manager_bit(id);
+
+    t_sched += (std::chrono::steady_clock::now() - now).count() - spin_total;
+    t_spin += spin_total;
   }
 
   void run_transactions() {
+
+    auto now = std::chrono::steady_clock::now();
+    uint64_t exec_total = 0;
 
     while (!get_lock_manager_bit(lock_manager_id) ||
            !transaction_queue.empty()) {
@@ -307,6 +326,7 @@ public:
         process_request();
         continue;
       }
+      auto t = std::chrono::steady_clock::now();
 
       TransactionType *transaction = transaction_queue.front();
       bool ok = transaction_queue.pop();
@@ -329,7 +349,12 @@ public:
       } else {
         CHECK(false) << "abort no retry transaction should not be scheduled.";
       }
+
+      exec_total += (std::chrono::steady_clock::now() - t).count();
     }
+
+    t_spin += (std::chrono::steady_clock::now() - now).count() - exec_total;
+    t_exec += exec_total;
   }
 
   void setup_execute_handlers(TransactionType &txn) {
@@ -457,5 +482,6 @@ private:
   LockfreeQueue<Message *> in_queue, out_queue;
   LockfreeQueue<TransactionType *> transaction_queue;
   std::vector<CalvinExecutor *> all_executors;
+  uint64_t t_gen, t_sched, t_exec, t_spin;
 };
 } // namespace scar
