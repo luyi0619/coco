@@ -13,6 +13,8 @@ class PwvTransaction {
 public:
   PwvTransaction(std::size_t partition_id) : partition_id(partition_id) {}
 
+  void set_spin_counter(uint64_t *t_spin) { this->t_spin = t_spin; }
+
   virtual ~PwvTransaction() = default;
 
   virtual void build_pieces() = 0;
@@ -22,6 +24,7 @@ public:
 public:
   std::size_t partition_id;
   std::vector<std::unique_ptr<PwvStatement>> pieces;
+  uint64_t *t_spin;
 };
 
 class PwvYCSBTransaction : public PwvTransaction {
@@ -105,6 +108,8 @@ public:
       }
     }
 
+    auto now = std::chrono::steady_clock::now();
+    uint64_t total = 0;
     // run writes
     for (auto k = keys_num; k < pieces.size(); k++) {
       if (pieces[k]->piece_partition_id() % context.worker_num == core_id) {
@@ -116,10 +121,13 @@ public:
           }
           std::this_thread::yield();
         }
-
+        auto t1 = std::chrono::steady_clock::now();
         pieces[k]->execute();
+        auto t2 = std::chrono::steady_clock::now();
+        total += (t2 - t1).count();
       }
     }
+    *t_spin += (std::chrono::steady_clock::now() - now).count() - total;
     return true;
   }
 

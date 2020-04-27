@@ -40,7 +40,10 @@ public:
         n_started_workers(n_started_workers), workload(db, random),
         init_transaction(false),
         random(id), // make sure each worker has a different seed.
-        sleep_random(reinterpret_cast<uint64_t>(this)) {}
+        sleep_random(reinterpret_cast<uint64_t>(this)) {
+
+    t_gen = t_piece = t_spin = t_exec = 0;
+  }
 
   ~PwvExecutor() = default;
 
@@ -55,7 +58,9 @@ public:
         status = static_cast<ExecutorStatus>(worker_status.load());
 
         if (status == ExecutorStatus::EXIT) {
-          LOG(INFO) << "PwvExecutor" << id << " exits. ";
+          LOG(INFO) << "PwvExecutor" << id << " exits. t_gen: " << t_gen
+                    << " t_piece: " << t_piece << " t_spin: " << t_spin
+                    << " t_exec: " << t_exec;
           return;
         }
       } while (status != ExecutorStatus::Pwv_Analysis);
@@ -92,16 +97,22 @@ public:
   Message *pop_message() override { return nullptr; }
 
   void generate_transactions() {
+    auto now = std::chrono::steady_clock::now();
     for (auto i = id; i < transactions.size(); i += context.worker_num) {
       auto partition_id = random.uniform_dist(0, context.partition_num - 1);
       transactions[i] =
           workload.next_transaction(context, partition_id, storages[i]);
+      auto t1 = std::chrono::steady_clock::now();
       transactions[i]->build_pieces();
+      t_piece += (std::chrono::steady_clock::now() - t1).count();
+      transactions[i]->set_spin_counter(&t_spin);
     }
     init_transaction = true;
+    t_gen += (std::chrono::steady_clock::now() - now).count();
   }
 
   void run_transactions() {
+    auto now = std::chrono::steady_clock::now();
     for (auto i = 0u; i < transactions.size(); i++) {
       bool commit = transactions[i]->commit(id);
       if (transactions[i]->partition_id % context.worker_num == id) {
@@ -112,6 +123,7 @@ public:
         }
       }
     }
+    t_exec += (std::chrono::steady_clock::now() - now).count();
   }
 
 private:
@@ -125,5 +137,6 @@ private:
   bool init_transaction;
   RandomType random, sleep_random;
   Percentile<int64_t> percentile;
+  uint64_t t_gen, t_piece, t_spin, t_exec;
 };
 } // namespace scar
