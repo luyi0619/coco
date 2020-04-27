@@ -58,6 +58,8 @@ public:
       init_message(messages[i].get(), i);
     }
     messageHandlers = MessageHandlerType::get_message_handlers();
+
+    t_generate = t_insert = t_exec = t_spin = t_gc = 0;
   }
 
   ~BohmExecutor() = default;
@@ -73,7 +75,10 @@ public:
         status = static_cast<ExecutorStatus>(worker_status.load());
 
         if (status == ExecutorStatus::EXIT) {
-          LOG(INFO) << "BohmExecutor " << id << " exits. ";
+          LOG(INFO) << "BohmExecutor " << id
+                    << " exits. t_generate: " << t_generate
+                    << " t_insert: " << t_insert << " t_exec: " << t_exec
+                    << " t_spin: " << t_spin << " t_gc: " << t_gc;
           return;
         }
       } while (status != ExecutorStatus::Bohm_Analysis);
@@ -171,6 +176,7 @@ public:
   }
 
   void generate_transactions() {
+    auto now = std::chrono::steady_clock::now();
     uint32_t cur_epoch = epoch.load();
     for (auto i = id; i < transactions.size(); i += context.worker_num) {
       if (!context.same_batch || !init_transaction) {
@@ -188,6 +194,7 @@ public:
       transactions[i]->set_id(epoch, i);
     }
     init_transaction = true;
+    t_generate += (std::chrono::steady_clock::now() - now).count();
   }
 
   void prepare_transaction(TransactionType &txn) {
@@ -240,14 +247,20 @@ public:
         std::atomic<uint64_t> &placeholder = *std::get<0>(row);
 
         if (context.bohm_single_spin) {
+          auto now = std::chrono::steady_clock::now();
+          decltype(now) t1, t2;
           for (;;) {
             bool success = BohmHelper::is_placeholder_ready(placeholder);
             if (success) {
+              t1 = std::chrono::steady_clock::now();
               BohmHelper::read(row, value, table->value_size());
               readKey.clear_read_request_bit();
+              t2 = std::chrono::steady_clock::now();
               break;
             }
           }
+          t_spin += (std::chrono::steady_clock::now() - now).count() -
+                    (t2 - t1).count();
         } else {
           bool success = BohmHelper::is_placeholder_ready(placeholder);
           if (success) {
@@ -273,6 +286,7 @@ public:
   };
 
   void insert_write_sets() {
+    auto now = std::chrono::steady_clock::now();
     for (auto i = 0u; i < transactions.size(); i++) {
       if (transactions[i]->abort_no_retry) {
         continue;
@@ -295,6 +309,7 @@ public:
         }
       }
     }
+    t_insert += (std::chrono::steady_clock::now() - now).count();
   }
 
   void run_transactions() {
@@ -333,6 +348,7 @@ public:
       flush_messages();
     };
 
+    auto now = std::chrono::steady_clock::now();
     if (context.bohm_local) {
       for (auto i = id; i < transactions.size(); i += context.worker_num) {
         if (!partitioner.has_master_partition(transactions[i]->partition_id)) {
@@ -347,9 +363,11 @@ public:
         run_transaction(transactions[i].get());
       }
     }
+    t_exec += (std::chrono::steady_clock::now() - now).count();
   }
 
   void garbage_collect() {
+    auto now = std::chrono::steady_clock::now();
     for (auto i = id; i < transactions.size(); i += context.worker_num) {
       TransactionType &t = *transactions[i].get();
       std::vector<BohmRWKey> &writeSet = t.writeSet;
@@ -364,6 +382,7 @@ public:
         }
       }
     }
+    t_gc += (std::chrono::steady_clock::now() - now).count();
   }
 
   std::size_t process_request() {
@@ -414,5 +433,6 @@ private:
                          std::vector<std::unique_ptr<TransactionType>> &)>>
       messageHandlers;
   LockfreeQueue<Message *> in_queue, out_queue;
+  uint64_t t_generate, t_insert, t_exec, t_spin, t_gc;
 };
 } // namespace scar
