@@ -179,8 +179,8 @@ public:
    * */
 
   void generate_transactions() {
-    if (!context.same_batch || !init_transaction) {
-      init_transaction = true;
+    // single node
+    if (context.coordinator_num == 1) {
       for (auto i = id; i < transactions.size(); i += context.worker_num) {
         auto partition_id = get_partition_id();
         partition_ids[i] = partition_id;
@@ -189,19 +189,34 @@ public:
         transactions[i]->set_id(i + 1); // tid starts from 1
         transactions[i]->set_tid_offset(i);
         transactions[i]->execution_phase = false;
-        prepare_transaction(*transactions[i]);
         setupHandlers(*transactions[i]);
-        transactions[i]->reset();
         transactions[i]->setup_process_requests_in_execution_phase();
       }
     } else {
-      auto now = std::chrono::steady_clock::now();
-      for (auto i = id; i < transactions.size(); i += context.worker_num) {
-        transactions[i]->reset();
-        transactions[i]->setup_process_requests_in_execution_phase();
-        transactions[i]->startTime = now;
+      if (!init_transaction) {
+        for (auto i = id; i < transactions.size(); i += context.worker_num) {
+          auto partition_id = get_partition_id();
+          partition_ids[i] = partition_id;
+          transactions[i] =
+              workload.next_transaction(context, partition_id, storages[i]);
+          transactions[i]->set_id(i + 1); // tid starts from 1
+          transactions[i]->set_tid_offset(i);
+          transactions[i]->execution_phase = false;
+          prepare_transaction(*transactions[i]);
+          setupHandlers(*transactions[i]);
+          transactions[i]->reset();
+          transactions[i]->setup_process_requests_in_execution_phase();
+        }
+      } else {
+        auto now = std::chrono::steady_clock::now();
+        for (auto i = id; i < transactions.size(); i += context.worker_num) {
+          transactions[i]->reset();
+          transactions[i]->setup_process_requests_in_execution_phase();
+          transactions[i]->startTime = now;
+        }
       }
     }
+    init_transaction = true;
   }
 
   void prepare_transaction(TransactionType &txn) {
