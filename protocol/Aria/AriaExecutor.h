@@ -190,6 +190,7 @@ public:
         transactions[i]->set_tid_offset(i);
         transactions[i]->execution_phase = false;
         setupHandlers(*transactions[i]);
+        transactions[i]->relevant = true;
         transactions[i]->setup_process_requests_in_execution_phase();
       }
     } else {
