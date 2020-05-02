@@ -434,7 +434,10 @@ public:
                 std::chrono::steady_clock::now() - transaction->startTime)
                 .count();
         percentile.add(latency);
-      } else if (result == TransactionResult::ABORT_NORETRY) {
+      } else if (result == TransactionResult::ABORT) {
+        protocol.calvin_abort(*transaction, lock_manager_id, n_lock_manager,
+                              context.coordinator_num);
+      } else {
         CHECK(false) << "abort no retry transaction should not be scheduled.";
       }
     }
