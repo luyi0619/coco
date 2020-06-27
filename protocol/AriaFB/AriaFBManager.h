@@ -6,10 +6,10 @@
 
 #include "core/Manager.h"
 #include "core/Partitioner.h"
-#include "protocol/Aria/Aria.h"
-#include "protocol/Aria/AriaExecutor.h"
-#include "protocol/Aria/AriaHelper.h"
-#include "protocol/Aria/AriaTransaction.h"
+#include "protocol/AriaFB/AriaFB.h"
+#include "protocol/AriaFB/AriaFBExecutor.h"
+#include "protocol/AriaFB/AriaFBHelper.h"
+#include "protocol/AriaFB/AriaFBTransaction.h"
 
 #include <atomic>
 #include <thread>
@@ -18,7 +18,7 @@
 
 namespace scar {
 
-template <class Workload> class AriaManager : public scar::Manager {
+template <class Workload> class AriaFBManager : public scar::Manager {
 public:
   using base_type = scar::Manager;
 
@@ -26,15 +26,15 @@ public:
   using DatabaseType = typename WorkloadType::DatabaseType;
   using StorageType = typename WorkloadType::StorageType;
 
-  using TransactionType = AriaTransaction;
+  using TransactionType = AriaFBTransaction;
   static_assert(std::is_same<typename WorkloadType::TransactionType,
                              TransactionType>::value,
                 "Transaction types do not match.");
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
 
-  AriaManager(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
-              const ContextType &context, std::atomic<bool> &stopFlag)
+  AriaFBManager(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
+                const ContextType &context, std::atomic<bool> &stopFlag)
       : base_type(coordinator_id, id, context, stopFlag), db(db), epoch(0),
         partitioner(PartitionerFactory::create_partitioner(
             context.partitioner, coordinator_id, context.coordinator_num)) {
@@ -61,7 +61,7 @@ public:
       // LOG(INFO) << "Seed: " << random.get_seed();
       n_started_workers.store(0);
       n_completed_workers.store(0);
-      signal_worker(ExecutorStatus::Aria_READ);
+      signal_worker(ExecutorStatus::AriaFB_READ);
       wait_all_workers_start();
       wait_all_workers_finish();
       broadcast_stop();
@@ -69,13 +69,13 @@ public:
       n_completed_workers.store(0);
       set_worker_status(ExecutorStatus::STOP);
       wait_all_workers_finish();
-      // wait for all machines until they finish the Aria_READ phase.
+      // wait for all machines until they finish the AriaFB_READ phase.
       wait4_ack();
 
       // Allow each worker to commit transactions
       n_started_workers.store(0);
       n_completed_workers.store(0);
-      signal_worker(ExecutorStatus::Aria_COMMIT);
+      signal_worker(ExecutorStatus::AriaFB_COMMIT);
       wait_all_workers_start();
       wait_all_workers_finish();
       broadcast_stop();
@@ -86,7 +86,7 @@ public:
 
       // clean batch now
       cleanup_batch();
-      // wait for all machines until they finish the Aria_COMMIT phase.
+      // wait for all machines until they finish the AriaFB_COMMIT phase.
       // this can be skipped
       // wait4_ack();
       wait4_abort_tids_from_non_master();
@@ -95,7 +95,7 @@ public:
       // prepare transactions for calvin and clear the metadata
       n_started_workers.store(0);
       n_completed_workers.store(0);
-      signal_worker(ExecutorStatus::Aria_Fallback_Prepare);
+      signal_worker(ExecutorStatus::AriaFB_Fallback_Prepare);
       wait_all_workers_start();
       wait_all_workers_finish();
       broadcast_stop();
@@ -103,14 +103,14 @@ public:
       n_completed_workers.store(0);
       set_worker_status(ExecutorStatus::STOP);
       wait_all_workers_finish();
-      // wait for all machines until they finish the Aria_COMMIT phase.
+      // wait for all machines until they finish the AriaFB_COMMIT phase.
       wait4_ack();
 
       // calvin execution
       n_started_workers.store(0);
       n_completed_workers.store(0);
       clear_lock_manager_status();
-      signal_worker(ExecutorStatus::Aria_Fallback);
+      signal_worker(ExecutorStatus::AriaFB_Fallback);
       wait_all_workers_start();
       wait_all_workers_finish();
       broadcast_stop();
@@ -118,7 +118,7 @@ public:
       n_completed_workers.store(0);
       set_worker_status(ExecutorStatus::STOP);
       wait_all_workers_finish();
-      // wait for all machines until they finish the Aria_COMMIT phase.
+      // wait for all machines until they finish the AriaFB_COMMIT phase.
       wait4_ack();
     }
     signal_worker(ExecutorStatus::EXIT);
@@ -137,7 +137,7 @@ public:
         break;
       }
 
-      DCHECK(status == ExecutorStatus::Aria_READ);
+      DCHECK(status == ExecutorStatus::AriaFB_READ);
       // the coordinator on each machine first moves the aborted transactions
       // from the last batch earlier to the next batch and set remaining
       // transaction slots to null.
@@ -146,7 +146,7 @@ public:
 
       n_started_workers.store(0);
       n_completed_workers.store(0);
-      set_worker_status(ExecutorStatus::Aria_READ);
+      set_worker_status(ExecutorStatus::AriaFB_READ);
       wait_all_workers_start();
       wait_all_workers_finish();
       broadcast_stop();
@@ -157,10 +157,10 @@ public:
       send_ack();
 
       status = wait4_signal();
-      DCHECK(status == ExecutorStatus::Aria_COMMIT);
+      DCHECK(status == ExecutorStatus::AriaFB_COMMIT);
       n_started_workers.store(0);
       n_completed_workers.store(0);
-      set_worker_status(ExecutorStatus::Aria_COMMIT);
+      set_worker_status(ExecutorStatus::AriaFB_COMMIT);
       wait_all_workers_start();
       wait_all_workers_finish();
       broadcast_stop();
@@ -177,10 +177,10 @@ public:
       wait4_abort_tids_from_master();
 
       status = wait4_signal();
-      DCHECK(status == ExecutorStatus::Aria_Fallback_Prepare);
+      DCHECK(status == ExecutorStatus::AriaFB_Fallback_Prepare);
       n_started_workers.store(0);
       n_completed_workers.store(0);
-      set_worker_status(ExecutorStatus::Aria_Fallback_Prepare);
+      set_worker_status(ExecutorStatus::AriaFB_Fallback_Prepare);
       wait_all_workers_start();
       wait_all_workers_finish();
       broadcast_stop();
@@ -191,11 +191,11 @@ public:
       send_ack();
 
       status = wait4_signal();
-      DCHECK(status == ExecutorStatus::Aria_Fallback);
+      DCHECK(status == ExecutorStatus::AriaFB_Fallback);
       n_started_workers.store(0);
       n_completed_workers.store(0);
       clear_lock_manager_status();
-      set_worker_status(ExecutorStatus::Aria_Fallback);
+      set_worker_status(ExecutorStatus::AriaFB_Fallback);
       wait_all_workers_start();
       wait_all_workers_finish();
       broadcast_stop();
@@ -295,7 +295,7 @@ public:
     }
   }
 
-  void add_worker(const std::shared_ptr<AriaExecutor<WorkloadType>>
+  void add_worker(const std::shared_ptr<AriaFBExecutor<WorkloadType>>
 
                       &w) {
     workers.push_back(w);
@@ -308,7 +308,7 @@ public:
   DatabaseType &db;
   std::atomic<uint32_t> epoch;
   std::atomic<uint32_t> lock_manager_status;
-  std::vector<std::shared_ptr<AriaExecutor<WorkloadType>>> workers;
+  std::vector<std::shared_ptr<AriaFBExecutor<WorkloadType>>> workers;
   std::unique_ptr<Partitioner> partitioner;
   std::vector<StorageType> storages;
   std::vector<std::unique_ptr<TransactionType>> transactions;

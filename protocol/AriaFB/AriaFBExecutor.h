@@ -11,22 +11,22 @@
 #include "core/Worker.h"
 #include "glog/logging.h"
 
-#include "protocol/Aria/Aria.h"
-#include "protocol/Aria/AriaHelper.h"
-#include "protocol/Aria/AriaMessage.h"
+#include "protocol/AriaFB/AriaFB.h"
+#include "protocol/AriaFB/AriaFBHelper.h"
+#include "protocol/AriaFB/AriaFBMessage.h"
 
 #include <chrono>
 #include <thread>
 
 namespace scar {
 
-template <class Workload> class AriaExecutor : public Worker {
+template <class Workload> class AriaFBExecutor : public Worker {
 public:
   using WorkloadType = Workload;
   using DatabaseType = typename WorkloadType::DatabaseType;
   using StorageType = typename WorkloadType::StorageType;
 
-  using TransactionType = AriaTransaction;
+  using TransactionType = AriaFBTransaction;
   static_assert(std::is_same<typename WorkloadType::TransactionType,
                              TransactionType>::value,
                 "Transaction types do not match.");
@@ -34,22 +34,23 @@ public:
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
 
-  using ProtocolType = Aria<DatabaseType>;
+  using ProtocolType = AriaFB<DatabaseType>;
 
-  using MessageType = AriaMessage;
-  using MessageFactoryType = AriaMessageFactory;
-  using MessageHandlerType = AriaMessageHandler;
+  using MessageType = AriaFBMessage;
+  using MessageFactoryType = AriaFBMessageFactory;
+  using MessageHandlerType = AriaFBMessageHandler;
 
-  AriaExecutor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
-               const ContextType &context,
-               std::vector<std::unique_ptr<TransactionType>> &transactions,
-               std::vector<std::size_t> &partition_ids,
-               std::vector<StorageType> &storages, std::atomic<uint32_t> &epoch,
-               std::atomic<uint32_t> &lock_manager_status,
-               std::atomic<uint32_t> &worker_status,
-               std::atomic<uint32_t> &total_abort,
-               std::atomic<uint32_t> &n_complete_workers,
-               std::atomic<uint32_t> &n_started_workers)
+  AriaFBExecutor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
+                 const ContextType &context,
+                 std::vector<std::unique_ptr<TransactionType>> &transactions,
+                 std::vector<std::size_t> &partition_ids,
+                 std::vector<StorageType> &storages,
+                 std::atomic<uint32_t> &epoch,
+                 std::atomic<uint32_t> &lock_manager_status,
+                 std::atomic<uint32_t> &worker_status,
+                 std::atomic<uint32_t> &total_abort,
+                 std::atomic<uint32_t> &n_complete_workers,
+                 std::atomic<uint32_t> &n_started_workers)
       : Worker(coordinator_id, id), db(db), context(context),
         transactions(transactions), partition_ids(partition_ids),
         storages(storages), epoch(epoch),
@@ -59,9 +60,9 @@ public:
         partitioner(PartitionerFactory::create_partitioner(
             context.partitioner, coordinator_id, context.coordinator_num)),
         workload(coordinator_id, db, random, *partitioner),
-        n_lock_manager(context.aria_lock_manager),
+        n_lock_manager(context.ariaFB_lock_manager),
         n_workers(context.worker_num - n_lock_manager),
-        lock_manager_id(AriaHelper::worker_id_to_lock_manager_id(
+        lock_manager_id(AriaFBHelper::worker_id_to_lock_manager_id(
             id, n_lock_manager, n_workers)),
         init_transaction(false),
         random(id), // make sure each worker has a different seed.
@@ -78,11 +79,11 @@ public:
     messageHandlers = MessageHandlerType::get_message_handlers();
   }
 
-  ~AriaExecutor() = default;
+  ~AriaFBExecutor() = default;
 
   void start() override {
 
-    LOG(INFO) << "AriaExecutor " << id << " started. ";
+    LOG(INFO) << "AriaFBExecutor " << id << " started. ";
 
     for (;;) {
 
@@ -91,59 +92,59 @@ public:
         status = static_cast<ExecutorStatus>(worker_status.load());
 
         if (status == ExecutorStatus::EXIT) {
-          LOG(INFO) << "AriaExecutor " << id << " exits. ";
+          LOG(INFO) << "AriaFBExecutor " << id << " exits. ";
           return;
         }
-      } while (status != ExecutorStatus::Aria_READ);
+      } while (status != ExecutorStatus::AriaFB_READ);
 
       n_started_workers.fetch_add(1);
       // we find active coord and relevant transactions
       generate_transactions();
       read_snapshot();
       n_complete_workers.fetch_add(1);
-      // wait to Aria_READ
+      // wait to AriaFB_READ
       while (static_cast<ExecutorStatus>(worker_status.load()) ==
-             ExecutorStatus::Aria_READ) {
+             ExecutorStatus::AriaFB_READ) {
         process_request();
       }
       process_request();
       n_complete_workers.fetch_add(1);
 
-      // wait till Aria_COMMIT
+      // wait till AriaFB_COMMIT
       while (static_cast<ExecutorStatus>(worker_status.load()) !=
-             ExecutorStatus::Aria_COMMIT) {
+             ExecutorStatus::AriaFB_COMMIT) {
         std::this_thread::yield();
       }
       n_started_workers.fetch_add(1);
       commit_transactions();
       n_complete_workers.fetch_add(1);
-      // wait to Aria_COMMIT
+      // wait to AriaFB_COMMIT
       while (static_cast<ExecutorStatus>(worker_status.load()) ==
-             ExecutorStatus::Aria_COMMIT) {
+             ExecutorStatus::AriaFB_COMMIT) {
         process_request();
       }
       process_request();
       n_complete_workers.fetch_add(1);
 
-      // wait till Aria_Fallback_Prepare
+      // wait till AriaFB_Fallback_Prepare
       while (static_cast<ExecutorStatus>(worker_status.load()) !=
-             ExecutorStatus::Aria_Fallback_Prepare) {
+             ExecutorStatus::AriaFB_Fallback_Prepare) {
         std::this_thread::yield();
       }
       n_started_workers.fetch_add(1);
       prepare_calvin_input();
       n_complete_workers.fetch_add(1);
-      // wait to Aria_COMMIT
+      // wait to AriaFB_COMMIT
       while (static_cast<ExecutorStatus>(worker_status.load()) ==
-             ExecutorStatus::Aria_Fallback_Prepare) {
+             ExecutorStatus::AriaFB_Fallback_Prepare) {
         process_request();
       }
       process_request();
       n_complete_workers.fetch_add(1);
 
-      // wait till Aria_Fallback
+      // wait till AriaFB_Fallback
       while (static_cast<ExecutorStatus>(worker_status.load()) !=
-             ExecutorStatus::Aria_Fallback) {
+             ExecutorStatus::AriaFB_Fallback) {
         std::this_thread::yield();
       }
       n_started_workers.fetch_add(1);
@@ -156,9 +157,9 @@ public:
         run_calvin_transactions();
       }
       n_complete_workers.fetch_add(1);
-      // wait to Aria_COMMIT
+      // wait to AriaFB_COMMIT
       while (static_cast<ExecutorStatus>(worker_status.load()) ==
-             ExecutorStatus::Aria_Fallback) {
+             ExecutorStatus::AriaFB_Fallback) {
         process_request();
       }
       process_request();
@@ -174,7 +175,7 @@ public:
   }
 
   /*
-   * We run the same batch of transactions in Aria for simplicity
+   * We run the same batch of transactions in AriaFB for simplicity
    * Each node generates the same set of transactions.
    * */
 
@@ -246,7 +247,7 @@ public:
           auto table = db.find_table(readSet[i].get_table_id(),
                                      readSet[i].get_partition_id());
           std::atomic<uint64_t> &tid =
-              AriaHelper::get_metadata(table, readSet[i]);
+              AriaFBHelper::get_metadata(table, readSet[i]);
           readSet[i].set_tid(&tid);
         }
         readSet[i].get_tid()->store(0);
@@ -356,7 +357,7 @@ public:
           continue;
         }
 
-        if (AriaHelper::partition_id_to_lock_manager_id(
+        if (AriaFBHelper::partition_id_to_lock_manager_id(
                 readKey.get_partition_id(), n_lock_manager,
                 context.coordinator_num) != lock_manager_id) {
           continue;
@@ -366,9 +367,9 @@ public:
         std::atomic<uint64_t> &tid = *(readKey.get_tid());
 
         if (readKey.get_write_lock_bit()) {
-          AriaHelper::write_lock(tid);
+          AriaFBHelper::write_lock(tid);
         } else if (readKey.get_read_lock_bit()) {
-          AriaHelper::read_lock(tid);
+          AriaFBHelper::read_lock(tid);
         } else {
           CHECK(false);
         }
@@ -514,12 +515,12 @@ public:
       return;
     }
 
-    std::vector<AriaRWKey> &readSet = txn.readSet;
-    std::vector<AriaRWKey> &writeSet = txn.writeSet;
+    std::vector<AriaFBRWKey> &readSet = txn.readSet;
+    std::vector<AriaFBRWKey> &writeSet = txn.writeSet;
 
     // reserve reads;
     for (std::size_t i = 0u; i < readSet.size(); i++) {
-      AriaRWKey &readKey = readSet[i];
+      AriaFBRWKey &readKey = readSet[i];
       if (readKey.get_local_index_read_bit()) {
         continue;
       }
@@ -528,9 +529,9 @@ public:
       auto partitionId = readKey.get_partition_id();
       auto table = db.find_table(tableId, partitionId);
       if (partitioner->has_master_partition(partitionId)) {
-        std::atomic<uint64_t> &tid = AriaHelper::get_metadata(table, readKey);
+        std::atomic<uint64_t> &tid = AriaFBHelper::get_metadata(table, readKey);
         readKey.set_tid(&tid);
-        AriaHelper::reserve_read(tid, txn.epoch, txn.id);
+        AriaFBHelper::reserve_read(tid, txn.epoch, txn.id);
       } else {
         auto coordinatorID = this->partitioner->master_coordinator(partitionId);
         txn.network_size += MessageFactoryType::new_reserve_message(
@@ -541,14 +542,15 @@ public:
 
     // reserve writes
     for (std::size_t i = 0u; i < writeSet.size(); i++) {
-      AriaRWKey &writeKey = writeSet[i];
+      AriaFBRWKey &writeKey = writeSet[i];
       auto tableId = writeKey.get_table_id();
       auto partitionId = writeKey.get_partition_id();
       auto table = db.find_table(tableId, partitionId);
       if (partitioner->has_master_partition(partitionId)) {
-        std::atomic<uint64_t> &tid = AriaHelper::get_metadata(table, writeKey);
+        std::atomic<uint64_t> &tid =
+            AriaFBHelper::get_metadata(table, writeKey);
         writeKey.set_tid(&tid);
-        AriaHelper::reserve_write(tid, txn.epoch, txn.id);
+        AriaFBHelper::reserve_write(tid, txn.epoch, txn.id);
       } else {
         auto coordinatorID = this->partitioner->master_coordinator(partitionId);
         txn.network_size += MessageFactoryType::new_reserve_message(
@@ -564,13 +566,13 @@ public:
       return;
     }
 
-    const std::vector<AriaRWKey> &readSet = txn.readSet;
-    const std::vector<AriaRWKey> &writeSet = txn.writeSet;
+    const std::vector<AriaFBRWKey> &readSet = txn.readSet;
+    const std::vector<AriaFBRWKey> &writeSet = txn.writeSet;
 
     // analyze raw
 
     for (std::size_t i = 0u; i < readSet.size(); i++) {
-      const AriaRWKey &readKey = readSet[i];
+      const AriaFBRWKey &readKey = readSet[i];
       if (readKey.get_local_index_read_bit()) {
         continue;
       }
@@ -580,9 +582,9 @@ public:
       auto table = db.find_table(tableId, partitionId);
 
       if (partitioner->has_master_partition(partitionId)) {
-        uint64_t tid = AriaHelper::get_metadata(table, readKey).load();
-        uint64_t epoch = AriaHelper::get_epoch(tid);
-        uint64_t wts = AriaHelper::get_wts(tid);
+        uint64_t tid = AriaFBHelper::get_metadata(table, readKey).load();
+        uint64_t epoch = AriaFBHelper::get_epoch(tid);
+        uint64_t wts = AriaFBHelper::get_wts(tid);
         DCHECK(epoch == txn.epoch);
         if (epoch == txn.epoch && wts < txn.id && wts != 0) {
           txn.raw = true;
@@ -600,17 +602,17 @@ public:
     // analyze war and waw
 
     for (std::size_t i = 0u; i < writeSet.size(); i++) {
-      const AriaRWKey &writeKey = writeSet[i];
+      const AriaFBRWKey &writeKey = writeSet[i];
 
       auto tableId = writeKey.get_table_id();
       auto partitionId = writeKey.get_partition_id();
       auto table = db.find_table(tableId, partitionId);
 
       if (partitioner->has_master_partition(partitionId)) {
-        uint64_t tid = AriaHelper::get_metadata(table, writeKey).load();
-        uint64_t epoch = AriaHelper::get_epoch(tid);
-        uint64_t rts = AriaHelper::get_rts(tid);
-        uint64_t wts = AriaHelper::get_wts(tid);
+        uint64_t tid = AriaFBHelper::get_metadata(table, writeKey).load();
+        uint64_t epoch = AriaFBHelper::get_epoch(tid);
+        uint64_t rts = AriaFBHelper::get_rts(tid);
+        uint64_t wts = AriaFBHelper::get_wts(tid);
         DCHECK(epoch == txn.epoch);
         if (epoch == txn.epoch && rts < txn.id && rts != 0) {
           txn.war = true;
@@ -727,8 +729,9 @@ public:
 
   void setupHandlers(TransactionType &txn) {
 
-    txn.aria_read_handler = [this, &txn](AriaRWKey &readKey, std::size_t tid,
-                                         uint32_t key_offset) {
+    txn.AriaFB_read_handler = [this, &txn](AriaFBRWKey &readKey,
+                                           std::size_t tid,
+                                           uint32_t key_offset) {
       auto table_id = readKey.get_table_id();
       auto partition_id = readKey.get_partition_id();
       const void *key = readKey.get_key();
@@ -745,8 +748,8 @@ public:
       if (local_read || local_index_read) {
         // set tid meta_data
         auto row = table->search(key);
-        AriaHelper::set_key_tid(readKey, row);
-        AriaHelper::read(row, value, table->value_size());
+        AriaFBHelper::set_key_tid(readKey, row);
+        AriaFBHelper::read(row, value, table->value_size());
       } else {
         auto coordinatorID =
             this->partitioner->master_coordinator(partition_id);
@@ -765,7 +768,7 @@ public:
           auto *worker = this->all_executors[worker_id];
           if (worker->partitioner->has_master_partition(partition_id)) {
             ITable *table = worker->db.find_table(table_id, partition_id);
-            AriaHelper::read(table->search(key), value, table->value_size());
+            AriaFBHelper::read(table->search(key), value, table->value_size());
             auto &active_coordinators = txn.active_coordinators;
             for (auto i = 0u; i < active_coordinators.size(); i++) {
               if (i == worker->coordinator_id || !active_coordinators[i])
@@ -783,7 +786,7 @@ public:
                                           std::size_t partition_id,
                                           const void *key, void *value) {
       ITable *table = this->db.find_table(table_id, partition_id);
-      AriaHelper::read(table->search(key), value, table->value_size());
+      AriaFBHelper::read(table->search(key), value, table->value_size());
     };
 
     txn.remote_request_handler = [this](std::size_t worker_id) {
@@ -851,7 +854,7 @@ public:
     message->set_worker_id(id);
   }
 
-  void set_all_executors(const std::vector<AriaExecutor *> &executors) {
+  void set_all_executors(const std::vector<AriaFBExecutor *> &executors) {
     all_executors = executors;
   }
 
@@ -907,6 +910,6 @@ private:
       messageHandlers;
   LockfreeQueue<Message *> in_queue, out_queue;
   LockfreeQueue<TransactionType *> transaction_queue;
-  std::vector<AriaExecutor *> all_executors;
+  std::vector<AriaFBExecutor *> all_executors;
 };
 } // namespace scar

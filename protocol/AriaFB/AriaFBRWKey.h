@@ -8,7 +8,7 @@
 
 namespace scar {
 
-class AriaRWKey {
+class AriaFBRWKey {
 public:
   // local index read bit
 

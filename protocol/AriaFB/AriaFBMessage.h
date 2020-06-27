@@ -9,12 +9,12 @@
 #include "common/MessagePiece.h"
 #include "core/ControlMessage.h"
 #include "core/Table.h"
-#include "protocol/Aria/AriaRWKey.h"
-#include "protocol/Aria/AriaTransaction.h"
+#include "protocol/AriaFB/AriaFBRWKey.h"
+#include "protocol/AriaFB/AriaFBTransaction.h"
 
 namespace scar {
 
-enum class AriaMessage {
+enum class AriaFBMessage {
   SEARCH_REQUEST = static_cast<int>(ControlMessage::NFIELDS),
   SEARCH_RESPONSE,
   RESERVE_REQUEST,
@@ -25,7 +25,7 @@ enum class AriaMessage {
   NFIELDS
 };
 
-class AriaMessageFactory {
+class AriaFBMessageFactory {
 public:
   static std::size_t new_search_message(Message &message, ITable &table,
                                         uint32_t tid, uint32_t tid_offset,
@@ -41,7 +41,7 @@ public:
                         sizeof(uint32_t) + sizeof(uint32_t) +
                         sizeof(key_offset);
     auto message_piece_header = MessagePiece::construct_message_piece_header(
-        static_cast<uint32_t>(AriaMessage::SEARCH_REQUEST), message_size,
+        static_cast<uint32_t>(AriaFBMessage::SEARCH_REQUEST), message_size,
         table.tableID(), table.partitionID());
     Encoder encoder(message.data);
     encoder << message_piece_header;
@@ -63,7 +63,7 @@ public:
     auto message_size = MessagePiece::get_header_size() + key_size +
                         sizeof(uint32_t) + sizeof(epoch) + sizeof(bool);
     auto message_piece_header = MessagePiece::construct_message_piece_header(
-        static_cast<uint32_t>(AriaMessage::RESERVE_REQUEST), message_size,
+        static_cast<uint32_t>(AriaFBMessage::RESERVE_REQUEST), message_size,
         table.tableID(), table.partitionID());
 
     Encoder encoder(message.data);
@@ -89,7 +89,7 @@ public:
                         sizeof(uint32_t) + sizeof(uint32_t) + sizeof(epoch) +
                         sizeof(bool);
     auto message_piece_header = MessagePiece::construct_message_piece_header(
-        static_cast<uint32_t>(AriaMessage::CHECK_REQUEST), message_size,
+        static_cast<uint32_t>(AriaFBMessage::CHECK_REQUEST), message_size,
         table.tableID(), table.partitionID());
 
     Encoder encoder(message.data);
@@ -112,7 +112,7 @@ public:
 
     auto message_size = MessagePiece::get_header_size() + key_size + field_size;
     auto message_piece_header = MessagePiece::construct_message_piece_header(
-        static_cast<uint32_t>(AriaMessage::WRITE_REQUEST), message_size,
+        static_cast<uint32_t>(AriaFBMessage::WRITE_REQUEST), message_size,
         table.tableID(), table.partitionID());
 
     Encoder encoder(message.data);
@@ -137,7 +137,7 @@ public:
                         sizeof(key_offset) + value_size;
 
     auto message_piece_header = MessagePiece::construct_message_piece_header(
-        static_cast<uint32_t>(AriaMessage::CALVIN_READ_REQUEST), message_size,
+        static_cast<uint32_t>(AriaFBMessage::CALVIN_READ_REQUEST), message_size,
         table.tableID(), table.partitionID());
 
     Encoder encoder(message.data);
@@ -149,8 +149,8 @@ public:
   }
 };
 
-class AriaMessageHandler {
-  using Transaction = AriaTransaction;
+class AriaFBMessageHandler {
+  using Transaction = AriaFBTransaction;
 
 public:
   static void
@@ -159,7 +159,7 @@ public:
                          std::vector<std::unique_ptr<Transaction>> &txns) {
 
     DCHECK(inputPiece.get_message_type() ==
-           static_cast<uint32_t>(AriaMessage::SEARCH_REQUEST));
+           static_cast<uint32_t>(AriaFBMessage::SEARCH_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     DCHECK(table_id == table.tableID());
@@ -194,7 +194,7 @@ public:
     auto message_size = MessagePiece::get_header_size() + value_size +
                         sizeof(tid) + sizeof(tid_offset) + sizeof(key_offset);
     auto message_piece_header = MessagePiece::construct_message_piece_header(
-        static_cast<uint32_t>(AriaMessage::SEARCH_RESPONSE), message_size,
+        static_cast<uint32_t>(AriaFBMessage::SEARCH_RESPONSE), message_size,
         table_id, partition_id);
 
     scar::Encoder encoder(responseMessage.data);
@@ -205,7 +205,7 @@ public:
     void *dest =
         &responseMessage.data[0] + responseMessage.data.size() - value_size;
     // read to message buffer
-    AriaHelper::read(row, dest, value_size);
+    AriaFBHelper::read(row, dest, value_size);
     encoder << tid << tid_offset << key_offset;
     responseMessage.flush();
   }
@@ -216,7 +216,7 @@ public:
                           std::vector<std::unique_ptr<Transaction>> &txns) {
 
     DCHECK(inputPiece.get_message_type() ==
-           static_cast<uint32_t>(AriaMessage::SEARCH_RESPONSE));
+           static_cast<uint32_t>(AriaFBMessage::SEARCH_RESPONSE));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     DCHECK(table_id == table.tableID());
@@ -244,7 +244,7 @@ public:
     CHECK(txns[tid_offset]->id == tid);
     CHECK(key_offset < txns[tid_offset]->readSet.size());
 
-    AriaRWKey &readKey = txns[tid_offset]->readSet[key_offset];
+    AriaFBRWKey &readKey = txns[tid_offset]->readSet[key_offset];
     dec = Decoder(inputPiece.toStringPiece());
     dec.read_n_bytes(readKey.get_value(), value_size);
     txns[tid_offset]->pendingResponses--;
@@ -257,7 +257,7 @@ public:
                           std::vector<std::unique_ptr<Transaction>> &txns) {
 
     DCHECK(inputPiece.get_message_type() ==
-           static_cast<uint32_t>(AriaMessage::RESERVE_REQUEST));
+           static_cast<uint32_t>(AriaFBMessage::RESERVE_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     DCHECK(table_id == table.tableID());
@@ -288,9 +288,9 @@ public:
     DCHECK(dec.size() == 0);
 
     if (is_write) {
-      AriaHelper::reserve_write(metadata, epoch, tid);
+      AriaFBHelper::reserve_write(metadata, epoch, tid);
     } else {
-      AriaHelper::reserve_read(metadata, epoch, tid);
+      AriaFBHelper::reserve_read(metadata, epoch, tid);
     }
   }
 
@@ -300,7 +300,7 @@ public:
                         std::vector<std::unique_ptr<Transaction>> &txns) {
 
     DCHECK(inputPiece.get_message_type() ==
-           static_cast<uint32_t>(AriaMessage::CHECK_REQUEST));
+           static_cast<uint32_t>(AriaFBMessage::CHECK_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     DCHECK(table_id == table.tableID());
@@ -337,9 +337,9 @@ public:
     if (is_write) {
 
       // analyze war and waw
-      uint64_t reserve_epoch = AriaHelper::get_epoch(metadata);
-      uint64_t reserve_rts = AriaHelper::get_rts(metadata);
-      uint64_t reserve_wts = AriaHelper::get_wts(metadata);
+      uint64_t reserve_epoch = AriaFBHelper::get_epoch(metadata);
+      uint64_t reserve_rts = AriaFBHelper::get_rts(metadata);
+      uint64_t reserve_wts = AriaFBHelper::get_wts(metadata);
       DCHECK(reserve_epoch == epoch);
 
       if (reserve_epoch == epoch && reserve_rts < tid && reserve_rts != 0) {
@@ -350,8 +350,8 @@ public:
       }
     } else {
       // analyze raw
-      uint64_t reserve_epoch = AriaHelper::get_epoch(metadata);
-      uint64_t reserve_wts = AriaHelper::get_wts(metadata);
+      uint64_t reserve_epoch = AriaFBHelper::get_epoch(metadata);
+      uint64_t reserve_wts = AriaFBHelper::get_wts(metadata);
       DCHECK(reserve_epoch == epoch);
 
       if (reserve_epoch == epoch && reserve_wts < tid && reserve_wts != 0) {
@@ -363,7 +363,7 @@ public:
     auto message_size = MessagePiece::get_header_size() + sizeof(tid) +
                         sizeof(tid_offset) + sizeof(bool) * 4;
     auto message_piece_header = MessagePiece::construct_message_piece_header(
-        static_cast<uint32_t>(AriaMessage::CHECK_RESPONSE), message_size,
+        static_cast<uint32_t>(AriaFBMessage::CHECK_RESPONSE), message_size,
         table_id, partition_id);
 
     scar::Encoder encoder(responseMessage.data);
@@ -378,7 +378,7 @@ public:
                          std::vector<std::unique_ptr<Transaction>> &txns) {
 
     DCHECK(inputPiece.get_message_type() ==
-           static_cast<uint32_t>(AriaMessage::CHECK_RESPONSE));
+           static_cast<uint32_t>(AriaFBMessage::CHECK_RESPONSE));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     DCHECK(table_id == table.tableID());
@@ -430,7 +430,7 @@ public:
                         ITable &table,
                         std::vector<std::unique_ptr<Transaction>> &txns) {
     DCHECK(inputPiece.get_message_type() ==
-           static_cast<uint32_t>(AriaMessage::WRITE_REQUEST));
+           static_cast<uint32_t>(AriaFBMessage::WRITE_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     DCHECK(table_id == table.tableID());
@@ -461,7 +461,7 @@ public:
                               ITable &table,
                               std::vector<std::unique_ptr<Transaction>> &txns) {
     DCHECK(inputPiece.get_message_type() ==
-           static_cast<uint32_t>(AriaMessage::CALVIN_READ_REQUEST));
+           static_cast<uint32_t>(AriaFBMessage::CALVIN_READ_REQUEST));
     auto table_id = inputPiece.get_table_id();
     auto partition_id = inputPiece.get_partition_id();
     DCHECK(table_id == table.tableID());
@@ -487,7 +487,7 @@ public:
     DCHECK(tid - 1 < txns.size());
     DCHECK(key_offset < txns[tid - 1]->readSet.size())
         << key_offset << " " << tid;
-    AriaRWKey &readKey = txns[tid - 1]->readSet[key_offset];
+    AriaFBRWKey &readKey = txns[tid - 1]->readSet[key_offset];
     dec.read_n_bytes(readKey.get_value(), value_size);
 
     txns[tid - 1]->remote_read.fetch_add(-1);

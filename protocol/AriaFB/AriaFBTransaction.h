@@ -8,28 +8,28 @@
 #include "core/Defs.h"
 #include "core/Partitioner.h"
 #include "core/Table.h"
-#include "protocol/Aria/AriaHelper.h"
-#include "protocol/Aria/AriaRWKey.h"
+#include "protocol/AriaFB/AriaFBHelper.h"
+#include "protocol/AriaFB/AriaFBRWKey.h"
 #include <chrono>
 #include <glog/logging.h>
 #include <thread>
 
 namespace scar {
 
-class AriaTransaction {
+class AriaFBTransaction {
 
 public:
   using MetaDataType = std::atomic<uint64_t>;
 
-  AriaTransaction(std::size_t coordinator_id, std::size_t partition_id,
-                  Partitioner &partitioner)
+  AriaFBTransaction(std::size_t coordinator_id, std::size_t partition_id,
+                    Partitioner &partitioner)
       : coordinator_id(coordinator_id), partition_id(partition_id),
         startTime(std::chrono::steady_clock::now()), partitioner(partitioner) {
     relevant = false;
     reset();
   }
 
-  virtual ~AriaTransaction() = default;
+  virtual ~AriaFBTransaction() = default;
 
   void reset() {
 
@@ -73,7 +73,7 @@ public:
       return;
     }
 
-    AriaRWKey readKey;
+    AriaFBRWKey readKey;
 
     readKey.set_table_id(table_id);
     readKey.set_partition_id(partition_id);
@@ -94,7 +94,7 @@ public:
       return;
     }
 
-    AriaRWKey readKey;
+    AriaFBRWKey readKey;
 
     readKey.set_table_id(table_id);
     readKey.set_partition_id(partition_id);
@@ -115,7 +115,7 @@ public:
       return;
     }
 
-    AriaRWKey readKey;
+    AriaFBRWKey readKey;
 
     readKey.set_table_id(table_id);
     readKey.set_partition_id(partition_id);
@@ -136,7 +136,7 @@ public:
       return;
     }
 
-    AriaRWKey writeKey;
+    AriaFBRWKey writeKey;
 
     writeKey.set_table_id(table_id);
     writeKey.set_partition_id(partition_id);
@@ -148,12 +148,12 @@ public:
     add_to_write_set(writeKey);
   }
 
-  std::size_t add_to_read_set(const AriaRWKey &key) {
+  std::size_t add_to_read_set(const AriaFBRWKey &key) {
     readSet.push_back(key);
     return readSet.size() - 1;
   }
 
-  std::size_t add_to_write_set(const AriaRWKey &key) {
+  std::size_t add_to_write_set(const AriaFBRWKey &key) {
     writeSet.push_back(key);
     return writeSet.size() - 1;
   }
@@ -202,7 +202,7 @@ public:
           break;
         }
 
-        AriaRWKey &readKey = readSet[i];
+        AriaFBRWKey &readKey = readSet[i];
         if (readSet[i].get_local_index_read_bit() == false) {
           if (partitioner.has_master_partition(readSet[i].get_partition_id())) {
             local_read.fetch_add(1);
@@ -211,7 +211,7 @@ public:
           }
         }
 
-        aria_read_handler(readKey, id, i);
+        AriaFB_read_handler(readKey, id, i);
         readSet[i].clear_read_request_bit();
       }
       return false;
@@ -226,7 +226,7 @@ public:
     // only read the keys with locks from the lock_manager_id
     process_requests = [this, n_lock_manager, n_worker,
                         replica_group_size](std::size_t worker_id) {
-      auto lock_manager_id = AriaHelper::worker_id_to_lock_manager_id(
+      auto lock_manager_id = AriaFBHelper::worker_id_to_lock_manager_id(
           worker_id, n_lock_manager, n_worker);
 
       // cannot use unsigned type in reverse iteration
@@ -236,7 +236,7 @@ public:
           continue;
         }
 
-        if (AriaHelper::partition_id_to_lock_manager_id(
+        if (AriaFBHelper::partition_id_to_lock_manager_id(
                 readSet[i].get_partition_id(), n_lock_manager,
                 replica_group_size) != lock_manager_id) {
           continue;
@@ -306,7 +306,8 @@ public:
       local_index_read_handler;
 
   // read_key, id, key_offset
-  std::function<void(AriaRWKey &, std::size_t, std::size_t)> aria_read_handler;
+  std::function<void(AriaFBRWKey &, std::size_t, std::size_t)>
+      AriaFB_read_handler;
 
   // table id, partition id, id, key_offset, key, value
   std::function<void(std::size_t, std::size_t, std::size_t, std::size_t,
@@ -322,6 +323,6 @@ public:
   std::vector<bool> active_coordinators;
   std::size_t n_active_coordinators;
   Operation operation; // never used
-  std::vector<AriaRWKey> readSet, writeSet;
+  std::vector<AriaFBRWKey> readSet, writeSet;
 };
 } // namespace scar

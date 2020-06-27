@@ -6,24 +6,24 @@
 
 #include "core/Partitioner.h"
 #include "core/Table.h"
-#include "protocol/Aria/AriaHelper.h"
-#include "protocol/Aria/AriaMessage.h"
-#include "protocol/Aria/AriaTransaction.h"
+#include "protocol/AriaFB/AriaFBHelper.h"
+#include "protocol/AriaFB/AriaFBMessage.h"
+#include "protocol/AriaFB/AriaFBTransaction.h"
 
 namespace scar {
 
-template <class Database> class Aria {
+template <class Database> class AriaFB {
 public:
   using DatabaseType = Database;
   using MetaDataType = std::atomic<uint64_t>;
   using ContextType = typename DatabaseType::ContextType;
-  using MessageType = AriaMessage;
-  using TransactionType = AriaTransaction;
+  using MessageType = AriaFBMessage;
+  using TransactionType = AriaFBTransaction;
 
-  using MessageFactoryType = AriaMessageFactory;
-  using MessageHandlerType = AriaMessageHandler;
+  using MessageFactoryType = AriaFBMessageFactory;
+  using MessageHandlerType = AriaFBMessageHandler;
 
-  Aria(DatabaseType &db, const ContextType &context, Partitioner &partitioner)
+  AriaFB(DatabaseType &db, const ContextType &context, Partitioner &partitioner)
       : db(db), context(context), partitioner(partitioner) {}
 
   void abort(TransactionType &txn,
@@ -97,7 +97,7 @@ public:
         continue;
       }
 
-      if (AriaHelper::partition_id_to_lock_manager_id(
+      if (AriaFBHelper::partition_id_to_lock_manager_id(
               writeKey.get_partition_id(), n_lock_manager,
               replica_group_size) != lock_manager_id) {
         continue;
@@ -130,7 +130,7 @@ public:
         continue;
       }
 
-      if (AriaHelper::partition_id_to_lock_manager_id(
+      if (AriaFBHelper::partition_id_to_lock_manager_id(
               readKey.get_partition_id(), n_lock_manager, replica_group_size) !=
           lock_manager_id) {
         continue;
@@ -139,7 +139,7 @@ public:
       auto key = readKey.get_key();
       auto value = readKey.get_value();
       std::atomic<uint64_t> &tid = table->search_metadata(key);
-      AriaHelper::read_lock_release(tid);
+      AriaFBHelper::read_lock_release(tid);
     }
   }
 
@@ -161,7 +161,7 @@ public:
         continue;
       }
 
-      if (AriaHelper::partition_id_to_lock_manager_id(
+      if (AriaFBHelper::partition_id_to_lock_manager_id(
               writeKey.get_partition_id(), n_lock_manager,
               replica_group_size) != lock_manager_id) {
         continue;
@@ -170,7 +170,7 @@ public:
       auto key = writeKey.get_key();
       auto value = writeKey.get_value();
       std::atomic<uint64_t> &tid = table->search_metadata(key);
-      AriaHelper::write_lock_release(tid);
+      AriaFBHelper::write_lock_release(tid);
     }
   }
 

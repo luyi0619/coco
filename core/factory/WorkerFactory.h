@@ -53,10 +53,10 @@
 #include "protocol/Kiva/KivaManager.h"
 #include "protocol/Kiva/KivaTransaction.h"
 
-#include "protocol/Aria/Aria.h"
-#include "protocol/Aria/AriaExecutor.h"
-#include "protocol/Aria/AriaManager.h"
-#include "protocol/Aria/AriaTransaction.h"
+#include "protocol/AriaFB/AriaFB.h"
+#include "protocol/AriaFB/AriaFBExecutor.h"
+#include "protocol/AriaFB/AriaFBManager.h"
+#include "protocol/AriaFB/AriaFBTransaction.h"
 
 #include "protocol/Pwv/PwvExecutor.h"
 #include "protocol/Pwv/PwvManager.h"
@@ -97,7 +97,7 @@ public:
     std::unordered_set<std::string> protocols = {
         "Silo",   "SiloGC", "SiloSI", "SiloRC", "Scar",
         "ScarGC", "ScarSI", "Star",   "TwoPL",  "TwoPLGC",
-        "Calvin", "Bohm",   "Kiva",   "Aria",   "Pwv"};
+        "Calvin", "Bohm",   "Kiva",   "AriaFB", "Pwv"};
     CHECK(protocols.count(context.protocol) == 1);
 
     std::vector<std::shared_ptr<Worker>> workers;
@@ -347,23 +347,23 @@ public:
       }
 
       workers.push_back(manager);
-    } else if (context.protocol == "Aria") {
+    } else if (context.protocol == "AriaFB") {
 
-      using TransactionType = scar::AriaTransaction;
+      using TransactionType = scar::AriaFBTransaction;
       using WorkloadType =
           typename InferType<Context>::template WorkloadType<TransactionType>;
 
       // create manager
 
-      auto manager = std::make_shared<AriaManager<WorkloadType>>(
+      auto manager = std::make_shared<AriaFBManager<WorkloadType>>(
           coordinator_id, context.worker_num, db, context, stop_flag);
 
       // create worker
 
-      std::vector<AriaExecutor<WorkloadType> *> all_executors;
+      std::vector<AriaFBExecutor<WorkloadType> *> all_executors;
 
       for (auto i = 0u; i < context.worker_num; i++) {
-        auto w = std::make_shared<AriaExecutor<WorkloadType>>(
+        auto w = std::make_shared<AriaFBExecutor<WorkloadType>>(
             coordinator_id, i, db, context, manager->transactions,
             manager->partition_ids, manager->storages, manager->epoch,
             manager->lock_manager_status, manager->worker_status,
@@ -378,7 +378,7 @@ public:
       workers.push_back(manager);
 
       for (auto i = 0u; i < context.worker_num; i++) {
-        static_cast<AriaExecutor<WorkloadType> *>(workers[i].get())
+        static_cast<AriaFBExecutor<WorkloadType> *>(workers[i].get())
             ->set_all_executors(all_executors);
       }
     } else if (context.protocol == "Pwv") {

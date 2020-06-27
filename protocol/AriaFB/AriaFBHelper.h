@@ -11,11 +11,11 @@
 #include "core/Table.h"
 
 #include "glog/logging.h"
-#include "protocol/Aria/AriaRWKey.h"
+#include "protocol/AriaFB/AriaFBRWKey.h"
 
 namespace scar {
 
-class AriaHelper {
+class AriaFBHelper {
 
 public:
   using MetaDataType = std::atomic<uint64_t>;
@@ -29,13 +29,13 @@ public:
   }
 
   static void
-  set_key_tid(AriaRWKey &key,
+  set_key_tid(AriaFBRWKey &key,
               const std::tuple<std::atomic<uint64_t> *, void *> &row) {
     key.set_tid(std::get<0>(row));
   }
 
   static std::atomic<uint64_t> &get_metadata(ITable *table,
-                                             const AriaRWKey &key) {
+                                             const AriaFBRWKey &key) {
     auto tid = key.get_tid();
     if (!tid) {
       tid = &table->search_metadata(key.get_key());
