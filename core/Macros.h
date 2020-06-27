@@ -30,9 +30,9 @@ DEFINE_bool(star_dynamic_batch_size, true, "dynamic batch size");
 DEFINE_bool(plv, true, "parallel locking and validation");
 DEFINE_bool(same_batch, false,
             "always run the same batch of txns in calvin and bohm.");
-DEFINE_bool(kiva_read_only, true, "kiva read only optimization");
-DEFINE_bool(kiva_reordering, true, "kiva reordering optimization");
-DEFINE_bool(kiva_si, false, "kiva snapshot isolation");
+DEFINE_bool(aria_read_only, true, "aria read only optimization");
+DEFINE_bool(aria_reordering, true, "aria reordering optimization");
+DEFINE_bool(aria_si, false, "aria snapshot isolation");
 DEFINE_int32(delay, 0, "delay time in us.");
 DEFINE_string(cdf_path, "", "path to cdf");
 DEFINE_string(log_path, "", "path to disk logging.");
@@ -73,9 +73,9 @@ DEFINE_int32(ariaFB_lock_manager, 0,
   context.star_dynamic_batch_size = FLAGS_star_dynamic_batch_size;             \
   context.parallel_locking_and_validation = FLAGS_plv;                         \
   context.same_batch = FLAGS_same_batch;                                       \
-  context.kiva_read_only_optmization = FLAGS_kiva_read_only;                   \
-  context.kiva_reordering_optmization = FLAGS_kiva_reordering;                 \
-  context.kiva_snapshot_isolation = FLAGS_kiva_si;                             \
+  context.aria_read_only_optmization = FLAGS_aria_read_only;                   \
+  context.aria_reordering_optmization = FLAGS_aria_reordering;                 \
+  context.aria_snapshot_isolation = FLAGS_aria_si;                             \
   context.delay_time = FLAGS_delay;                                            \
   context.log_path = FLAGS_log_path;                                           \
   context.cdf_path = FLAGS_cdf_path;                                           \

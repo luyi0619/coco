@@ -33,7 +33,7 @@ public:
 
   void reset() {
 
-    run_in_kiva = false;
+    run_in_aria = false;
 
     abort_lock = false;
     abort_no_retry = false;
@@ -295,7 +295,7 @@ public:
 
   bool abort_lock, abort_no_retry, abort_read_validation;
   bool distributed_transaction;
-  bool relevant, run_in_kiva;
+  bool relevant, run_in_aria;
   bool execution_phase;
   bool waw, war, raw;
 

@@ -8,7 +8,7 @@
 
 namespace scar {
 
-class KivaRWKey {
+class AriaRWKey {
 public:
   // local index read bit
 

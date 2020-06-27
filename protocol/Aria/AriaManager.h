@@ -6,10 +6,10 @@
 
 #include "core/Manager.h"
 #include "core/Partitioner.h"
-#include "protocol/Kiva/Kiva.h"
-#include "protocol/Kiva/KivaExecutor.h"
-#include "protocol/Kiva/KivaHelper.h"
-#include "protocol/Kiva/KivaTransaction.h"
+#include "protocol/Aria/Aria.h"
+#include "protocol/Aria/AriaExecutor.h"
+#include "protocol/Aria/AriaHelper.h"
+#include "protocol/Aria/AriaTransaction.h"
 
 #include <atomic>
 #include <thread>
@@ -17,7 +17,7 @@
 
 namespace scar {
 
-template <class Workload> class KivaManager : public scar::Manager {
+template <class Workload> class AriaManager : public scar::Manager {
 public:
   using base_type = scar::Manager;
 
@@ -25,14 +25,14 @@ public:
   using DatabaseType = typename WorkloadType::DatabaseType;
   using StorageType = typename WorkloadType::StorageType;
 
-  using TransactionType = KivaTransaction;
+  using TransactionType = AriaTransaction;
   static_assert(std::is_same<typename WorkloadType::TransactionType,
                              TransactionType>::value,
                 "Transaction types do not match.");
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
 
-  KivaManager(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
+  AriaManager(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
               const ContextType &context, std::atomic<bool> &stopFlag)
       : base_type(coordinator_id, id, context, stopFlag), db(db), epoch(0) {
 
@@ -58,7 +58,7 @@ public:
       // LOG(INFO) << "Seed: " << random.get_seed();
       n_started_workers.store(0);
       n_completed_workers.store(0);
-      signal_worker(ExecutorStatus::Kiva_READ);
+      signal_worker(ExecutorStatus::Aria_READ);
       wait_all_workers_start();
       wait_all_workers_finish();
       broadcast_stop();
@@ -66,13 +66,13 @@ public:
       n_completed_workers.store(0);
       set_worker_status(ExecutorStatus::STOP);
       wait_all_workers_finish();
-      // wait for all machines until they finish the Kiva_READ phase.
+      // wait for all machines until they finish the Aria_READ phase.
       wait4_ack();
 
       // Allow each worker to commit transactions
       n_started_workers.store(0);
       n_completed_workers.store(0);
-      signal_worker(ExecutorStatus::Kiva_COMMIT);
+      signal_worker(ExecutorStatus::Aria_COMMIT);
       wait_all_workers_start();
       wait_all_workers_finish();
       broadcast_stop();
@@ -80,7 +80,7 @@ public:
       n_completed_workers.store(0);
       set_worker_status(ExecutorStatus::STOP);
       wait_all_workers_finish();
-      // wait for all machines until they finish the Kiva_COMMIT phase.
+      // wait for all machines until they finish the Aria_COMMIT phase.
       wait4_ack();
     }
 
@@ -100,7 +100,7 @@ public:
         break;
       }
 
-      DCHECK(status == ExecutorStatus::Kiva_READ);
+      DCHECK(status == ExecutorStatus::Aria_READ);
       // the coordinator on each machine first moves the aborted transactions
       // from the last batch earlier to the next batch and set remaining
       // transaction slots to null.
@@ -110,7 +110,7 @@ public:
 
       n_started_workers.store(0);
       n_completed_workers.store(0);
-      set_worker_status(ExecutorStatus::Kiva_READ);
+      set_worker_status(ExecutorStatus::Aria_READ);
       wait_all_workers_start();
       wait_all_workers_finish();
       broadcast_stop();
@@ -121,10 +121,10 @@ public:
       send_ack();
 
       status = wait4_signal();
-      DCHECK(status == ExecutorStatus::Kiva_COMMIT);
+      DCHECK(status == ExecutorStatus::Aria_COMMIT);
       n_started_workers.store(0);
       n_completed_workers.store(0);
-      set_worker_status(ExecutorStatus::Kiva_COMMIT);
+      set_worker_status(ExecutorStatus::Aria_COMMIT);
       wait_all_workers_start();
       wait_all_workers_finish();
       broadcast_stop();

@@ -8,27 +8,27 @@
 #include "core/Defs.h"
 #include "core/Partitioner.h"
 #include "core/Table.h"
-#include "protocol/Kiva/KivaHelper.h"
-#include "protocol/Kiva/KivaRWKey.h"
+#include "protocol/Aria/AriaHelper.h"
+#include "protocol/Aria/AriaRWKey.h"
 #include <chrono>
 #include <glog/logging.h>
 #include <thread>
 
 namespace scar {
 
-class KivaTransaction {
+class AriaTransaction {
 
 public:
   using MetaDataType = std::atomic<uint64_t>;
 
-  KivaTransaction(std::size_t coordinator_id, std::size_t partition_id,
+  AriaTransaction(std::size_t coordinator_id, std::size_t partition_id,
                   Partitioner &partitioner)
       : coordinator_id(coordinator_id), partition_id(partition_id),
         startTime(std::chrono::steady_clock::now()), partitioner(partitioner) {
     reset();
   }
 
-  virtual ~KivaTransaction() = default;
+  virtual ~AriaTransaction() = default;
 
   void reset() {
     abort_lock = false;
@@ -57,7 +57,7 @@ public:
       return;
     }
 
-    KivaRWKey readKey;
+    AriaRWKey readKey;
 
     readKey.set_table_id(table_id);
     readKey.set_partition_id(partition_id);
@@ -77,7 +77,7 @@ public:
     if (execution_phase) {
       return;
     }
-    KivaRWKey readKey;
+    AriaRWKey readKey;
 
     readKey.set_table_id(table_id);
     readKey.set_partition_id(partition_id);
@@ -96,7 +96,7 @@ public:
     if (execution_phase) {
       return;
     }
-    KivaRWKey readKey;
+    AriaRWKey readKey;
 
     readKey.set_table_id(table_id);
     readKey.set_partition_id(partition_id);
@@ -115,7 +115,7 @@ public:
     if (execution_phase) {
       return;
     }
-    KivaRWKey writeKey;
+    AriaRWKey writeKey;
 
     writeKey.set_table_id(table_id);
     writeKey.set_partition_id(partition_id);
@@ -127,12 +127,12 @@ public:
     add_to_write_set(writeKey);
   }
 
-  std::size_t add_to_read_set(const KivaRWKey &key) {
+  std::size_t add_to_read_set(const AriaRWKey &key) {
     readSet.push_back(key);
     return readSet.size() - 1;
   }
 
-  std::size_t add_to_write_set(const KivaRWKey &key) {
+  std::size_t add_to_write_set(const AriaRWKey &key) {
     writeSet.push_back(key);
     return writeSet.size() - 1;
   }
@@ -152,7 +152,7 @@ public:
         break;
       }
 
-      KivaRWKey &readKey = readSet[i];
+      AriaRWKey &readKey = readSet[i];
       readRequestHandler(readKey, id, i);
       readSet[i].clear_read_request_bit();
     }
@@ -175,7 +175,7 @@ public:
   bool waw, war, raw;
 
   // read_key, id, key_offset
-  std::function<void(KivaRWKey &, std::size_t, std::size_t)> readRequestHandler;
+  std::function<void(AriaRWKey &, std::size_t, std::size_t)> readRequestHandler;
 
   // processed a request?
   std::function<std::size_t(void)> remote_request_handler;
@@ -184,6 +184,6 @@ public:
 
   Partitioner &partitioner;
   Operation operation; // never used
-  std::vector<KivaRWKey> readSet, writeSet;
+  std::vector<AriaRWKey> readSet, writeSet;
 };
 } // namespace scar

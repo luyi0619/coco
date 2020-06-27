@@ -293,7 +293,7 @@ public:
     // otherwise, we analyse the read and write set.
 
     for (auto i = id; i < transactions.size(); i += context.worker_num) {
-      // commit in kiva
+      // commit in aria
       if (transactions[i]->abort_lock == false)
         continue;
       if (transactions[i]->abort_no_retry)
@@ -302,7 +302,7 @@ public:
       if (transactions[i]->relevant == false)
         continue;
 
-      if (transactions[i]->run_in_kiva == false) {
+      if (transactions[i]->run_in_aria == false) {
         // read & write set are not ready
         bool abort = transactions[i]->abort_lock;
         transactions[i]->reset();
@@ -326,7 +326,7 @@ public:
     // a worker thread in a round-robin manner.
     std::size_t request_id = 0;
     for (auto i = 0u; i < transactions.size(); i++) {
-      // commit in kiva
+      // commit in aria
       if (transactions[i]->abort_lock == false) {
         continue;
       }
@@ -462,7 +462,7 @@ public:
       if (partitioner->has_master_partition(partition_ids[i]) == false)
         continue;
       transactions[i]->set_epoch(cur_epoch);
-      transactions[i]->run_in_kiva = true;
+      transactions[i]->run_in_aria = true;
       process_request();
       count++;
 
@@ -511,7 +511,7 @@ public:
 
   void reserve_transaction(TransactionType &txn) {
 
-    if (context.kiva_read_only_optmization && txn.is_read_only()) {
+    if (context.aria_read_only_optmization && txn.is_read_only()) {
       return;
     }
 
@@ -562,7 +562,7 @@ public:
 
   void analyze_dependency(TransactionType &txn) {
 
-    if (context.kiva_read_only_optmization && txn.is_read_only()) {
+    if (context.aria_read_only_optmization && txn.is_read_only()) {
       return;
     }
 
@@ -663,7 +663,7 @@ public:
         process_request();
       }
 
-      if (context.kiva_read_only_optmization &&
+      if (context.aria_read_only_optmization &&
           transactions[i]->is_read_only()) {
         n_commit.fetch_add(1);
         auto latency =
@@ -680,7 +680,7 @@ public:
         continue;
       }
 
-      if (context.kiva_snapshot_isolation) {
+      if (context.aria_snapshot_isolation) {
         protocol.commit(*transactions[i], messages);
         n_commit.fetch_add(1);
         auto latency =
@@ -689,7 +689,7 @@ public:
                 .count();
         percentile.add(latency);
       } else {
-        if (context.kiva_reordering_optmization) {
+        if (context.aria_reordering_optmization) {
           if (transactions[i]->war == false || transactions[i]->raw == false) {
             protocol.commit(*transactions[i], messages);
             n_commit.fetch_add(1);

@@ -11,22 +11,22 @@
 #include "core/Worker.h"
 #include "glog/logging.h"
 
-#include "protocol/Kiva/Kiva.h"
-#include "protocol/Kiva/KivaHelper.h"
-#include "protocol/Kiva/KivaMessage.h"
+#include "protocol/Aria/Aria.h"
+#include "protocol/Aria/AriaHelper.h"
+#include "protocol/Aria/AriaMessage.h"
 
 #include <chrono>
 #include <thread>
 
 namespace scar {
 
-template <class Workload> class KivaExecutor : public Worker {
+template <class Workload> class AriaExecutor : public Worker {
 public:
   using WorkloadType = Workload;
   using DatabaseType = typename WorkloadType::DatabaseType;
   using StorageType = typename WorkloadType::StorageType;
 
-  using TransactionType = KivaTransaction;
+  using TransactionType = AriaTransaction;
   static_assert(std::is_same<typename WorkloadType::TransactionType,
                              TransactionType>::value,
                 "Transaction types do not match.");
@@ -34,13 +34,13 @@ public:
   using ContextType = typename DatabaseType::ContextType;
   using RandomType = typename DatabaseType::RandomType;
 
-  using ProtocolType = Kiva<DatabaseType>;
+  using ProtocolType = Aria<DatabaseType>;
 
-  using MessageType = KivaMessage;
-  using MessageFactoryType = KivaMessageFactory;
-  using MessageHandlerType = KivaMessageHandler;
+  using MessageType = AriaMessage;
+  using MessageFactoryType = AriaMessageFactory;
+  using MessageHandlerType = AriaMessageHandler;
 
-  KivaExecutor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
+  AriaExecutor(std::size_t coordinator_id, std::size_t id, DatabaseType &db,
                const ContextType &context,
                std::vector<std::unique_ptr<TransactionType>> &transactions,
                std::vector<StorageType> &storages, std::atomic<uint32_t> &epoch,
@@ -69,11 +69,11 @@ public:
     messageHandlers = MessageHandlerType::get_message_handlers();
   }
 
-  ~KivaExecutor() = default;
+  ~AriaExecutor() = default;
 
   void start() override {
 
-    LOG(INFO) << "KivaExecutor " << id << " started. ";
+    LOG(INFO) << "AriaExecutor " << id << " started. ";
 
     for (;;) {
 
@@ -82,33 +82,33 @@ public:
         status = static_cast<ExecutorStatus>(worker_status.load());
 
         if (status == ExecutorStatus::EXIT) {
-          LOG(INFO) << "KivaExecutor " << id << " exits. ";
+          LOG(INFO) << "AriaExecutor " << id << " exits. ";
           return;
         }
-      } while (status != ExecutorStatus::Kiva_READ);
+      } while (status != ExecutorStatus::Aria_READ);
 
       n_started_workers.fetch_add(1);
       read_snapshot();
       n_complete_workers.fetch_add(1);
-      // wait to Kiva_READ
+      // wait to Aria_READ
       while (static_cast<ExecutorStatus>(worker_status.load()) ==
-             ExecutorStatus::Kiva_READ) {
+             ExecutorStatus::Aria_READ) {
         process_request();
       }
       process_request();
       n_complete_workers.fetch_add(1);
 
-      // wait till Kiva_COMMIT
+      // wait till Aria_COMMIT
       while (static_cast<ExecutorStatus>(worker_status.load()) !=
-             ExecutorStatus::Kiva_COMMIT) {
+             ExecutorStatus::Aria_COMMIT) {
         std::this_thread::yield();
       }
       n_started_workers.fetch_add(1);
       commit_transactions();
       n_complete_workers.fetch_add(1);
-      // wait to Kiva_COMMIT
+      // wait to Aria_COMMIT
       while (static_cast<ExecutorStatus>(worker_status.load()) ==
-             ExecutorStatus::Kiva_COMMIT) {
+             ExecutorStatus::Aria_COMMIT) {
         process_request();
       }
       process_request();
@@ -203,16 +203,16 @@ public:
 
   void reserve_transaction(TransactionType &txn) {
 
-    if (context.kiva_read_only_optmization && txn.is_read_only()) {
+    if (context.aria_read_only_optmization && txn.is_read_only()) {
       return;
     }
 
-    std::vector<KivaRWKey> &readSet = txn.readSet;
-    std::vector<KivaRWKey> &writeSet = txn.writeSet;
+    std::vector<AriaRWKey> &readSet = txn.readSet;
+    std::vector<AriaRWKey> &writeSet = txn.writeSet;
 
     // reserve reads;
     for (std::size_t i = 0u; i < readSet.size(); i++) {
-      KivaRWKey &readKey = readSet[i];
+      AriaRWKey &readKey = readSet[i];
       if (readKey.get_local_index_read_bit()) {
         continue;
       }
@@ -221,9 +221,9 @@ public:
       auto partitionId = readKey.get_partition_id();
       auto table = db.find_table(tableId, partitionId);
       if (partitioner->has_master_partition(partitionId)) {
-        std::atomic<uint64_t> &tid = KivaHelper::get_metadata(table, readKey);
+        std::atomic<uint64_t> &tid = AriaHelper::get_metadata(table, readKey);
         readKey.set_tid(&tid);
-        KivaHelper::reserve_read(tid, txn.epoch, txn.id);
+        AriaHelper::reserve_read(tid, txn.epoch, txn.id);
       } else {
         auto coordinatorID = this->partitioner->master_coordinator(partitionId);
         txn.network_size += MessageFactoryType::new_reserve_message(
@@ -234,14 +234,14 @@ public:
 
     // reserve writes
     for (std::size_t i = 0u; i < writeSet.size(); i++) {
-      KivaRWKey &writeKey = writeSet[i];
+      AriaRWKey &writeKey = writeSet[i];
       auto tableId = writeKey.get_table_id();
       auto partitionId = writeKey.get_partition_id();
       auto table = db.find_table(tableId, partitionId);
       if (partitioner->has_master_partition(partitionId)) {
-        std::atomic<uint64_t> &tid = KivaHelper::get_metadata(table, writeKey);
+        std::atomic<uint64_t> &tid = AriaHelper::get_metadata(table, writeKey);
         writeKey.set_tid(&tid);
-        KivaHelper::reserve_write(tid, txn.epoch, txn.id);
+        AriaHelper::reserve_write(tid, txn.epoch, txn.id);
       } else {
         auto coordinatorID = this->partitioner->master_coordinator(partitionId);
         txn.network_size += MessageFactoryType::new_reserve_message(
@@ -253,17 +253,17 @@ public:
 
   void analyze_dependency(TransactionType &txn) {
 
-    if (context.kiva_read_only_optmization && txn.is_read_only()) {
+    if (context.aria_read_only_optmization && txn.is_read_only()) {
       return;
     }
 
-    const std::vector<KivaRWKey> &readSet = txn.readSet;
-    const std::vector<KivaRWKey> &writeSet = txn.writeSet;
+    const std::vector<AriaRWKey> &readSet = txn.readSet;
+    const std::vector<AriaRWKey> &writeSet = txn.writeSet;
 
     // analyze raw
 
     for (std::size_t i = 0u; i < readSet.size(); i++) {
-      const KivaRWKey &readKey = readSet[i];
+      const AriaRWKey &readKey = readSet[i];
       if (readKey.get_local_index_read_bit()) {
         continue;
       }
@@ -273,9 +273,9 @@ public:
       auto table = db.find_table(tableId, partitionId);
 
       if (partitioner->has_master_partition(partitionId)) {
-        uint64_t tid = KivaHelper::get_metadata(table, readKey).load();
-        uint64_t epoch = KivaHelper::get_epoch(tid);
-        uint64_t wts = KivaHelper::get_wts(tid);
+        uint64_t tid = AriaHelper::get_metadata(table, readKey).load();
+        uint64_t epoch = AriaHelper::get_epoch(tid);
+        uint64_t wts = AriaHelper::get_wts(tid);
         DCHECK(epoch == txn.epoch);
         if (epoch == txn.epoch && wts < txn.id && wts != 0) {
           txn.raw = true;
@@ -293,17 +293,17 @@ public:
     // analyze war and waw
 
     for (std::size_t i = 0u; i < writeSet.size(); i++) {
-      const KivaRWKey &writeKey = writeSet[i];
+      const AriaRWKey &writeKey = writeSet[i];
 
       auto tableId = writeKey.get_table_id();
       auto partitionId = writeKey.get_partition_id();
       auto table = db.find_table(tableId, partitionId);
 
       if (partitioner->has_master_partition(partitionId)) {
-        uint64_t tid = KivaHelper::get_metadata(table, writeKey).load();
-        uint64_t epoch = KivaHelper::get_epoch(tid);
-        uint64_t rts = KivaHelper::get_rts(tid);
-        uint64_t wts = KivaHelper::get_wts(tid);
+        uint64_t tid = AriaHelper::get_metadata(table, writeKey).load();
+        uint64_t epoch = AriaHelper::get_epoch(tid);
+        uint64_t rts = AriaHelper::get_rts(tid);
+        uint64_t wts = AriaHelper::get_wts(tid);
         DCHECK(epoch == txn.epoch);
         if (epoch == txn.epoch && rts < txn.id && rts != 0) {
           txn.war = true;
@@ -350,7 +350,7 @@ public:
         process_request();
       }
 
-      if (context.kiva_read_only_optmization &&
+      if (context.aria_read_only_optmization &&
           transactions[i]->is_read_only()) {
         n_commit.fetch_add(1);
         auto latency =
@@ -367,7 +367,7 @@ public:
         continue;
       }
 
-      if (context.kiva_snapshot_isolation) {
+      if (context.aria_snapshot_isolation) {
         protocol.commit(*transactions[i], messages);
         n_commit.fetch_add(1);
         auto latency =
@@ -376,7 +376,7 @@ public:
                 .count();
         percentile.add(latency);
       } else {
-        if (context.kiva_reordering_optmization) {
+        if (context.aria_reordering_optmization) {
           if (transactions[i]->war == false || transactions[i]->raw == false) {
             protocol.commit(*transactions[i], messages);
             n_commit.fetch_add(1);
@@ -416,7 +416,7 @@ public:
 
   void setupHandlers(TransactionType &txn) {
 
-    txn.readRequestHandler = [this, &txn](KivaRWKey &readKey, std::size_t tid,
+    txn.readRequestHandler = [this, &txn](AriaRWKey &readKey, std::size_t tid,
                                           uint32_t key_offset) {
       auto table_id = readKey.get_table_id();
       auto partition_id = readKey.get_partition_id();
@@ -434,8 +434,8 @@ public:
       if (local_read || local_index_read) {
         // set tid meta_data
         auto row = table->search(key);
-        KivaHelper::set_key_tid(readKey, row);
-        KivaHelper::read(row, value, table->value_size());
+        AriaHelper::set_key_tid(readKey, row);
+        AriaHelper::read(row, value, table->value_size());
       } else {
         auto coordinatorID =
             this->partitioner->master_coordinator(partition_id);

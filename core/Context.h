@@ -66,9 +66,9 @@ public:
 
   bool same_batch = false; // calvin and bohm
 
-  bool kiva_read_only_optmization = true;
-  bool kiva_reordering_optmization = true;
-  bool kiva_snapshot_isolation = false;
+  bool aria_read_only_optmization = true;
+  bool aria_reordering_optmization = true;
+  bool aria_snapshot_isolation = false;
 
   std::size_t ariaFB_lock_manager;
 

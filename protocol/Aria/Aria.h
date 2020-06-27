@@ -6,24 +6,24 @@
 
 #include "core/Partitioner.h"
 #include "core/Table.h"
-#include "protocol/Kiva/KivaHelper.h"
-#include "protocol/Kiva/KivaMessage.h"
-#include "protocol/Kiva/KivaTransaction.h"
+#include "protocol/Aria/AriaHelper.h"
+#include "protocol/Aria/AriaMessage.h"
+#include "protocol/Aria/AriaTransaction.h"
 
 namespace scar {
 
-template <class Database> class Kiva {
+template <class Database> class Aria {
 public:
   using DatabaseType = Database;
   using MetaDataType = std::atomic<uint64_t>;
   using ContextType = typename DatabaseType::ContextType;
-  using MessageType = KivaMessage;
-  using TransactionType = KivaTransaction;
+  using MessageType = AriaMessage;
+  using TransactionType = AriaTransaction;
 
-  using MessageFactoryType = KivaMessageFactory;
-  using MessageHandlerType = KivaMessageHandler;
+  using MessageFactoryType = AriaMessageFactory;
+  using MessageHandlerType = AriaMessageHandler;
 
-  Kiva(DatabaseType &db, const ContextType &context, Partitioner &partitioner)
+  Aria(DatabaseType &db, const ContextType &context, Partitioner &partitioner)
       : db(db), context(context), partitioner(partitioner) {}
 
   void abort(TransactionType &txn,
