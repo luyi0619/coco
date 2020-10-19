@@ -8,7 +8,6 @@
 #include "core/Executor.h"
 #include "core/Manager.h"
 
-#include "benchmark/retwis/Workload.h"
 #include "benchmark/tpcc/Workload.h"
 #include "benchmark/ycsb/Workload.h"
 
@@ -27,8 +26,6 @@
 #include "protocol/ScarSI/ScarSIExecutor.h"
 #include "protocol/SiloGC/SiloGC.h"
 #include "protocol/SiloGC/SiloGCExecutor.h"
-#include "protocol/SiloRC/SiloRC.h"
-#include "protocol/SiloRC/SiloRCExecutor.h"
 #include "protocol/SiloSI/SiloSI.h"
 #include "protocol/SiloSI/SiloSIExecutor.h"
 #include "protocol/TwoPLGC/TwoPLGC.h"
@@ -80,12 +77,6 @@ public:
   using WorkloadType = scar::ycsb::Workload<Transaction>;
 };
 
-template <> class InferType<scar::retwis::Context> {
-public:
-  template <class Transaction>
-  using WorkloadType = scar::retwis::Workload<Transaction>;
-};
-
 class WorkerFactory {
 
 public:
@@ -95,9 +86,8 @@ public:
                  const Context &context, std::atomic<bool> &stop_flag) {
 
     std::unordered_set<std::string> protocols = {
-        "Silo",   "SiloGC", "SiloSI", "SiloRC", "Scar",
-        "ScarGC", "ScarSI", "Star",   "TwoPL",  "TwoPLGC",
-        "Calvin", "Bohm",   "Aria",   "AriaFB", "Pwv"};
+        "Silo",  "SiloGC",  "SiloSI", "Scar", "ScarGC", "ScarSI", "Star",
+        "TwoPL", "TwoPLGC", "Calvin", "Bohm", "Aria",   "AriaFB", "Pwv"};
     CHECK(protocols.count(context.protocol) == 1);
 
     std::vector<std::shared_ptr<Worker>> workers;
@@ -145,22 +135,6 @@ public:
 
       for (auto i = 0u; i < context.worker_num; i++) {
         workers.push_back(std::make_shared<SiloSIExecutor<WorkloadType>>(
-            coordinator_id, i, db, context, manager->worker_status,
-            manager->n_completed_workers, manager->n_started_workers));
-      }
-      workers.push_back(manager);
-
-    } else if (context.protocol == "SiloRC") {
-
-      using TransactionType = scar::SiloTransaction;
-      using WorkloadType =
-          typename InferType<Context>::template WorkloadType<TransactionType>;
-
-      auto manager = std::make_shared<group_commit::Manager>(
-          coordinator_id, context.worker_num, context, stop_flag);
-
-      for (auto i = 0u; i < context.worker_num; i++) {
-        workers.push_back(std::make_shared<SiloRCExecutor<WorkloadType>>(
             coordinator_id, i, db, context, manager->worker_status,
             manager->n_completed_workers, manager->n_started_workers));
       }
