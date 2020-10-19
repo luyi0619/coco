@@ -14,7 +14,7 @@
 
 #include <chrono>
 
-namespace scar {
+namespace coco {
 namespace group_commit {
 
 template <class Workload, class Protocol> class Executor : public Worker {
@@ -337,4 +337,4 @@ protected:
 };
 } // namespace group_commit
 
-} // namespace scar
+} // namespace coco

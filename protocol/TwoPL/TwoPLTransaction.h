@@ -14,7 +14,7 @@
 #include <glog/logging.h>
 #include <vector>
 
-namespace scar {
+namespace coco {
 class TwoPLTransaction {
 
 public:
@@ -213,4 +213,4 @@ public:
   Operation operation;
   std::vector<TwoPLRWKey> readSet, writeSet;
 };
-} // namespace scar
+} // namespace coco

@@ -10,7 +10,7 @@
 #include <glog/logging.h>
 #include <queue>
 
-namespace scar {
+namespace coco {
 
 class Worker {
 public:
@@ -42,4 +42,4 @@ public:
       n_abort_read_validation, n_local, n_si_in_serializable, n_network_size;
 };
 
-} // namespace scar
+} // namespace coco

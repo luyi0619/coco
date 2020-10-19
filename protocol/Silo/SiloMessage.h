@@ -14,7 +14,7 @@
 #include "protocol/Silo/SiloRWKey.h"
 #include "protocol/Silo/SiloTransaction.h"
 
-namespace scar {
+namespace coco {
 
 enum class SiloMessage {
   SEARCH_REQUEST = static_cast<int>(ControlMessage::NFIELDS),
@@ -234,7 +234,7 @@ public:
     auto row = table.search(key);
 
     stringPiece.remove_prefix(key_size);
-    scar::Decoder dec(stringPiece);
+    coco::Decoder dec(stringPiece);
     dec >> key_offset;
 
     DCHECK(dec.size() == 0);
@@ -246,7 +246,7 @@ public:
         static_cast<uint32_t>(SiloMessage::SEARCH_RESPONSE), message_size,
         table_id, partition_id);
 
-    scar::Encoder encoder(responseMessage.data);
+    coco::Encoder encoder(responseMessage.data);
     encoder << message_piece_header;
 
     // reserve size for read
@@ -326,7 +326,7 @@ public:
     uint64_t latest_tid = SiloHelper::lock(tid, success);
 
     stringPiece.remove_prefix(key_size);
-    scar::Decoder dec(stringPiece);
+    coco::Decoder dec(stringPiece);
     dec >> key_offset;
 
     DCHECK(dec.size() == 0);
@@ -338,7 +338,7 @@ public:
         static_cast<uint32_t>(SiloMessage::LOCK_RESPONSE), message_size,
         table_id, partition_id);
 
-    scar::Encoder encoder(responseMessage.data);
+    coco::Encoder encoder(responseMessage.data);
     encoder << message_piece_header;
     encoder << success << latest_tid << key_offset;
     responseMessage.flush();
@@ -449,7 +449,7 @@ public:
         static_cast<uint32_t>(SiloMessage::READ_VALIDATION_RESPONSE),
         message_size, table_id, partition_id);
 
-    scar::Encoder encoder(responseMessage.data);
+    coco::Encoder encoder(responseMessage.data);
     encoder << message_piece_header;
     encoder << success << key_offset;
 
@@ -550,7 +550,7 @@ public:
         static_cast<uint32_t>(SiloMessage::WRITE_RESPONSE), message_size,
         table_id, partition_id);
 
-    scar::Encoder encoder(responseMessage.data);
+    coco::Encoder encoder(responseMessage.data);
     encoder << message_piece_header;
     responseMessage.flush();
   }
@@ -623,7 +623,7 @@ public:
         static_cast<uint32_t>(SiloMessage::REPLICATION_RESPONSE), message_size,
         table_id, partition_id);
 
-    scar::Encoder encoder(responseMessage.data);
+    coco::Encoder encoder(responseMessage.data);
     encoder << message_piece_header;
     responseMessage.flush();
   }
@@ -705,4 +705,4 @@ public:
   }
 };
 
-} // namespace scar
+} // namespace coco

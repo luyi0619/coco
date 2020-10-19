@@ -14,7 +14,7 @@
 #include <glog/logging.h>
 #include <vector>
 
-namespace scar {
+namespace coco {
 
 class ScarTransaction {
 public:
@@ -185,4 +185,4 @@ public:
   std::vector<ScarRWKey> readSet, writeSet;
 };
 
-} // namespace scar
+} // namespace coco

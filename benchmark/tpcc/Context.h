@@ -6,12 +6,12 @@
 
 #include "core/Context.h"
 
-namespace scar {
+namespace coco {
 namespace tpcc {
 
 enum class TPCCWorkloadType { NEW_ORDER_ONLY, PAYMENT_ONLY, MIXED };
 
-class Context : public scar::Context {
+class Context : public coco::Context {
 public:
   TPCCWorkloadType workloadType = TPCCWorkloadType::NEW_ORDER_ONLY;
 
@@ -41,4 +41,4 @@ public:
   bool payment_look_up = false;
 };
 } // namespace tpcc
-} // namespace scar
+} // namespace coco

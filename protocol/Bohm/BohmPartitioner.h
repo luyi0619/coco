@@ -6,7 +6,7 @@
 
 #include "core/Partitioner.h"
 
-namespace scar {
+namespace coco {
 class BohmPartitioner : public Partitioner {
 
 public:
@@ -37,4 +37,4 @@ public:
   bool is_backup() const override { return false; }
 };
 
-} // namespace scar
+} // namespace coco

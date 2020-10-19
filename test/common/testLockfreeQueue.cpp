@@ -6,7 +6,7 @@
 #include <gtest/gtest.h>
 
 TEST(TestLockfreeQueue, TestInt) {
-  scar::LockfreeQueue<int> q;
+  coco::LockfreeQueue<int> q;
   q.push(1);
   EXPECT_EQ(q.front(), 1);
   q.pop();

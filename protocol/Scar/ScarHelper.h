@@ -10,7 +10,7 @@
 
 #include "glog/logging.h"
 
-namespace scar {
+namespace coco {
 
 class ScarHelper {
 
@@ -173,4 +173,4 @@ public:
   static constexpr uint64_t WTS_MASK = 0xffffffffffffull;
 };
 
-} // namespace scar
+} // namespace coco

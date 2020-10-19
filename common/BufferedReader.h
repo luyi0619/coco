@@ -9,7 +9,7 @@
 
 #include <glog/logging.h>
 
-namespace scar {
+namespace coco {
 class BufferedReader {
 public:
   BufferedReader(Socket &socket)
@@ -135,4 +135,4 @@ private:
   char buffer[BUFFER_SIZE];
   std::size_t bytes_read, bytes_total;
 };
-} // namespace scar
+} // namespace coco

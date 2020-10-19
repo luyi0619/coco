@@ -10,7 +10,7 @@
 #include "protocol/Aria/AriaMessage.h"
 #include "protocol/Aria/AriaTransaction.h"
 
-namespace scar {
+namespace coco {
 
 template <class Database> class Aria {
 public:
@@ -61,4 +61,4 @@ private:
   const ContextType &context;
   Partitioner &partitioner;
 };
-} // namespace scar
+} // namespace coco

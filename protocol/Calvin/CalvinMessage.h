@@ -12,7 +12,7 @@
 #include "protocol/Calvin/CalvinRWKey.h"
 #include "protocol/Calvin/CalvinTransaction.h"
 
-namespace scar {
+namespace coco {
 
 enum class CalvinMessage {
   READ_REQUEST = static_cast<int>(ControlMessage::NFIELDS),
@@ -100,4 +100,4 @@ public:
   }
 };
 
-} // namespace scar
+} // namespace coco

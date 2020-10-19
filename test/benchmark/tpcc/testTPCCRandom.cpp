@@ -6,7 +6,7 @@
 #include <gtest/gtest.h>
 
 TEST(TestTPCCRandom, TestRandStr) {
-  scar::tpcc::Random random;
+  coco::tpcc::Random random;
   std::string astring = random.a_string(10, 10);
   std::string nstring = random.a_string(10, 10);
   std::string zip = random.a_string(10, 10);

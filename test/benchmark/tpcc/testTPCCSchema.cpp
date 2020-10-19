@@ -8,22 +8,22 @@
 #include <gtest/gtest.h>
 
 TEST(TestTPCCSchema, TestWarehouse) {
-  scar::tpcc::warehouse::key key(1);
+  coco::tpcc::warehouse::key key(1);
   EXPECT_EQ(key.W_ID, 1);
-  scar::tpcc::warehouse::value value;
+  coco::tpcc::warehouse::value value;
 
   value.W_YTD = 12.34;
   EXPECT_EQ(value.W_YTD, 12.34f);
-  scar::tpcc::warehouse::key key_ = scar::tpcc::warehouse::key(1);
+  coco::tpcc::warehouse::key key_ = coco::tpcc::warehouse::key(1);
   EXPECT_EQ(key, key_);
 
   std::string str;
-  scar::Encoder enc(str);
+  coco::Encoder enc(str);
   enc << key << value;
 
-  scar::tpcc::warehouse::key key1;
-  scar::tpcc::warehouse::value value1;
-  scar::Decoder dec(enc.toStringPiece());
+  coco::tpcc::warehouse::key key1;
+  coco::tpcc::warehouse::value value1;
+  coco::Decoder dec(enc.toStringPiece());
   dec >> key1 >> value1;
 
   EXPECT_EQ(key, key1);
@@ -31,24 +31,24 @@ TEST(TestTPCCSchema, TestWarehouse) {
 }
 
 TEST(TestTPCCSchema, TestDistrict) {
-  scar::tpcc::district::key key;
+  coco::tpcc::district::key key;
   key.D_W_ID = 1;
   key.D_ID = 2;
 
-  scar::tpcc::district::value value;
+  coco::tpcc::district::value value;
 
   value.D_YTD = 12.34;
   value.D_NEXT_O_ID = 3000;
 
   std::string str;
-  scar::Encoder enc(str);
+  coco::Encoder enc(str);
 
   enc << key << value;
 
-  scar::tpcc::district::key key1;
-  scar::tpcc::district::value value1;
+  coco::tpcc::district::key key1;
+  coco::tpcc::district::value value1;
 
-  scar::Decoder dec(enc.toStringPiece());
+  coco::Decoder dec(enc.toStringPiece());
   dec >> key1 >> value1;
 
   EXPECT_EQ(key, key1);
@@ -58,12 +58,12 @@ TEST(TestTPCCSchema, TestDistrict) {
 
 TEST(TestTPCCSchema, TestCustomer) {
 
-  scar::tpcc::customer::key key;
+  coco::tpcc::customer::key key;
   key.C_W_ID = 1;
   key.C_D_ID = 2;
   key.C_ID = 3;
 
-  scar::tpcc::customer::value value;
+  coco::tpcc::customer::value value;
 
   value.C_DATA.assign(std::string(500, '0'));
   value.C_BALANCE = 12.34;
@@ -71,14 +71,14 @@ TEST(TestTPCCSchema, TestCustomer) {
   value.C_PAYMENT_CNT = 78;
 
   std::string str;
-  scar::Encoder enc(str);
+  coco::Encoder enc(str);
 
   enc << key << value;
 
-  scar::tpcc::customer::key key1;
-  scar::tpcc::customer::value value1;
+  coco::tpcc::customer::key key1;
+  coco::tpcc::customer::value value1;
 
-  scar::Decoder dec(enc.toStringPiece());
+  coco::Decoder dec(enc.toStringPiece());
   dec >> key1 >> value1;
 
   EXPECT_EQ(key, key1);
@@ -90,11 +90,11 @@ TEST(TestTPCCSchema, TestCustomer) {
 
 TEST(TestTPCCSchema, TestStock) {
 
-  scar::tpcc::stock::key key;
+  coco::tpcc::stock::key key;
   key.S_W_ID = 1;
   key.S_I_ID = 2;
 
-  scar::tpcc::stock::value value;
+  coco::tpcc::stock::value value;
 
   value.S_QUANTITY = 1;
   value.S_YTD = 2;
@@ -102,14 +102,14 @@ TEST(TestTPCCSchema, TestStock) {
   value.S_REMOTE_CNT = 43;
 
   std::string str;
-  scar::Encoder enc(str);
+  coco::Encoder enc(str);
 
   enc << key << value;
 
-  scar::tpcc::stock::key key1;
-  scar::tpcc::stock::value value1;
+  coco::tpcc::stock::key key1;
+  coco::tpcc::stock::value value1;
 
-  scar::Decoder dec(enc.toStringPiece());
+  coco::Decoder dec(enc.toStringPiece());
   dec >> key1 >> value1;
 
   EXPECT_EQ(key, key1);

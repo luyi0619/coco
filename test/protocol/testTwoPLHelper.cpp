@@ -7,7 +7,7 @@
 
 TEST(TestTwoPLHelper, TestBasic) {
 
-  using scar::TwoPLHelper;
+  using coco::TwoPLHelper;
   std::atomic<uint64_t> a;
 
   EXPECT_EQ(TwoPLHelper::read_lock_max(), 511);
@@ -47,7 +47,7 @@ TEST(TestTwoPLHelper, TestBasic) {
 
 TEST(TestTwoPLHelper, TestValue) {
 
-  using scar::TwoPLHelper;
+  using coco::TwoPLHelper;
   std::atomic<uint64_t> a;
   a.store(0x1234);
 

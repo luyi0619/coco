@@ -7,7 +7,7 @@
 
 TEST(TestTwoPLRWKey, TestBasic) {
 
-  scar::TwoPLRWKey key;
+  coco::TwoPLRWKey key;
 
   EXPECT_EQ(key.get_key(), nullptr);
   EXPECT_EQ(key.get_value(), nullptr);

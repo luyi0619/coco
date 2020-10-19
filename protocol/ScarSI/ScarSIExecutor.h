@@ -7,7 +7,7 @@
 #include "core/group_commit/Executor.h"
 #include "protocol/ScarSI/ScarSI.h"
 
-namespace scar {
+namespace coco {
 template <class Workload>
 class ScarSIExecutor
     : public group_commit::Executor<Workload,
@@ -72,4 +72,4 @@ public:
     txn.message_flusher = [this]() { this->flush_sync_messages(); };
   };
 };
-} // namespace scar
+} // namespace coco

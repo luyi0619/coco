@@ -9,7 +9,7 @@
 #include <glog/logging.h>
 #include <unordered_map>
 
-namespace scar {
+namespace coco {
 
 template <std::size_t N, class KeyType, class ValueType> class HashMap {
 
@@ -111,4 +111,4 @@ private:
   SpinLock locks[N];
 };
 
-} // namespace scar
+} // namespace coco

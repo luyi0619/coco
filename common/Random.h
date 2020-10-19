@@ -6,7 +6,7 @@
 
 #include <string>
 
-namespace scar {
+namespace coco {
 
 class Random {
 public:
@@ -62,4 +62,4 @@ private:
 
   uint64_t seed_;
 };
-} // namespace scar
+} // namespace coco

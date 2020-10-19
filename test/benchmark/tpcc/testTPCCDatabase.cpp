@@ -7,33 +7,33 @@
 
 TEST(TestTPCCDatabase, TestBasic) {
 
-  scar::tpcc::Context context;
+  coco::tpcc::Context context;
   context.coordinator_num = 1;
   context.partition_num = 4;
   context.worker_num = 4;
   context.partitioner = "hash";
-  scar::tpcc::Database db;
+  coco::tpcc::Database db;
   db.initialize(context);
 
   auto warehouse =
-      sizeof(scar::tpcc::warehouse::key) + sizeof(scar::tpcc::warehouse::value);
+      sizeof(coco::tpcc::warehouse::key) + sizeof(coco::tpcc::warehouse::value);
   auto district =
-      sizeof(scar::tpcc::district::key) + sizeof(scar::tpcc::district::value);
+      sizeof(coco::tpcc::district::key) + sizeof(coco::tpcc::district::value);
   auto customer =
-      sizeof(scar::tpcc::customer::key) + sizeof(scar::tpcc::customer::value);
-  auto customer_name_idx = sizeof(scar::tpcc::customer_name_idx::key) +
-                           sizeof(scar::tpcc::customer_name_idx::value);
+      sizeof(coco::tpcc::customer::key) + sizeof(coco::tpcc::customer::value);
+  auto customer_name_idx = sizeof(coco::tpcc::customer_name_idx::key) +
+                           sizeof(coco::tpcc::customer_name_idx::value);
   auto history =
-      sizeof(scar::tpcc::history::key) + sizeof(scar::tpcc::history::value);
+      sizeof(coco::tpcc::history::key) + sizeof(coco::tpcc::history::value);
   auto new_order =
-      sizeof(scar::tpcc::new_order::key) + sizeof(scar::tpcc::new_order::value);
+      sizeof(coco::tpcc::new_order::key) + sizeof(coco::tpcc::new_order::value);
   auto order =
-      sizeof(scar::tpcc::order::key) + sizeof(scar::tpcc::order::value);
-  auto order_line = sizeof(scar::tpcc::order_line::key) +
-                    sizeof(scar::tpcc::order_line::value);
-  auto item = sizeof(scar::tpcc::item::key) + sizeof(scar::tpcc::item::value);
+      sizeof(coco::tpcc::order::key) + sizeof(coco::tpcc::order::value);
+  auto order_line = sizeof(coco::tpcc::order_line::key) +
+                    sizeof(coco::tpcc::order_line::value);
+  auto item = sizeof(coco::tpcc::item::key) + sizeof(coco::tpcc::item::value);
   auto stock =
-      sizeof(scar::tpcc::stock::key) + sizeof(scar::tpcc::stock::value);
+      sizeof(coco::tpcc::stock::key) + sizeof(coco::tpcc::stock::value);
 
   auto total_size = warehouse + 10 * district + 10 * 3000 * customer +
                     10 * 3000 * customer_name_idx + 10 * 3000 * history +

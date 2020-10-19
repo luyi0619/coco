@@ -13,7 +13,7 @@
 
 #include "core/Context.h"
 
-namespace scar {
+namespace coco {
 
 class ITable {
 public:
@@ -320,4 +320,4 @@ public:
   }
 };
 
-} // namespace scar
+} // namespace coco

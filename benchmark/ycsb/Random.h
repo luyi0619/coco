@@ -9,11 +9,11 @@
 
 #include "common/Random.h"
 
-namespace scar {
+namespace coco {
 namespace ycsb {
-class Random : public scar::Random {
+class Random : public coco::Random {
 public:
-  using scar::Random::Random;
+  using coco::Random::Random;
 
   std::string rand_str(std::size_t length) {
     auto &characters_ = characters();
@@ -34,4 +34,4 @@ private:
   };
 };
 } // namespace ycsb
-} // namespace scar
+} // namespace coco

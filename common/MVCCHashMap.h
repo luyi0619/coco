@@ -10,7 +10,7 @@
 #include <list>
 #include <unordered_map>
 
-namespace scar {
+namespace coco {
 
 /*
  *  MVCC Hash Map -- overview --
@@ -273,4 +273,4 @@ private:
   HashMapType maps[N];
   SpinLock locks[N];
 };
-} // namespace scar
+} // namespace coco

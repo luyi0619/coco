@@ -9,11 +9,11 @@
 #include "common/Percentile.h"
 #include "core/Manager.h"
 
-namespace scar {
+namespace coco {
 
-class StarManager : public scar::Manager {
+class StarManager : public coco::Manager {
 public:
-  using base_type = scar::Manager;
+  using base_type = coco::Manager;
 
   StarManager(std::size_t coordinator_id, std::size_t id,
               const Context &context, std::atomic<bool> &stopFlag)
@@ -192,4 +192,4 @@ public:
 public:
   uint32_t batch_size;
 };
-} // namespace scar
+} // namespace coco

@@ -15,7 +15,7 @@
 #include "protocol/TwoPL/TwoPLTransaction.h"
 #include <glog/logging.h>
 
-namespace scar {
+namespace coco {
 
 template <class Database> class TwoPL {
 public:
@@ -260,4 +260,4 @@ private:
   Partitioner &partitioner;
   uint64_t max_tid = 0;
 };
-} // namespace scar
+} // namespace coco

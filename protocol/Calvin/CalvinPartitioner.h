@@ -6,7 +6,7 @@
 
 #include "core/Partitioner.h"
 
-namespace scar {
+namespace coco {
 class CalvinPartitioner : public Partitioner {
 
 public:
@@ -63,4 +63,4 @@ private:
   // the first coordinator in this replica group
   std::size_t coordinator_start_id;
 };
-} // namespace scar
+} // namespace coco

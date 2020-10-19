@@ -6,7 +6,7 @@
 
 #include <functional>
 
-namespace scar {
+namespace coco {
 
 template <typename T>
 inline std::size_t hash_combine(const T &v1, const T &v2) {
@@ -23,4 +23,4 @@ inline std::size_t hash(const T &v, Rest... rest) {
   return hash_combine(h(v), hash(rest...));
 }
 
-} // namespace scar
+} // namespace coco

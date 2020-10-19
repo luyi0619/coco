@@ -13,7 +13,7 @@
 #include "glog/logging.h"
 #include "protocol/AriaFB/AriaFBRWKey.h"
 
-namespace scar {
+namespace coco {
 
 class AriaFBHelper {
 
@@ -252,4 +252,4 @@ public:
   static constexpr uint64_t WRITE_LOCK_BIT_MASK = 0x1ull;
 };
 
-} // namespace scar
+} // namespace coco

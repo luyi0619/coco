@@ -6,7 +6,7 @@
 
 #include <glog/logging.h>
 
-namespace scar {
+namespace coco {
 
 class PwvRWKey {
 public:
@@ -68,4 +68,4 @@ public:
   static constexpr uint32_t PARTITION_ID_MASK = 0xffff;
   static constexpr uint32_t PARTITION_ID_OFFSET = 11;
 };
-} // namespace scar
+} // namespace coco

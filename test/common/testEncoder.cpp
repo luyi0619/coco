@@ -8,7 +8,7 @@
 
 TEST(TestEncoder, TestBasic) {
   std::string bytes;
-  scar::Encoder encoder(bytes);
+  coco::Encoder encoder(bytes);
   int a = 0x1234;
   double b = 123456.7890123;
   char c = 0x78;
@@ -16,7 +16,7 @@ TEST(TestEncoder, TestBasic) {
   int a2;
   double b2;
   char c2;
-  scar::Decoder dec(encoder.toStringPiece());
+  coco::Decoder dec(encoder.toStringPiece());
   dec >> a2 >> b2 >> c2;
   EXPECT_EQ(a, a2);
   EXPECT_EQ(b, b2);
@@ -25,7 +25,7 @@ TEST(TestEncoder, TestBasic) {
 
 TEST(TestEncoder, TestString) {
   std::string bytes;
-  scar::Encoder encoder(bytes);
+  coco::Encoder encoder(bytes);
   int a = 0x1234;
   std::string s = "helloworldHELLOWORLDhelloWORLDHELLOworld";
   double c = 123456.7890123;
@@ -35,7 +35,7 @@ TEST(TestEncoder, TestString) {
   std::string s3;
   double c2;
   std::string s4;
-  scar::Decoder dec(encoder.toStringPiece());
+  coco::Decoder dec(encoder.toStringPiece());
   dec >> a2 >> s3 >> c2 >> s4;
   EXPECT_EQ(a, a2);
   EXPECT_EQ(s, s3);
@@ -45,17 +45,17 @@ TEST(TestEncoder, TestString) {
 
 TEST(TestEncoder, TestFixedString) {
   std::string bytes;
-  scar::Encoder encoder(bytes);
+  coco::Encoder encoder(bytes);
   int a = 0x1234;
-  scar::FixedString<40> s = "helloworldHELLOWORLDhelloWORLDHELLOworld";
+  coco::FixedString<40> s = "helloworldHELLOWORLDhelloWORLDHELLOworld";
   double c = 123456.7890123;
-  scar::FixedString<40> s2 = "helloworldHELLOWORLDhelloWORLDHELLOworld";
+  coco::FixedString<40> s2 = "helloworldHELLOWORLDhelloWORLDHELLOworld";
   encoder << a << s << c << s2;
   int a2;
-  scar::FixedString<40> s3;
+  coco::FixedString<40> s3;
   double c2;
-  scar::FixedString<40> s4;
-  scar::Decoder dec(encoder.toStringPiece());
+  coco::FixedString<40> s4;
+  coco::Decoder dec(encoder.toStringPiece());
   dec >> a2 >> s3 >> c2 >> s4;
   EXPECT_EQ(a, a2);
   EXPECT_EQ(s, s3);

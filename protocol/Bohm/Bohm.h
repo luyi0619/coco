@@ -10,7 +10,7 @@
 #include "protocol/Bohm/BohmPartitioner.h"
 #include "protocol/Bohm/BohmTransaction.h"
 
-namespace scar {
+namespace coco {
 
 template <class Database> class Bohm {
 public:
@@ -61,4 +61,4 @@ private:
   DatabaseType &db;
   BohmPartitioner &partitioner;
 };
-} // namespace scar
+} // namespace coco

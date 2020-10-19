@@ -16,7 +16,7 @@
 #include <chrono>
 #include <thread>
 
-namespace scar {
+namespace coco {
 
 template <class Database> class PwvExecutor : public Worker {
 public:
@@ -126,4 +126,4 @@ private:
   RandomType random, sleep_random;
   Percentile<int64_t> percentile;
 };
-} // namespace scar
+} // namespace coco

@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
   google::InstallFailureSignalHandler();
   google::ParseCommandLineFlags(&argc, &argv, true);
 
-  scar::retwis::Context context;
+  coco::retwis::Context context;
   SETUP_CONTEXT(context);
 
   context.crossPartitionProbability = FLAGS_cross_ratio;
@@ -26,13 +26,13 @@ int main(int argc, char *argv[]) {
 
   if (FLAGS_zipf > 0) {
     context.isUniform = false;
-    scar::Zipf::globalZipf().init(context.keysPerPartition, FLAGS_zipf);
+    coco::Zipf::globalZipf().init(context.keysPerPartition, FLAGS_zipf);
   }
 
-  scar::retwis::Database db;
+  coco::retwis::Database db;
   db.initialize(context);
 
-  scar::Coordinator c(FLAGS_id, db, context);
+  coco::Coordinator c(FLAGS_id, db, context);
   c.connectToPeers();
   c.start();
   return 0;

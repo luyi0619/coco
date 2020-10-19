@@ -10,7 +10,7 @@
 #include "protocol/AriaFB/AriaFBMessage.h"
 #include "protocol/AriaFB/AriaFBTransaction.h"
 
-namespace scar {
+namespace coco {
 
 template <class Database> class AriaFB {
 public:
@@ -179,4 +179,4 @@ private:
   const ContextType &context;
   Partitioner &partitioner;
 };
-} // namespace scar
+} // namespace coco

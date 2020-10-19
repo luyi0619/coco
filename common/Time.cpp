@@ -4,6 +4,6 @@
 
 #include "common/Time.h"
 
-namespace scar {
+namespace coco {
   std::chrono::steady_clock::time_point Time::startTime = std::chrono::steady_clock::now();
 }

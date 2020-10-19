@@ -7,7 +7,7 @@
 
 TEST(TestCalvinPartitioner, TestBasic) {
 
-  using scar::CalvinPartitioner;
+  using coco::CalvinPartitioner;
 
   {
     std::vector<std::size_t> replica_group_sizes = {2, 3, 4};

@@ -71,7 +71,7 @@
     template <> struct hash<namespacefields(NAMESPACE_EXPAND) name::key> {     \
       std::size_t operator()(const namespacefields(NAMESPACE_EXPAND)           \
                                  name::key &k) const {                         \
-        return scar::hash(keyfields(STRUCT_HASH_FIRST_X, STRUCT_HASH_REST_X)); \
+        return coco::hash(keyfields(STRUCT_HASH_FIRST_X, STRUCT_HASH_REST_X)); \
       }                                                                        \
     };                                                                         \
   }

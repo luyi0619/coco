@@ -8,7 +8,7 @@
 #include "benchmark/ycsb/Random.h"
 #include "common/Zipf.h"
 
-namespace scar {
+namespace coco {
 namespace ycsb {
 
 template <std::size_t N> struct YCSBQuery {
@@ -200,4 +200,4 @@ public:
   }
 };
 } // namespace ycsb
-} // namespace scar
+} // namespace coco

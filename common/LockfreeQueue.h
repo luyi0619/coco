@@ -7,7 +7,7 @@
 #include "glog/logging.h"
 #include <boost/lockfree/spsc_queue.hpp>
 
-namespace scar {
+namespace coco {
 
 /*
  * boost::lockfree::spsc_queue does not support move only objects, e.g.,
@@ -47,4 +47,4 @@ public:
 private:
   void nop_pause() { __asm volatile("pause" : :); }
 };
-} // namespace scar
+} // namespace coco

@@ -11,7 +11,7 @@
 #include "benchmark/tpcc/Transaction.h"
 #include "core/Partitioner.h"
 
-namespace scar {
+namespace coco {
 
 namespace tpcc {
 
@@ -66,4 +66,4 @@ private:
 };
 
 } // namespace tpcc
-} // namespace scar
+} // namespace coco

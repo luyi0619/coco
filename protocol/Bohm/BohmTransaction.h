@@ -14,7 +14,7 @@
 #include <glog/logging.h>
 #include <thread>
 
-namespace scar {
+namespace coco {
 
 class BohmTransaction {
 
@@ -252,5 +252,5 @@ public:
   Partitioner &partitioner;
   Operation operation; // never used
   std::vector<BohmRWKey> readSet, writeSet;
-}; // namespace scar
-} // namespace scar
+}; // namespace coco
+} // namespace coco

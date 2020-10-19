@@ -11,7 +11,7 @@
 #include "benchmark/ycsb/Transaction.h"
 #include "core/Partitioner.h"
 
-namespace scar {
+namespace coco {
 
 namespace ycsb {
 
@@ -48,4 +48,4 @@ private:
 };
 
 } // namespace ycsb
-} // namespace scar
+} // namespace coco

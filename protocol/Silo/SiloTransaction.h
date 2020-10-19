@@ -14,7 +14,7 @@
 #include <glog/logging.h>
 #include <vector>
 
-namespace scar {
+namespace coco {
 
 class SiloTransaction {
 public:
@@ -183,4 +183,4 @@ public:
   std::vector<SiloRWKey> readSet, writeSet;
 };
 
-} // namespace scar
+} // namespace coco

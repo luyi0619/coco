@@ -16,17 +16,17 @@ int main(int argc, char *argv[]) {
   google::InstallFailureSignalHandler();
   google::ParseCommandLineFlags(&argc, &argv, true);
 
-  scar::tpcc::Context context;
+  coco::tpcc::Context context;
   SETUP_CONTEXT(context);
 
   context.operation_replication = FLAGS_operation_replication;
 
   if (FLAGS_query == "mixed") {
-    context.workloadType = scar::tpcc::TPCCWorkloadType::MIXED;
+    context.workloadType = coco::tpcc::TPCCWorkloadType::MIXED;
   } else if (FLAGS_query == "neworder") {
-    context.workloadType = scar::tpcc::TPCCWorkloadType::NEW_ORDER_ONLY;
+    context.workloadType = coco::tpcc::TPCCWorkloadType::NEW_ORDER_ONLY;
   } else if (FLAGS_query == "payment") {
-    context.workloadType = scar::tpcc::TPCCWorkloadType::PAYMENT_ONLY;
+    context.workloadType = coco::tpcc::TPCCWorkloadType::PAYMENT_ONLY;
   } else {
     CHECK(false);
   }
@@ -37,10 +37,10 @@ int main(int argc, char *argv[]) {
   context.write_to_w_ytd = FLAGS_write_to_w_ytd;
   context.payment_look_up = FLAGS_payment_look_up;
 
-  scar::tpcc::Database db;
+  coco::tpcc::Database db;
   db.initialize(context);
 
-  scar::Coordinator c(FLAGS_id, db, context);
+  coco::Coordinator c(FLAGS_id, db, context);
   c.connectToPeers();
   c.start();
   return 0;

@@ -16,7 +16,7 @@
 #include <chrono>
 #include <thread>
 
-namespace scar {
+namespace coco {
 
 template <class Workload, class Protocol> class Executor : public Worker {
 public:
@@ -306,4 +306,4 @@ protected:
   std::vector<std::size_t> message_stats, message_sizes;
   LockfreeQueue<Message *> in_queue, out_queue;
 };
-} // namespace scar
+} // namespace coco

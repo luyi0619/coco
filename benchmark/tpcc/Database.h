@@ -23,7 +23,7 @@
 
 #include <glog/logging.h>
 
-namespace scar {
+namespace coco {
 namespace tpcc {
 
 class Database {
@@ -794,4 +794,4 @@ private:
   std::vector<std::unique_ptr<ITable>> tbl_stock_vec;
 };
 } // namespace tpcc
-} // namespace scar
+} // namespace coco

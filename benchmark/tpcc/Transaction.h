@@ -16,7 +16,7 @@
 #include "core/Partitioner.h"
 #include "core/Table.h"
 
-namespace scar {
+namespace coco {
 namespace tpcc {
 
 template <class Transaction> class NewOrder : public Transaction {
@@ -450,4 +450,4 @@ private:
 };
 
 } // namespace tpcc
-} // namespace scar
+} // namespace coco

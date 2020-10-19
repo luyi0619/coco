@@ -10,7 +10,7 @@
 #include "Serialization.h"
 #include "StringPiece.h"
 
-namespace scar {
+namespace coco {
 class Encoder {
 public:
   Encoder(std::string &bytes) : bytes(bytes) {}
@@ -61,4 +61,4 @@ template <class T> Decoder &operator>>(Decoder &dec, T &rhs) {
   dec.bytes.remove_prefix(size);
   return dec;
 }
-} // namespace scar
+} // namespace coco

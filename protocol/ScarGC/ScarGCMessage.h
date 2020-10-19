@@ -14,7 +14,7 @@
 #include "protocol/Scar/ScarRWKey.h"
 #include "protocol/Scar/ScarTransaction.h"
 
-namespace scar {
+namespace coco {
 
 enum class ScarGCMessage {
   SEARCH_REQUEST = static_cast<int>(ControlMessage::NFIELDS),
@@ -686,4 +686,4 @@ public:
   }
 };
 
-} // namespace scar
+} // namespace coco

@@ -9,7 +9,7 @@
 #include "benchmark/ycsb/Context.h"
 #include "benchmark/ycsb/Database.h"
 
-namespace scar {
+namespace coco {
 template <class Database> class PwvWorkload {
 public:
   using DatabaseType = Database;
@@ -100,4 +100,4 @@ private:
   RandomType &random;
 };
 
-} // namespace scar
+} // namespace coco

@@ -18,7 +18,7 @@
 #include <chrono>
 #include <thread>
 
-namespace scar {
+namespace coco {
 
 template <class Workload> class AriaExecutor : public Worker {
 public:
@@ -553,4 +553,4 @@ private:
       messageHandlers;
   LockfreeQueue<Message *> in_queue, out_queue;
 };
-} // namespace scar
+} // namespace coco

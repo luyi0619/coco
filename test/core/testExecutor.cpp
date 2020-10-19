@@ -13,21 +13,21 @@
 
 TEST(TestExecutor, TestTPCC) {
 
-  using TransactionType = scar::SiloTransaction;
-  using WorkloadType = scar::tpcc::Workload<TransactionType>;
+  using TransactionType = coco::SiloTransaction;
+  using WorkloadType = coco::tpcc::Workload<TransactionType>;
 
-  scar::tpcc::Context context;
+  coco::tpcc::Context context;
   context.coordinator_num = 2;
   context.partition_num = 4;
   context.worker_num = 4;
   context.partitioner = "hash";
-  scar::tpcc::Random random;
+  coco::tpcc::Random random;
 
-  scar::tpcc::Database db;
+  coco::tpcc::Database db;
 
   std::atomic<bool> stopFlag;
-  scar::Manager manager(0, 0, context, stopFlag);
-  scar::SiloExecutor<WorkloadType> w(0, 0, db, context, manager.worker_status,
+  coco::Manager manager(0, 0, context, stopFlag);
+  coco::SiloExecutor<WorkloadType> w(0, 0, db, context, manager.worker_status,
                                      manager.n_completed_workers,
                                      manager.n_started_workers);
 
@@ -36,21 +36,21 @@ TEST(TestExecutor, TestTPCC) {
 
 TEST(TestWorker, TestYCSB) {
 
-  using TransactionType = scar::SiloTransaction;
-  using WorkloadType = scar::ycsb::Workload<TransactionType>;
+  using TransactionType = coco::SiloTransaction;
+  using WorkloadType = coco::ycsb::Workload<TransactionType>;
 
-  scar::ycsb::Context context;
+  coco::ycsb::Context context;
   context.coordinator_num = 2;
   context.partition_num = 4;
   context.worker_num = 4;
   context.partitioner = "hash";
-  scar::ycsb::Random random;
+  coco::ycsb::Random random;
 
-  scar::ycsb::Database db;
+  coco::ycsb::Database db;
 
   std::atomic<bool> stopFlag;
-  scar::Manager manager(0, 0, context, stopFlag);
-  scar::SiloExecutor<WorkloadType> w(0, 0, db, context, manager.worker_status,
+  coco::Manager manager(0, 0, context, stopFlag);
+  coco::SiloExecutor<WorkloadType> w(0, 0, db, context, manager.worker_status,
                                      manager.n_completed_workers,
                                      manager.n_started_workers);
 

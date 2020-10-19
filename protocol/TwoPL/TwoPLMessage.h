@@ -14,7 +14,7 @@
 #include "protocol/TwoPL/TwoPLRWKey.h"
 #include "protocol/TwoPL/TwoPLTransaction.h"
 
-namespace scar {
+namespace coco {
 
 enum class TwoPLMessage {
   READ_LOCK_REQUEST = static_cast<int>(ControlMessage::NFIELDS),
@@ -236,7 +236,7 @@ public:
     std::atomic<uint64_t> &tid = *std::get<0>(row);
 
     stringPiece.remove_prefix(key_size);
-    scar::Decoder dec(stringPiece);
+    coco::Decoder dec(stringPiece);
     dec >> key_offset;
 
     DCHECK(dec.size() == 0);
@@ -256,7 +256,7 @@ public:
         static_cast<uint32_t>(TwoPLMessage::READ_LOCK_RESPONSE), message_size,
         table_id, partition_id);
 
-    scar::Encoder encoder(responseMessage.data);
+    coco::Encoder encoder(responseMessage.data);
     encoder << message_piece_header;
     encoder << success << key_offset;
 
@@ -350,7 +350,7 @@ public:
     std::atomic<uint64_t> &tid = *std::get<0>(row);
 
     stringPiece.remove_prefix(key_size);
-    scar::Decoder dec(stringPiece);
+    coco::Decoder dec(stringPiece);
     dec >> key_offset;
 
     DCHECK(dec.size() == 0);
@@ -370,7 +370,7 @@ public:
         static_cast<uint32_t>(TwoPLMessage::WRITE_LOCK_RESPONSE), message_size,
         table_id, partition_id);
 
-    scar::Encoder encoder(responseMessage.data);
+    coco::Encoder encoder(responseMessage.data);
     encoder << message_piece_header;
     encoder << success << key_offset;
 
@@ -506,7 +506,7 @@ public:
         static_cast<uint32_t>(TwoPLMessage::WRITE_RESPONSE), message_size,
         table_id, partition_id);
 
-    scar::Encoder encoder(responseMessage.data);
+    coco::Encoder encoder(responseMessage.data);
     encoder << message_piece_header;
     responseMessage.flush();
   }
@@ -574,7 +574,7 @@ public:
         static_cast<uint32_t>(TwoPLMessage::REPLICATION_RESPONSE), message_size,
         table_id, partition_id);
 
-    scar::Encoder encoder(responseMessage.data);
+    coco::Encoder encoder(responseMessage.data);
     encoder << message_piece_header;
     responseMessage.flush();
   }
@@ -635,7 +635,7 @@ public:
         static_cast<uint32_t>(TwoPLMessage::RELEASE_READ_LOCK_RESPONSE),
         message_size, table_id, partition_id);
 
-    scar::Encoder encoder(responseMessage.data);
+    coco::Encoder encoder(responseMessage.data);
     encoder << message_piece_header;
     responseMessage.flush();
   }
@@ -699,7 +699,7 @@ public:
         static_cast<uint32_t>(TwoPLMessage::RELEASE_WRITE_LOCK_RESPONSE),
         message_size, table_id, partition_id);
 
-    scar::Encoder encoder(responseMessage.data);
+    coco::Encoder encoder(responseMessage.data);
     encoder << message_piece_header;
     responseMessage.flush();
   }
@@ -749,4 +749,4 @@ public:
   }
 };
 
-} // namespace scar
+} // namespace coco

@@ -14,11 +14,11 @@
 #include <thread>
 #include <vector>
 
-namespace scar {
+namespace coco {
 
-template <class Workload> class BohmManager : public scar::Manager {
+template <class Workload> class BohmManager : public coco::Manager {
 public:
-  using base_type = scar::Manager;
+  using base_type = coco::Manager;
 
   using WorkloadType = Workload;
   using DatabaseType = typename WorkloadType::DatabaseType;
@@ -159,4 +159,4 @@ public:
   std::vector<StorageType> storages;
   std::vector<std::unique_ptr<TransactionType>> transactions;
 };
-} // namespace scar
+} // namespace coco

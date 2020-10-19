@@ -6,7 +6,7 @@
 #include <gtest/gtest.h>
 
 TEST(TestCommonFixedString, TestHashCode) {
-  using namespace scar;
+  using namespace coco;
   FixedString<10> s1 = "123";
   EXPECT_EQ(ClassOf<decltype(s1)>::size(), 10);
 

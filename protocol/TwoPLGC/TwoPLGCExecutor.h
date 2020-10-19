@@ -7,7 +7,7 @@
 #include "core/group_commit/Executor.h"
 #include "protocol/TwoPLGC/TwoPLGC.h"
 
-namespace scar {
+namespace coco {
 template <class Workload>
 class TwoPLGCExecutor
     : public group_commit::Executor<Workload,
@@ -100,4 +100,4 @@ public:
     txn.message_flusher = [this]() { this->flush_sync_messages(); };
   };
 };
-} // namespace scar
+} // namespace coco

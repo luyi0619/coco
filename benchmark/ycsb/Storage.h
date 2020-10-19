@@ -6,7 +6,7 @@
 
 #include "benchmark/ycsb/Schema.h"
 
-namespace scar {
+namespace coco {
 
 namespace ycsb {
 struct Storage {
@@ -15,4 +15,4 @@ struct Storage {
 };
 
 } // namespace ycsb
-} // namespace scar
+} // namespace coco

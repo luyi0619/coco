@@ -9,9 +9,9 @@ const int N = 10;
 const int port = 12345;
 
 void listen_thread() {
-  scar::Listener l("127.0.0.1", port, N);
+  coco::Listener l("127.0.0.1", port, N);
   for (int i = 0; i < N; i++) {
-    scar::Socket s = l.accept();
+    coco::Socket s = l.accept();
     int id;
     s.read_number(id);
     s.write_number(id);
@@ -22,7 +22,7 @@ void listen_thread() {
 }
 
 void send_thread(int id) {
-  scar::Socket s;
+  coco::Socket s;
   s.connect("127.0.0.1", port);
   s.write_number(id);
   uint64_t ret;

@@ -8,7 +8,7 @@
 
 #include "glog/logging.h"
 
-namespace scar {
+namespace coco {
 
 class PwvHelper {
 public:
@@ -19,4 +19,4 @@ public:
     std::memcpy(dest, src, size);
   }
 };
-} // namespace scar
+} // namespace coco

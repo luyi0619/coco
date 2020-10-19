@@ -9,7 +9,7 @@
 #include "common/FixedString.h"
 #include <string>
 
-namespace scar {
+namespace coco {
 namespace tpcc {
 
 struct NewOrderQuery {
@@ -194,4 +194,4 @@ public:
   }
 };
 } // namespace tpcc
-} // namespace scar
+} // namespace coco

@@ -33,7 +33,7 @@ TEST(TestPartitioner, TestBasic) {
 
   std::size_t total_coordinator = 7, total_partitions = 10;
   for (auto i = 0u; i < total_coordinator; i++) {
-    scar::HashReplicatedPartitioner<2> partitioner(i, total_coordinator);
+    coco::HashReplicatedPartitioner<2> partitioner(i, total_coordinator);
     for (auto k = 0u; k < total_partitions; k++) {
       EXPECT_TRUE(k < masterPartitions.size());
       EXPECT_TRUE(partitioner.master_coordinator(k) <
@@ -70,7 +70,7 @@ TEST(TestPartitioner, TestStarS) {
 
   std::size_t total_coordinator = 4, total_partitions = 10;
   for (auto i = 0u; i < total_coordinator; i++) {
-    scar::StarSPartitioner partitioner(i, total_coordinator);
+    coco::StarSPartitioner partitioner(i, total_coordinator);
     for (auto k = 0u; k < total_partitions; k++) {
       EXPECT_TRUE(k < masterPartitions.size());
       EXPECT_TRUE(partitioner.master_coordinator(k) <

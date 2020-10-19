@@ -12,7 +12,7 @@
 
 #include <thread>
 
-namespace scar {
+namespace coco {
 
 class Manager : public Worker {
 public:
@@ -327,4 +327,4 @@ public:
   std::unique_ptr<Delay> delay;
 };
 
-} // namespace scar
+} // namespace coco

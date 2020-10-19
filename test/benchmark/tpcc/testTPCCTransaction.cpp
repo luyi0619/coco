@@ -9,20 +9,20 @@
 
 TEST(TestTPCCTransaction, TestBasic) {
 
-  using DatabaseType = scar::tpcc::Database;
+  using DatabaseType = coco::tpcc::Database;
 
   DatabaseType db;
-  scar::tpcc::Context context;
-  scar::tpcc::Random random;
+  coco::tpcc::Context context;
+  coco::tpcc::Random random;
 
-  scar::HashPartitioner partitioner(0, 1);
+  coco::HashPartitioner partitioner(0, 1);
 
-  scar::tpcc::Storage storage;
+  coco::tpcc::Storage storage;
 
-  scar::Silo<decltype(db)> silo(db, context, partitioner);
-  scar::tpcc::NewOrder<scar::SiloTransaction> t1(0, 0, db, context, random,
+  coco::Silo<decltype(db)> silo(db, context, partitioner);
+  coco::tpcc::NewOrder<coco::SiloTransaction> t1(0, 0, db, context, random,
                                                  partitioner, storage);
-  scar::tpcc::Payment<scar::SiloTransaction> t2(0, 0, db, context, random,
+  coco::tpcc::Payment<coco::SiloTransaction> t2(0, 0, db, context, random,
                                                 partitioner, storage);
   EXPECT_EQ(true, true);
 }

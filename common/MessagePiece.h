@@ -6,7 +6,7 @@
 
 #include "common/StringPiece.h"
 
-namespace scar {
+namespace coco {
 
 /*
  * MessagePiece header format
@@ -96,4 +96,4 @@ public:
   static constexpr uint64_t PARTITION_ID_MASK = 0xffff;
   static constexpr uint64_t PARTITION_ID_OFFSET = 0;
 };
-} // namespace scar
+} // namespace coco

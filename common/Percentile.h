@@ -12,7 +12,7 @@
 // The nearest-rank method
 // https://en.wikipedia.org/wiki/Percentile
 
-namespace scar {
+namespace coco {
 
 template <class T> class Percentile {
 public:
@@ -91,4 +91,4 @@ private:
   bool isSorted_ = true;
   std::vector<element_type> data_;
 };
-} // namespace scar
+} // namespace coco

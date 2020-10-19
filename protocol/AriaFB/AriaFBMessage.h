@@ -12,7 +12,7 @@
 #include "protocol/AriaFB/AriaFBRWKey.h"
 #include "protocol/AriaFB/AriaFBTransaction.h"
 
-namespace scar {
+namespace coco {
 
 enum class AriaFBMessage {
   SEARCH_REQUEST = static_cast<int>(ControlMessage::NFIELDS),
@@ -185,7 +185,7 @@ public:
     auto row = table.search(key);
 
     stringPiece.remove_prefix(key_size);
-    scar::Decoder dec(stringPiece);
+    coco::Decoder dec(stringPiece);
     dec >> tid >> tid_offset >> key_offset;
 
     DCHECK(dec.size() == 0);
@@ -197,7 +197,7 @@ public:
         static_cast<uint32_t>(AriaFBMessage::SEARCH_RESPONSE), message_size,
         table_id, partition_id);
 
-    scar::Encoder encoder(responseMessage.data);
+    coco::Encoder encoder(responseMessage.data);
     encoder << message_piece_header;
 
     // reserve size for read
@@ -282,7 +282,7 @@ public:
     std::atomic<uint64_t> &metadata = table.search_metadata(key);
 
     stringPiece.remove_prefix(key_size);
-    scar::Decoder dec(stringPiece);
+    coco::Decoder dec(stringPiece);
     dec >> tid >> epoch >> is_write;
 
     DCHECK(dec.size() == 0);
@@ -327,7 +327,7 @@ public:
     uint64_t metadata = table.search_metadata(key).load();
 
     stringPiece.remove_prefix(key_size);
-    scar::Decoder dec(stringPiece);
+    coco::Decoder dec(stringPiece);
     dec >> tid >> tid_offset >> epoch >> is_write;
 
     DCHECK(dec.size() == 0);
@@ -366,7 +366,7 @@ public:
         static_cast<uint32_t>(AriaFBMessage::CHECK_RESPONSE), message_size,
         table_id, partition_id);
 
-    scar::Encoder encoder(responseMessage.data);
+    coco::Encoder encoder(responseMessage.data);
     encoder << message_piece_header;
     encoder << tid << tid_offset << is_write << waw << war << raw;
     responseMessage.flush();
@@ -513,4 +513,4 @@ public:
   }
 };
 
-} // namespace scar
+} // namespace coco

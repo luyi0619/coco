@@ -9,7 +9,7 @@
 
 #include "StringPiece.h"
 
-namespace scar {
+namespace coco {
 template <class T> class Serializer {
 public:
   std::string operator()(const T &v) {
@@ -47,4 +47,4 @@ public:
   }
 };
 
-} // namespace scar
+} // namespace coco

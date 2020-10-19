@@ -7,7 +7,7 @@
 #include <cmath>
 #include <glog/logging.h>
 
-namespace scar {
+namespace coco {
 
 class Zipf {
 public:
@@ -63,4 +63,4 @@ private:
   double zetan_;
   double eta_;
 };
-} // namespace scar
+} // namespace coco

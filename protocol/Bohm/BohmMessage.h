@@ -12,7 +12,7 @@
 #include "protocol/Bohm/BohmRWKey.h"
 #include "protocol/Bohm/BohmTransaction.h"
 
-namespace scar {
+namespace coco {
 
 enum class BohmMessage {
   READ_REQUEST = static_cast<int>(ControlMessage::NFIELDS),
@@ -107,7 +107,7 @@ public:
     const void *key = stringPiece.data();
     stringPiece.remove_prefix(key_size);
 
-    scar::Decoder dec(stringPiece);
+    coco::Decoder dec(stringPiece);
     dec >> key_offset >> tid;
     DCHECK(dec.size() == 0);
 
@@ -127,7 +127,7 @@ public:
         static_cast<uint32_t>(BohmMessage::READ_RESPONSE), message_size,
         table_id, partition_id);
 
-    scar::Encoder encoder(responseMessage.data);
+    coco::Encoder encoder(responseMessage.data);
     encoder << message_piece_header;
     encoder << success << key_offset << tid;
 
@@ -247,4 +247,4 @@ public:
   }
 };
 
-} // namespace scar
+} // namespace coco

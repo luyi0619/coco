@@ -10,15 +10,15 @@
 #include "common/Serialization.h"
 #include "core/SchemaDef.h"
 
-namespace scar {
+namespace coco {
 namespace ycsb {
 static constexpr auto __BASE_COUNTER__ = __COUNTER__ + 1;
 static constexpr auto YCSB_FIELD_SIZE = 10;
 } // namespace ycsb
-} // namespace scar
+} // namespace coco
 
 #undef NAMESPACE_FIELDS
-#define NAMESPACE_FIELDS(x) x(scar) x(ycsb)
+#define NAMESPACE_FIELDS(x) x(coco) x(ycsb)
 
 #define YCSB_KEY_FIELDS(x, y) x(int32_t, Y_KEY)
 #define YCSB_VALUE_FIELDS(x, y)                                                \
@@ -35,7 +35,7 @@ static constexpr auto YCSB_FIELD_SIZE = 10;
 
 DO_STRUCT(ycsb, YCSB_KEY_FIELDS, YCSB_VALUE_FIELDS, NAMESPACE_FIELDS)
 
-namespace scar {
+namespace coco {
 
 template <> class Serializer<ycsb::ycsb::value> {
 public:
@@ -88,4 +88,4 @@ public:
   }
 };
 
-} // namespace scar
+} // namespace coco

@@ -16,7 +16,7 @@
 
 #include <glog/logging.h>
 
-namespace scar {
+namespace coco {
 
 template <class Database> class ScarGC {
 public:
@@ -450,4 +450,4 @@ private:
   Partitioner &partitioner;
 };
 
-} // namespace scar
+} // namespace coco

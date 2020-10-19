@@ -13,7 +13,7 @@
 #include "protocol/Silo/SiloHelper.h"
 #include "protocol/Silo/SiloTransaction.h"
 
-namespace scar {
+namespace coco {
 
 enum class StarMessage {
   ASYNC_VALUE_REPLICATION_REQUEST = static_cast<int>(ControlMessage::NFIELDS),
@@ -211,7 +211,7 @@ public:
         static_cast<uint32_t>(StarMessage::SYNC_VALUE_REPLICATION_RESPONSE),
         message_size, table_id, partition_id);
 
-    scar::Encoder encoder(responseMessage.data);
+    coco::Encoder encoder(responseMessage.data);
     encoder << message_piece_header;
     responseMessage.flush();
   }
@@ -277,4 +277,4 @@ public:
     return v;
   }
 };
-} // namespace scar
+} // namespace coco

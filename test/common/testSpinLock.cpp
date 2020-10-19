@@ -7,7 +7,7 @@
 #include <thread>
 
 TEST(TestCommonSpinLock, TestLock) {
-  scar::SpinLock lock;
+  coco::SpinLock lock;
   lock.lock();
   bool ok;
   std::thread t1([&]() {

@@ -7,7 +7,7 @@
 
 TEST(TestScarRWKey, TestBasic) {
 
-  scar::ScarRWKey key;
+  coco::ScarRWKey key;
 
   EXPECT_EQ(key.get_key(), nullptr);
   EXPECT_EQ(key.get_value(), nullptr);

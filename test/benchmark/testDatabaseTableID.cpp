@@ -7,28 +7,28 @@
 #include <gtest/gtest.h>
 
 TEST(TestDatabaseTableID, TestBasic) {
-  scar::tpcc::warehouse w;
-  auto warehouseTableID = scar::tpcc::warehouse::tableID;
+  coco::tpcc::warehouse w;
+  auto warehouseTableID = coco::tpcc::warehouse::tableID;
   EXPECT_EQ(warehouseTableID, 0);
-  auto districtTableID = scar::tpcc::district::tableID;
+  auto districtTableID = coco::tpcc::district::tableID;
   EXPECT_EQ(districtTableID, 1);
-  auto customerTableID = scar::tpcc::customer::tableID;
+  auto customerTableID = coco::tpcc::customer::tableID;
   EXPECT_EQ(customerTableID, 2);
-  auto customerNameIdxTableID = scar::tpcc::customer_name_idx::tableID;
+  auto customerNameIdxTableID = coco::tpcc::customer_name_idx::tableID;
   EXPECT_EQ(customerNameIdxTableID, 3);
-  auto historyTableID = scar::tpcc::history::tableID;
+  auto historyTableID = coco::tpcc::history::tableID;
   EXPECT_EQ(historyTableID, 4);
-  auto newOrderTableID = scar::tpcc::new_order::tableID;
+  auto newOrderTableID = coco::tpcc::new_order::tableID;
   EXPECT_EQ(newOrderTableID, 5);
-  auto orderTableID = scar::tpcc::order::tableID;
+  auto orderTableID = coco::tpcc::order::tableID;
   EXPECT_EQ(orderTableID, 6);
-  auto orderLineTableID = scar::tpcc::order_line::tableID;
+  auto orderLineTableID = coco::tpcc::order_line::tableID;
   EXPECT_EQ(orderLineTableID, 7);
-  auto itemTableID = scar::tpcc::item::tableID;
+  auto itemTableID = coco::tpcc::item::tableID;
   EXPECT_EQ(itemTableID, 8);
-  auto stockTableID = scar::tpcc::stock::tableID;
+  auto stockTableID = coco::tpcc::stock::tableID;
   EXPECT_EQ(stockTableID, 9);
 
-  auto ycsbTableID = scar::ycsb::ycsb::tableID;
+  auto ycsbTableID = coco::ycsb::ycsb::tableID;
   EXPECT_EQ(ycsbTableID, 0);
 }

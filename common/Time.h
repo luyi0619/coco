@@ -6,7 +6,7 @@
 
 #include <chrono>
 
-namespace scar {
+namespace coco {
 
 class Time {
 public:
@@ -19,4 +19,4 @@ public:
   static std::chrono::steady_clock::time_point startTime;
 };
 
-} // namespace scar
+} // namespace coco

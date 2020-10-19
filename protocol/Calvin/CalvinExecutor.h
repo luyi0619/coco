@@ -17,7 +17,7 @@
 #include <chrono>
 #include <thread>
 
-namespace scar {
+namespace coco {
 
 template <class Workload> class CalvinExecutor : public Worker {
 public:
@@ -458,4 +458,4 @@ private:
   LockfreeQueue<TransactionType *> transaction_queue;
   std::vector<CalvinExecutor *> all_executors;
 };
-} // namespace scar
+} // namespace coco

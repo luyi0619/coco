@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-namespace scar {
+namespace coco {
 class Context {
 
 public:
@@ -78,4 +78,4 @@ public:
 
   std::vector<std::string> peers;
 };
-} // namespace scar
+} // namespace coco

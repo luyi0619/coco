@@ -19,7 +19,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace scar {
+namespace coco {
 namespace ycsb {
 class Database {
 public:
@@ -173,4 +173,4 @@ private:
   std::vector<std::unique_ptr<ITable>> tbl_ycsb_vec;
 };
 } // namespace ycsb
-} // namespace scar
+} // namespace coco

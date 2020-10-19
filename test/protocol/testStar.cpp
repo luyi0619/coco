@@ -9,22 +9,22 @@
 
 TEST(TestStar, TestStarSwitcher) {
 
-  using TransactionType = scar::SiloTransaction;
-  using WorkloadType = scar::tpcc::Workload<TransactionType>;
+  using TransactionType = coco::SiloTransaction;
+  using WorkloadType = coco::tpcc::Workload<TransactionType>;
 
-  scar::tpcc::Context context;
+  coco::tpcc::Context context;
   context.coordinator_num = 2;
   context.partition_num = 4;
   context.worker_num = 4;
   context.protocol = "Star";
-  scar::tpcc::Random random;
+  coco::tpcc::Random random;
 
-  scar::tpcc::Database db;
+  coco::tpcc::Database db;
 
   std::atomic<bool> stopFlag;
 
-  scar::StarManager manager(0, 0, context, stopFlag);
-  scar::StarExecutor<WorkloadType> e(
+  coco::StarManager manager(0, 0, context, stopFlag);
+  coco::StarExecutor<WorkloadType> e(
       0, 0, db, context, manager.batch_size, manager.worker_status,
       manager.n_completed_workers, manager.n_started_workers);
 }

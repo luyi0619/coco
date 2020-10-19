@@ -16,11 +16,11 @@
 #include <unordered_set>
 #include <vector>
 
-namespace scar {
+namespace coco {
 
-template <class Workload> class AriaFBManager : public scar::Manager {
+template <class Workload> class AriaFBManager : public coco::Manager {
 public:
-  using base_type = scar::Manager;
+  using base_type = coco::Manager;
 
   using WorkloadType = Workload;
   using DatabaseType = typename WorkloadType::DatabaseType;
@@ -316,4 +316,4 @@ public:
   std::atomic<uint32_t> total_abort;
   std::vector<int> abort_tids;
 };
-} // namespace scar
+} // namespace coco

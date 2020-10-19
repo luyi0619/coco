@@ -10,7 +10,7 @@
 
 #include <vector>
 
-namespace scar {
+namespace coco {
 
 enum class ControlMessage { STATISTICS, VECTOR, SIGNAL, ACK, STOP, NFIELDS };
 
@@ -105,4 +105,4 @@ public:
   }
 };
 
-} // namespace scar
+} // namespace coco

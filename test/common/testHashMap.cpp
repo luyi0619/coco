@@ -10,7 +10,7 @@ TEST(TestHashMap, TestConcurrent) {
 
   constexpr int nThreads = 10, keys = 1000, totalKeys = nThreads * keys;
 
-  scar::HashMap<nThreads, int, int> maps;
+  coco::HashMap<nThreads, int, int> maps;
   std::vector<std::thread> v;
 
   for (int i = 0; i < nThreads; i++) {
@@ -28,7 +28,7 @@ TEST(TestHashMap, TestConcurrent) {
 }
 
 TEST(TestHashMap, TestSerialized) {
-  scar::HashMap<1, int, int> maps;
+  coco::HashMap<1, int, int> maps;
   EXPECT_EQ(maps.size(), 0);
   maps[0] = 0;
   EXPECT_EQ(maps.size(), 1);

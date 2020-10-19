@@ -7,11 +7,11 @@
 #include <gtest/gtest.h>
 
 TEST(TestMessage, TestBasic) {
-  using scar::Decoder;
-  using scar::Encoder;
-  using scar::Message;
-  using scar::MessagePiece;
-  using scar::StringPiece;
+  using coco::Decoder;
+  using coco::Encoder;
+  using coco::Message;
+  using coco::MessagePiece;
+  using coco::StringPiece;
 
   auto table_id = 12;
   auto partition_id = 34;
@@ -33,7 +33,7 @@ TEST(TestMessage, TestBasic) {
   EXPECT_EQ(message.get_dest_node_id(), dest_node_id);
   EXPECT_EQ(message.get_worker_id(), worker_id);
 
-  scar::Encoder encoder(message.data);
+  coco::Encoder encoder(message.data);
   auto message_piece_header0 = MessagePiece::construct_message_piece_header(
       message_type, sizeof(int32_t) + MessagePiece::get_header_size(), table_id,
       partition_id);
@@ -69,7 +69,7 @@ TEST(TestMessage, TestBasic) {
 
   auto it = message.begin();
 
-  scar::Decoder dec((*it).toStringPiece());
+  coco::Decoder dec((*it).toStringPiece());
   int32_t decoded_message_content0;
   dec >> decoded_message_content0;
   EXPECT_EQ(decoded_message_content0, message_content0);
@@ -78,7 +78,7 @@ TEST(TestMessage, TestBasic) {
 
   it++;
 
-  dec = scar::Decoder((*it).toStringPiece());
+  dec = coco::Decoder((*it).toStringPiece());
   int64_t decoded_message_content1;
   dec >> decoded_message_content1;
   EXPECT_EQ(decoded_message_content1, message_content1);

@@ -9,11 +9,11 @@
 
 #include "common/Random.h"
 
-namespace scar {
+namespace coco {
 namespace tpcc {
-class Random : public scar::Random {
+class Random : public coco::Random {
 public:
-  using scar::Random::Random;
+  using coco::Random::Random;
 
   uint64_t non_uniform_distribution(uint64_t A, uint64_t x, uint64_t y) {
     return (uniform_dist(0, A) | uniform_dist(x, y)) % (y - x + 1) + x;
@@ -55,4 +55,4 @@ private:
   };
 };
 } // namespace tpcc
-} // namespace scar
+} // namespace coco

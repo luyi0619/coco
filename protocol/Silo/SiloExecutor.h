@@ -7,7 +7,7 @@
 #include "core/Executor.h"
 #include "protocol/Silo/Silo.h"
 
-namespace scar {
+namespace coco {
 template <class Workload>
 class SiloExecutor
     : public Executor<Workload, Silo<typename Workload::DatabaseType>>
@@ -73,4 +73,4 @@ public:
     txn.message_flusher = [this]() { this->flush_messages(); };
   };
 };
-} // namespace scar
+} // namespace coco

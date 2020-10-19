@@ -12,10 +12,10 @@
 #include <thread>
 #include <vector>
 
-namespace scar {
-template <class Database> class PwvManager : public scar::Manager {
+namespace coco {
+template <class Database> class PwvManager : public coco::Manager {
 public:
-  using base_type = scar::Manager;
+  using base_type = coco::Manager;
   using DatabaseType = Database;
   using WorkloadType = PwvWorkload<Database>;
   using StorageType = typename DatabaseType::StorageType;
@@ -69,4 +69,4 @@ public:
   std::vector<StorageType> storages;
   std::vector<std::unique_ptr<TransactionType>> transactions;
 };
-} // namespace scar
+} // namespace coco

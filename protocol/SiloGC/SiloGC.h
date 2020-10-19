@@ -15,7 +15,7 @@
 #include "protocol/SiloGC/SiloGCMessage.h"
 #include <glog/logging.h>
 
-namespace scar {
+namespace coco {
 
 template <class Database> class SiloGC {
 public:
@@ -335,4 +335,4 @@ private:
   uint64_t max_tid = 0;
 };
 
-} // namespace scar
+} // namespace coco

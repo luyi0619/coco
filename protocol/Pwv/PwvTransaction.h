@@ -6,7 +6,7 @@
 
 #include "protocol/Pwv/PwvStatement.h"
 
-namespace scar {
+namespace coco {
 
 class PwvTransaction {
 
@@ -261,4 +261,4 @@ public:
   const tpcc::PaymentQuery query;
 };
 
-} // namespace scar
+} // namespace coco

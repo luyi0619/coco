@@ -7,7 +7,7 @@
 #include "common/Encoder.h"
 #include <string>
 
-namespace scar {
+namespace coco {
 
 class Operation {
 
@@ -29,4 +29,4 @@ public:
   std::size_t partition_id;
   std::string data;
 };
-} // namespace scar
+} // namespace coco

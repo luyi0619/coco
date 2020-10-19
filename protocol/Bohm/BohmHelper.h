@@ -10,7 +10,7 @@
 
 #include <glog/logging.h>
 
-namespace scar {
+namespace coco {
 
 class BohmHelper {
 public:
@@ -83,4 +83,4 @@ public:
   static constexpr int POS_OFFSET = 0;
   static constexpr uint64_t POS_MASK = 0xffffffull;
 };
-} // namespace scar
+} // namespace coco

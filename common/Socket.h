@@ -14,7 +14,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-namespace scar {
+namespace coco {
 
 class Socket {
 
@@ -213,4 +213,4 @@ private:
 private:
   int fd;
 };
-} // namespace scar
+} // namespace coco

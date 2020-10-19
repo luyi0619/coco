@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.2)
-project(scar)
+project(coco)
 
 #set(CMAKE_BUILD_TYPE Debug)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -Wall -Wno-long-long -Wno-unused-variable -Wno-variadic-macros -pedantic")

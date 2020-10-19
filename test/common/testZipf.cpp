@@ -8,9 +8,9 @@
 TEST(TestZipf, TestBasic) {
 
   constexpr int N = 1000000, M = 1000000;
-  auto &z = scar::Zipf::globalZipf();
+  auto &z = coco::Zipf::globalZipf();
   z.init(N, 0.9);
-  scar::Random random;
+  coco::Random random;
   std::vector<int> v(N, 0);
   std::vector<int> percentile(10, 0);
   for (auto i = 0; i < M; i++) {

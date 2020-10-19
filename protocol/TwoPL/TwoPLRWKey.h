@@ -10,7 +10,7 @@
 
 #include <glog/logging.h>
 
-namespace scar {
+namespace coco {
 
 class TwoPLRWKey {
 public:
@@ -179,4 +179,4 @@ public:
   static constexpr uint32_t LOCAL_INDEX_READ_BIT_MASK = 0x1;
   static constexpr uint32_t LOCAL_INDEX_READ_BIT_OFFSET = 0;
 };
-} // namespace scar
+} // namespace coco

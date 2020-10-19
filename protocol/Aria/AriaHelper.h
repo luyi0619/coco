@@ -13,7 +13,7 @@
 #include "glog/logging.h"
 #include "protocol/Aria/AriaRWKey.h"
 
-namespace scar {
+namespace coco {
 
 class AriaHelper {
 
@@ -136,4 +136,4 @@ public:
   static constexpr uint64_t WTS_MASK = 0xfffffull;
 };
 
-} // namespace scar
+} // namespace coco

@@ -12,11 +12,11 @@ DEFINE_string(servers, "127.0.0.1:10010;127.0.0.1:10011;127.0.0.1:10012",
 
 TEST(TestCoordinator, TestTPCC) {
 
-  using DatabaseType = scar::tpcc::Database;
+  using DatabaseType = coco::tpcc::Database;
 
   int n = FLAGS_threads;
 
-  scar::tpcc::Context context;
+  coco::tpcc::Context context;
   context.peers = {"127.0.0.1:10010"};
   context.coordinator_num = 1;
   context.partition_num = n;
@@ -29,14 +29,14 @@ TEST(TestCoordinator, TestTPCC) {
   std::atomic<uint64_t> epoch;
   std::atomic<bool> stopFlag;
 
-  scar::Coordinator c(0, db, context);
+  coco::Coordinator c(0, db, context);
 
   EXPECT_EQ(true, true);
 }
 
 TEST(TestCoordinator, TestConnect) {
 
-  using DatabaseType = scar::tpcc::Database;
+  using DatabaseType = coco::tpcc::Database;
 
   int n = FLAGS_threads;
 
@@ -44,7 +44,7 @@ TEST(TestCoordinator, TestConnect) {
   boost::algorithm::split(peers, FLAGS_servers, boost::is_any_of(";"));
 
   auto startCoordinator = [n, &peers](int id) {
-    scar::tpcc::Context context;
+    coco::tpcc::Context context;
     context.peers = peers;
     context.coordinator_num = 3;
     context.partition_num = n;
@@ -54,7 +54,7 @@ TEST(TestCoordinator, TestConnect) {
     context.io_thread_num = 1;
 
     DatabaseType db;
-    scar::Coordinator c(id, db, context);
+    coco::Coordinator c(id, db, context);
     c.connectToPeers();
   };
 

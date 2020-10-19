@@ -8,7 +8,7 @@
 
 #include "glog/logging.h"
 
-namespace scar {
+namespace coco {
 
 class SiloHelper {
 
@@ -85,4 +85,4 @@ public:
   static constexpr uint64_t LOCK_BIT_MASK = 0x1ull;
 };
 
-} // namespace scar
+} // namespace coco

@@ -17,7 +17,7 @@
 #include <thread>
 #include <vector>
 
-namespace scar {
+namespace coco {
 
 class Coordinator {
 public:
@@ -374,4 +374,4 @@ private:
   std::vector<std::unique_ptr<OutgoingDispatcher>> oDispatchers;
   LockfreeQueue<Message *> in_queue, out_queue;
 };
-} // namespace scar
+} // namespace coco

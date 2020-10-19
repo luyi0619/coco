@@ -61,20 +61,20 @@
 
 #include <unordered_set>
 
-namespace scar {
+namespace coco {
 
 template <class Context> class InferType {};
 
-template <> class InferType<scar::tpcc::Context> {
+template <> class InferType<coco::tpcc::Context> {
 public:
   template <class Transaction>
-  using WorkloadType = scar::tpcc::Workload<Transaction>;
+  using WorkloadType = coco::tpcc::Workload<Transaction>;
 };
 
-template <> class InferType<scar::ycsb::Context> {
+template <> class InferType<coco::ycsb::Context> {
 public:
   template <class Transaction>
-  using WorkloadType = scar::ycsb::Workload<Transaction>;
+  using WorkloadType = coco::ycsb::Workload<Transaction>;
 };
 
 class WorkerFactory {
@@ -94,7 +94,7 @@ public:
 
     if (context.protocol == "Silo") {
 
-      using TransactionType = scar::SiloTransaction;
+      using TransactionType = coco::SiloTransaction;
       using WorkloadType =
           typename InferType<Context>::template WorkloadType<TransactionType>;
 
@@ -111,7 +111,7 @@ public:
 
     } else if (context.protocol == "SiloGC") {
 
-      using TransactionType = scar::SiloTransaction;
+      using TransactionType = coco::SiloTransaction;
       using WorkloadType =
           typename InferType<Context>::template WorkloadType<TransactionType>;
 
@@ -126,7 +126,7 @@ public:
       workers.push_back(manager);
     } else if (context.protocol == "SiloSI") {
 
-      using TransactionType = scar::SiloTransaction;
+      using TransactionType = coco::SiloTransaction;
       using WorkloadType =
           typename InferType<Context>::template WorkloadType<TransactionType>;
 
@@ -142,7 +142,7 @@ public:
 
     } else if (context.protocol == "Scar") {
 
-      using TransactionType = scar::ScarTransaction;
+      using TransactionType = coco::ScarTransaction;
       using WorkloadType =
           typename InferType<Context>::template WorkloadType<TransactionType>;
 
@@ -159,7 +159,7 @@ public:
 
     } else if (context.protocol == "ScarGC") {
 
-      using TransactionType = scar::ScarTransaction;
+      using TransactionType = coco::ScarTransaction;
       using WorkloadType =
           typename InferType<Context>::template WorkloadType<TransactionType>;
 
@@ -176,7 +176,7 @@ public:
 
     } else if (context.protocol == "ScarSI") {
 
-      using TransactionType = scar::ScarTransaction;
+      using TransactionType = coco::ScarTransaction;
       using WorkloadType =
           typename InferType<Context>::template WorkloadType<TransactionType>;
 
@@ -198,7 +198,7 @@ public:
             0)
           << "In Star, each partition is managed by only one thread.";
 
-      using TransactionType = scar::SiloTransaction;
+      using TransactionType = coco::SiloTransaction;
       using WorkloadType =
           typename InferType<Context>::template WorkloadType<TransactionType>;
 
@@ -215,7 +215,7 @@ public:
 
     } else if (context.protocol == "TwoPL") {
 
-      using TransactionType = scar::TwoPLTransaction;
+      using TransactionType = coco::TwoPLTransaction;
       using WorkloadType =
           typename InferType<Context>::template WorkloadType<TransactionType>;
 
@@ -231,7 +231,7 @@ public:
       workers.push_back(manager);
     } else if (context.protocol == "TwoPLGC") {
 
-      using TransactionType = scar::TwoPLTransaction;
+      using TransactionType = coco::TwoPLTransaction;
       using WorkloadType =
           typename InferType<Context>::template WorkloadType<TransactionType>;
 
@@ -247,7 +247,7 @@ public:
       workers.push_back(manager);
     } else if (context.protocol == "Calvin") {
 
-      using TransactionType = scar::CalvinTransaction;
+      using TransactionType = coco::CalvinTransaction;
       using WorkloadType =
           typename InferType<Context>::template WorkloadType<TransactionType>;
 
@@ -280,7 +280,7 @@ public:
       }
     } else if (context.protocol == "Bohm") {
 
-      using TransactionType = scar::BohmTransaction;
+      using TransactionType = coco::BohmTransaction;
       using WorkloadType =
           typename InferType<Context>::template WorkloadType<TransactionType>;
 
@@ -301,7 +301,7 @@ public:
       workers.push_back(manager);
     } else if (context.protocol == "Aria") {
 
-      using TransactionType = scar::AriaTransaction;
+      using TransactionType = coco::AriaTransaction;
       using WorkloadType =
           typename InferType<Context>::template WorkloadType<TransactionType>;
 
@@ -323,7 +323,7 @@ public:
       workers.push_back(manager);
     } else if (context.protocol == "AriaFB") {
 
-      using TransactionType = scar::AriaFBTransaction;
+      using TransactionType = coco::AriaFBTransaction;
       using WorkloadType =
           typename InferType<Context>::template WorkloadType<TransactionType>;
 
@@ -378,4 +378,4 @@ public:
     return workers;
   }
 };
-} // namespace scar
+} // namespace coco

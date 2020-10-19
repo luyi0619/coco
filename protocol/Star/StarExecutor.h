@@ -18,7 +18,7 @@
 #include <chrono>
 #include <queue>
 
-namespace scar {
+namespace coco {
 
 template <class Workload> class StarExecutor : public Worker {
 public:
@@ -379,4 +379,4 @@ private:
       messageHandlers;
   LockfreeQueue<Message *> in_queue, out_queue;
 };
-} // namespace scar
+} // namespace coco

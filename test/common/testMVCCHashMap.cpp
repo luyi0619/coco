@@ -7,7 +7,7 @@
 #include <thread>
 
 TEST(TestHashMap, TestBasic) {
-  scar::MVCCHashMap<10, int, int> map;
+  coco::MVCCHashMap<10, int, int> map;
   map.insert_key_version_holder(1, 100) = 10;
 
   EXPECT_TRUE(map.contains_key(1));

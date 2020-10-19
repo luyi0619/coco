@@ -10,7 +10,7 @@
 #include "protocol/Calvin/CalvinPartitioner.h"
 #include "protocol/Calvin/CalvinTransaction.h"
 
-namespace scar {
+namespace coco {
 
 template <class Database> class Calvin {
 public:
@@ -141,4 +141,4 @@ private:
   DatabaseType &db;
   CalvinPartitioner &partitioner;
 };
-} // namespace scar
+} // namespace coco

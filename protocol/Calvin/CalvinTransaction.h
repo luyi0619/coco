@@ -13,7 +13,7 @@
 #include <glog/logging.h>
 #include <thread>
 
-namespace scar {
+namespace coco {
 class CalvinTransaction {
 
 public:
@@ -282,4 +282,4 @@ public:
   Operation operation; // never used
   std::vector<CalvinRWKey> readSet, writeSet;
 };
-} // namespace scar
+} // namespace coco

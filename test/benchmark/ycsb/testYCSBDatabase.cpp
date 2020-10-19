@@ -7,18 +7,18 @@
 
 TEST(TestYCSBDatabase, TestBasic) {
 
-  scar::ycsb::Context context;
-  context.strategy = scar::ycsb::PartitionStrategy::ROUND_ROBIN;
+  coco::ycsb::Context context;
+  context.strategy = coco::ycsb::PartitionStrategy::ROUND_ROBIN;
   context.keysPerPartition = 20;
   context.keysPerTransaction = 10;
   context.partition_num = 4;
   context.worker_num = 4;
   context.coordinator_num = 1;
   context.partitioner = "hash";
-  scar::ycsb::Database db;
+  coco::ycsb::Database db;
   db.initialize(context);
 
-  auto ycsb = sizeof(scar::ycsb::ycsb::key) + sizeof(scar::ycsb::ycsb::value);
+  auto ycsb = sizeof(coco::ycsb::ycsb::key) + sizeof(coco::ycsb::ycsb::value);
   auto total_size = 200000 * ycsb;
 
   LOG(INFO) << "YCSB total size: " << total_size << " bytes.";

@@ -9,7 +9,7 @@
 #include <numeric>
 #include <string>
 
-namespace scar {
+namespace coco {
 
 class Partitioner {
 public:
@@ -256,4 +256,4 @@ public:
   }
 };
 
-} // namespace scar
+} // namespace coco

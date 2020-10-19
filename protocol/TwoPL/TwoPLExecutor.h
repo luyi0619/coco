@@ -7,7 +7,7 @@
 #include "core/Executor.h"
 #include "protocol/TwoPL/TwoPL.h"
 
-namespace scar {
+namespace coco {
 template <class Workload>
 class TwoPLExecutor
     : public Executor<Workload, TwoPL<typename Workload::DatabaseType>>
@@ -97,4 +97,4 @@ public:
     txn.message_flusher = [this]() { this->flush_messages(); };
   };
 };
-} // namespace scar
+} // namespace coco

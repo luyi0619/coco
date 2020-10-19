@@ -18,15 +18,15 @@ int main(int argc, char *argv[]) {
   google::InstallFailureSignalHandler();
   google::ParseCommandLineFlags(&argc, &argv, true);
 
-  scar::ycsb::Context context;
+  coco::ycsb::Context context;
   SETUP_CONTEXT(context);
 
   if (FLAGS_skew_pattern == "both") {
-    context.skewPattern = scar::ycsb::YCSBSkewPattern::BOTH;
+    context.skewPattern = coco::ycsb::YCSBSkewPattern::BOTH;
   } else if (FLAGS_skew_pattern == "read") {
-    context.skewPattern = scar::ycsb::YCSBSkewPattern::READ;
+    context.skewPattern = coco::ycsb::YCSBSkewPattern::READ;
   } else if (FLAGS_skew_pattern == "write") {
-    context.skewPattern = scar::ycsb::YCSBSkewPattern::WRITE;
+    context.skewPattern = coco::ycsb::YCSBSkewPattern::WRITE;
   } else {
     CHECK(false);
   }
@@ -42,17 +42,17 @@ int main(int argc, char *argv[]) {
   if (FLAGS_zipf > 0) {
     context.isUniform = false;
     if (context.global_key_space) {
-      scar::Zipf::globalZipf().init(
+      coco::Zipf::globalZipf().init(
           context.keysPerPartition * context.partition_num, FLAGS_zipf);
     } else {
-      scar::Zipf::globalZipf().init(context.keysPerPartition, FLAGS_zipf);
+      coco::Zipf::globalZipf().init(context.keysPerPartition, FLAGS_zipf);
     }
   }
 
-  scar::ycsb::Database db;
+  coco::ycsb::Database db;
   db.initialize(context);
 
-  scar::Coordinator c(FLAGS_id, db, context);
+  coco::Coordinator c(FLAGS_id, db, context);
   c.connectToPeers();
   c.start();
   return 0;

@@ -9,7 +9,7 @@
 #include <glog/logging.h>
 #include <tuple>
 
-namespace scar {
+namespace coco {
 
 class TwoPLHelper {
 public:
@@ -138,4 +138,4 @@ public:
   static constexpr int WRITE_LOCK_BIT_OFFSET = 63;
   static constexpr uint64_t WRITE_LOCK_BIT_MASK = 0x1ull;
 };
-} // namespace scar
+} // namespace coco

@@ -14,7 +14,7 @@
  *  https://github.com/protocolbuffers/protobuf/blob/master/src/google/protobuf/stubs/stringpiece.h
  */
 
-namespace scar {
+namespace coco {
 
 class StringPiece {
 
@@ -123,4 +123,4 @@ private:
   const char *data_;
   size_t length_;
 };
-} // namespace scar
+} // namespace coco

@@ -15,7 +15,7 @@
 #include "protocol/Pwv/PwvHelper.h"
 #include "protocol/Pwv/PwvRWKey.h"
 
-namespace scar {
+namespace coco {
 
 class PwvStatement {
 public:
@@ -840,4 +840,4 @@ public:
   const tpcc::PaymentQuery &query;
 };
 
-} // namespace scar
+} // namespace coco

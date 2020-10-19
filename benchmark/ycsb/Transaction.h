@@ -15,7 +15,7 @@
 #include "core/Partitioner.h"
 #include "core/Table.h"
 
-namespace scar {
+namespace coco {
 namespace ycsb {
 
 template <class Transaction> class ReadModifyWrite : public Transaction {
@@ -111,4 +111,4 @@ private:
 };
 } // namespace ycsb
 
-} // namespace scar
+} // namespace coco

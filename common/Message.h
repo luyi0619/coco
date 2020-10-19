@@ -9,7 +9,7 @@
 #include <chrono>
 #include <string>
 
-namespace scar {
+namespace coco {
 
 /*
  * Message header format
@@ -244,4 +244,4 @@ public:
 
   static constexpr uint32_t DEADBEEF = 0xDEADBEEF;
 };
-} // namespace scar
+} // namespace coco

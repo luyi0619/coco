@@ -6,7 +6,7 @@
 
 #include <glog/logging.h>
 
-namespace scar {
+namespace coco {
 
 // delay in us from the sender side
 
@@ -49,4 +49,4 @@ protected:
   int64_t delay_time;
 };
 
-} // namespace scar
+} // namespace coco

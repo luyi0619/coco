@@ -4,7 +4,7 @@
 
 #pragma once
 
-namespace scar {
+namespace coco {
 
 enum class ExecutorStatus {
   START,
@@ -31,4 +31,4 @@ enum class ExecutorStatus {
 
 enum class TransactionResult { COMMIT, READY_TO_COMMIT, ABORT, ABORT_NORETRY };
 
-} // namespace scar
+} // namespace coco

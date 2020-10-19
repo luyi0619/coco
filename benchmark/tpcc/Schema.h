@@ -11,14 +11,14 @@
 #include "core/SchemaDef.h"
 
 // table definition for tpcc
-namespace scar {
+namespace coco {
 namespace tpcc {
 static constexpr std::size_t __BASE_COUNTER__ = __COUNTER__ + 1;
 }
-} // namespace scar
+} // namespace coco
 
 #undef NAMESPACE_FIELDS
-#define NAMESPACE_FIELDS(x) x(scar) x(tpcc)
+#define NAMESPACE_FIELDS(x) x(coco) x(tpcc)
 
 #define WAREHOUSE_KEY_FIELDS(x, y) x(int32_t, W_ID)
 #define WAREHOUSE_VALUE_FIELDS(x, y)                                           \
@@ -118,7 +118,7 @@ DO_STRUCT(item, ITEM_KEY_FIELDS, ITEM_VALUE_FIELDS, NAMESPACE_FIELDS)
 
 DO_STRUCT(stock, STOCK_KEY_FIELDS, STOCK_VALUE_FIELDS, NAMESPACE_FIELDS)
 
-namespace scar {
+namespace coco {
 
 template <> class Serializer<tpcc::warehouse::value> {
 public:
@@ -248,4 +248,4 @@ public:
   }
 };
 
-} // namespace scar
+} // namespace coco

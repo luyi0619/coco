@@ -8,14 +8,14 @@
 
 #include <glog/logging.h>
 
-namespace scar {
+namespace coco {
 namespace ycsb {
 
 enum class PartitionStrategy { RANGE, ROUND_ROBIN };
 
 enum class YCSBSkewPattern { BOTH, READ, WRITE };
 
-class Context : public scar::Context {
+class Context : public coco::Context {
 public:
   std::size_t getPartitionID(std::size_t key) const {
     DCHECK(key >= 0 && key < partition_num * keysPerPartition);
@@ -71,4 +71,4 @@ public:
   PartitionStrategy strategy = PartitionStrategy::ROUND_ROBIN;
 };
 } // namespace ycsb
-} // namespace scar
+} // namespace coco

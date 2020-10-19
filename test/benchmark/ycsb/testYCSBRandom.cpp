@@ -6,7 +6,7 @@
 #include <gtest/gtest.h>
 
 TEST(TestTPCCRandom, TestRandStr) {
-  scar::ycsb::Random random;
+  coco::ycsb::Random random;
   std::string rand_str = random.rand_str(100);
   EXPECT_EQ(rand_str.length(), 100);
 }

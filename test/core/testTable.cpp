@@ -8,7 +8,7 @@
 
 TEST(TestTable, TestTPCC) {
 
-  using namespace scar;
+  using namespace coco;
   using namespace tpcc;
 
   auto warehouse_table_id = warehouse::tableID;

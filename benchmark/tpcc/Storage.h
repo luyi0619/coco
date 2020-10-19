@@ -6,7 +6,7 @@
 
 #include "benchmark/tpcc/Schema.h"
 
-namespace scar {
+namespace coco {
 namespace tpcc {
 struct Storage {
   warehouse::key warehouse_key;
@@ -39,4 +39,4 @@ struct Storage {
   history::value h_value;
 };
 } // namespace tpcc
-} // namespace scar
+} // namespace coco

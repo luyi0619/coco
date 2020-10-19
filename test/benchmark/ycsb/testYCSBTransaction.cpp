@@ -9,21 +9,21 @@
 
 TEST(TestYCSBTransaction, TestBasic) {
 
-  using DatabaseType = scar::ycsb::Database;
+  using DatabaseType = coco::ycsb::Database;
 
   DatabaseType db;
-  scar::ycsb::Context context;
+  coco::ycsb::Context context;
   context.partition_num = 1;
 
-  scar::ycsb::Random random;
+  coco::ycsb::Random random;
 
-  scar::HashPartitioner partitioner(0, 1);
+  coco::HashPartitioner partitioner(0, 1);
 
-  scar::Silo<decltype(db)> silo(db, context, partitioner);
+  coco::Silo<decltype(db)> silo(db, context, partitioner);
 
-  scar::ycsb::Storage storage;
+  coco::ycsb::Storage storage;
 
-  scar::ycsb::ReadModifyWrite<scar::SiloTransaction> t(
+  coco::ycsb::ReadModifyWrite<coco::SiloTransaction> t(
       0, 0, db, context, random, partitioner, storage);
   EXPECT_EQ(true, true);
 }

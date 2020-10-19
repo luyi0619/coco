@@ -7,12 +7,12 @@
 #include "common/FastSleep.h"
 #include "core/Manager.h"
 
-namespace scar {
+namespace coco {
 namespace group_commit {
 
-class Manager : public scar::Manager {
+class Manager : public coco::Manager {
 public:
-  using base_type = scar::Manager;
+  using base_type = coco::Manager;
 
   Manager(std::size_t coordinator_id, std::size_t id, const Context &context,
           std::atomic<bool> &stopFlag)
@@ -115,4 +115,4 @@ protected:
 };
 
 } // namespace group_commit
-} // namespace scar
+} // namespace coco

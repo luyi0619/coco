@@ -14,7 +14,7 @@
 #include <glog/logging.h>
 #include <thread>
 
-namespace scar {
+namespace coco {
 
 class AriaTransaction {
 
@@ -186,4 +186,4 @@ public:
   Operation operation; // never used
   std::vector<AriaRWKey> readSet, writeSet;
 };
-} // namespace scar
+} // namespace coco

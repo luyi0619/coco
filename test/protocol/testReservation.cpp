@@ -23,7 +23,7 @@ const int WRITES = 2;
 const int TABLE = 1000000;
 const int TRANSACTIONS = 1000000;
 
-using namespace scar;
+using namespace coco;
 
 struct Transaction {
 

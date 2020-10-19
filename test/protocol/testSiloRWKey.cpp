@@ -7,7 +7,7 @@
 
 TEST(TestSiloRWKey, TestBasic) {
 
-  scar::SiloRWKey key;
+  coco::SiloRWKey key;
 
   EXPECT_EQ(key.get_key(), nullptr);
   EXPECT_EQ(key.get_value(), nullptr);

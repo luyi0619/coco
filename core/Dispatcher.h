@@ -15,7 +15,7 @@
 #include <thread>
 #include <vector>
 
-namespace scar {
+namespace coco {
 class IncomingDispatcher {
 
 public:
@@ -178,4 +178,4 @@ private:
   std::atomic<bool> &stopFlag;
 };
 
-} // namespace scar
+} // namespace coco

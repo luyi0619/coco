@@ -7,7 +7,7 @@
 
 TEST(TestTwoPLHelper, TestBasic) {
 
-  using scar::ScarHelper;
+  using coco::ScarHelper;
 
   uint64_t wts = 0x1234;
   uint64_t delta = 0x2345;
@@ -27,7 +27,7 @@ TEST(TestTwoPLHelper, TestBasic) {
 
 TEST(TestTwoPLHelper, TestOverflow) {
 
-  using scar::ScarHelper;
+  using coco::ScarHelper;
 
   uint64_t wts = 0x1234;
 

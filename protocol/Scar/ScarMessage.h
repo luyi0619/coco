@@ -14,7 +14,7 @@
 #include "protocol/Scar/ScarRWKey.h"
 #include "protocol/Scar/ScarTransaction.h"
 
-namespace scar {
+namespace coco {
 
 enum class ScarMessage {
   SEARCH_REQUEST = static_cast<int>(ControlMessage::NFIELDS),
@@ -591,7 +591,7 @@ public:
         static_cast<uint32_t>(ScarMessage::WRITE_RESPONSE), message_size,
         table_id, partition_id);
 
-    scar::Encoder encoder(responseMessage.data);
+    coco::Encoder encoder(responseMessage.data);
     encoder << message_piece_header;
     responseMessage.flush();
   }
@@ -667,7 +667,7 @@ public:
         static_cast<uint32_t>(ScarMessage::REPLICATION_RESPONSE), message_size,
         table_id, partition_id);
 
-    scar::Encoder encoder(responseMessage.data);
+    coco::Encoder encoder(responseMessage.data);
     encoder << message_piece_header;
     responseMessage.flush();
   }
@@ -795,4 +795,4 @@ public:
   }
 };
 
-} // namespace scar
+} // namespace coco

@@ -7,7 +7,7 @@
 #include <atomic>
 #include <ostream>
 
-namespace scar {
+namespace coco {
 class SpinLock {
 public:
   // constructors
@@ -30,4 +30,4 @@ public:
 private:
   std::atomic_flag lock_ = ATOMIC_FLAG_INIT;
 };
-} // namespace scar
+} // namespace coco

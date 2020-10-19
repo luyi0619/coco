@@ -15,11 +15,11 @@
 #include <thread>
 #include <vector>
 
-namespace scar {
+namespace coco {
 
-template <class Workload> class AriaManager : public scar::Manager {
+template <class Workload> class AriaManager : public coco::Manager {
 public:
-  using base_type = scar::Manager;
+  using base_type = coco::Manager;
 
   using WorkloadType = Workload;
   using DatabaseType = typename WorkloadType::DatabaseType;
@@ -157,4 +157,4 @@ public:
   std::vector<std::unique_ptr<TransactionType>> transactions;
   std::atomic<uint32_t> total_abort;
 };
-} // namespace scar
+} // namespace coco

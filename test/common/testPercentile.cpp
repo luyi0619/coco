@@ -8,7 +8,7 @@
 
 TEST(TestPercentile, TestBasic) {
 
-  scar::Percentile<int> p;
+  coco::Percentile<int> p;
   std::vector<int> data = {15, 20, 35, 40, 50};
 
   std::shuffle(data.begin(), data.end(), std::default_random_engine());
@@ -44,7 +44,7 @@ TEST(TestPercentile, TestBasic) {
 
 TEST(TestPercentile, TestString) {
 
-  scar::Percentile<std::string> p;
+  coco::Percentile<std::string> p;
   std::vector<std::string> data = {"15", "20", "35", "40", "50"};
 
   std::shuffle(data.begin(), data.end(), std::default_random_engine());

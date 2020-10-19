@@ -13,7 +13,7 @@
 #include "Serialization.h"
 #include "StringPiece.h"
 
-namespace scar {
+namespace coco {
 
 template <std::size_t N> class FixedString {
 public:
@@ -73,7 +73,7 @@ public:
     std::hash<char> h;
     std::size_t hashCode = 0;
     for (auto i = 0u; i < N; i++) {
-      hashCode = scar::hash_combine(hashCode, h(data_[i]));
+      hashCode = coco::hash_combine(hashCode, h(data_[i]));
     }
     return hashCode;
   }
@@ -119,11 +119,11 @@ public:
   static constexpr std::size_t size() { return N; }
 };
 
-} // namespace scar
+} // namespace coco
 
 namespace std {
-template <std::size_t N> struct hash<scar::FixedString<N>> {
-  std::size_t operator()(const scar::FixedString<N> &k) const {
+template <std::size_t N> struct hash<coco::FixedString<N>> {
+  std::size_t operator()(const coco::FixedString<N> &k) const {
     return k.hash_code();
   }
 };
